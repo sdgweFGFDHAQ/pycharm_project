@@ -1,0 +1,55 @@
+import numpy as np
+import jieba.analyse
+import pandas as pd
+from train_model import tf_idf_by_python
+from count_category_num import count_the_number_of_categories
+import re
+
+
+# 获取处理好的数据
+def get_data_from_CSV():
+    csv_data = pd.read_csv("../guangzhou.csv", usecols=["id", "name", "type", "typecode"], nrows=1000)
+    print(csv_data.head(10))
+    csv_data["word_name"] = csv_data["name"].apply(cut_word)
+    csv_data["word_name"].to_csv("../cut_word_list.csv", index=False)
+    print(csv_data.head(10))
+    return csv_data
+
+
+# 分词并过滤无用字符
+def cut_word(word):
+    out_word_list = []
+    stop_words = stop_words_list("../stop_word_plug.txt")
+    word = re.sub(r"[^a-zA-Z0-9\u4e00-\u9fa5]", "", word)
+    l_cut_words = jieba.lcut(word)
+    for lc_word in l_cut_words:
+        if lc_word not in stop_words:
+            if lc_word != '\t':
+                out_word_list.append(lc_word)
+    return out_word_list
+
+
+# 创建停用词list
+def stop_words_list(filepath):
+    stopwords = [line.strip() for line in open(filepath, 'r', encoding='utf-8').readlines()]
+    return stopwords
+
+
+# jieba实现算法
+def find_category0(csv_data):
+    name_text = "".join(csv_data["name"].tolist())
+    category = jieba.analyse.extract_tags(name_text, topK=10, withWeight=True, allowPOS=())
+    print(category)
+
+
+# 手写算法
+def find_category(csv_data):
+    category = tf_idf_by_python(csv_data["word_name"].tolist())
+    print(category)
+    return category
+
+
+if __name__ == '__main__':
+    csv_data = get_data_from_CSV()
+    category = find_category(csv_data)
+    save_data = count_the_number_of_categories(csv_data)
