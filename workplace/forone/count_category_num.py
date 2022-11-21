@@ -7,9 +7,13 @@ def count_the_number_of_categories(csv_data):
     word_list = []
     for v in csv_data["word_name"]:
         word_list.extend(v)
-    # word_list.extend(v for v in csv_data["word_name"])
     print(word_list)
-    dummies = pd.get_dummies(word_list)
+    dummies = pd.DataFrame(np.zeros((len(csv_data), len(word_list))), columns=word_list)
+    for index in range(0, len(csv_data)):
+        for word in csv_data["word_name"].iloc[index]:
+            if word in word_list:
+                dummies[word].iloc[index] = 1
+    # dummies = pd.get_dummies(word_list)
     print(dummies)
     # 获取高频特征词
     gain_list = get_info_gain(dummies, csv_data["type"])
@@ -26,6 +30,8 @@ def get_info_gain(dummies, categories):
         cond_entropy = sum([get_info_entropy(d[k]) * len(d[k]) / float(len(row)) for k in d])
         info_gain = entropy - cond_entropy
         info_gain_list[index] = info_gain
+    info_gain_list = sorted(info_gain_list.items(), key=lambda x: x[1], reverse=True)
+    print(info_gain_list)
     return info_gain_list
 
 

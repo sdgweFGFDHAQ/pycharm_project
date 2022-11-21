@@ -19,8 +19,15 @@ def get_data_from_CSV():
 # 分词并过滤无用字符
 def cut_word(word):
     out_word_list = []
+    # 加载停用词
     stop_words = stop_words_list("../stop_word_plug.txt")
-    word = re.sub(r"[^a-zA-Z0-9\u4e00-\u9fa5]", "", word)
+    word = re.sub(r'\(.*?\)', '', word)
+    word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', word)
+    # 不可分割的词
+    # with open("../inseparable_word_list.txt", 'r', encoding='utf-8') as in_word:
+    #     for word in in_word:
+    #         word = word.strip('\n')
+    jieba.suggest_freq("瑷丝坊", True)
     l_cut_words = jieba.lcut(word)
     for lc_word in l_cut_words:
         if lc_word not in stop_words:

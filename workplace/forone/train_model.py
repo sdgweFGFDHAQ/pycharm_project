@@ -57,6 +57,11 @@ def tf_idf_by_jieba(csv_data):
     print(category)
 
 
+# 朴素贝叶斯训练模型
+def b_train_parameter():
+    print("result")
+
+
 if __name__ == '__main__':
     data_list, label_list = loadDataSet()  # 加载数据
     features = tf_idf_by_python(data_list)  # 所有词的TF-IDF值
