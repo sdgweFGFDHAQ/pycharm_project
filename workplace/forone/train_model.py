@@ -3,6 +3,11 @@ import jieba.analyse
 from collections import defaultdict
 import math
 import operator
+from sklearn.naive_bayes import MultinomialNB, GaussianNB, BernoulliNB, ComplementNB
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import cross_val_score
+from sklearn import preprocessing
+from count_category_num import count_the_number_of_categories
 
 
 def loadDataSet():
@@ -57,13 +62,34 @@ def tf_idf_by_jieba(csv_data):
     print(category)
 
 
+# 贝叶斯测试
+def nb_test():
+    X, y = load_breast_cancer().data, load_breast_cancer().target
+    # one-hot
+    enc = preprocessing.OneHotEncoder()
+    enc.fit(X)
+    X = enc.transform(X).toarray()
+    print(X)
+    nb1 = GaussianNB()
+    nb2 = MultinomialNB()
+    nb3 = BernoulliNB()
+    nb4 = ComplementNB()
+    for model in [nb1, nb2, nb3, nb4]:
+        scores = cross_val_score(model, X, y, cv=10, scoring='accuracy')
+        print("Accuracy:{:.4f}".format(scores.mean()))
+
+
 # 朴素贝叶斯训练模型
-def b_train_parameter():
-    print("result")
+def b_train_parameter(csv_data):
+    X, y = count_the_number_of_categories(csv_data), csv_data["type"]
+    nb_model = BernoulliNB()
+    scores = cross_val_score(nb_model, X, y, cv=10, scoring="accuracy")
+    print("Accuracy:{:.4f}".format(scores.mean()))
 
 
 if __name__ == '__main__':
-    data_list, label_list = loadDataSet()  # 加载数据
-    features = tf_idf_by_python(data_list)  # 所有词的TF-IDF值
-    print(features)
-    print(len(features))
+    # data_list, label_list = loadDataSet()  # 加载数据
+    # features = tf_idf_by_python(data_list)  # 所有词的TF-IDF值
+    # print(features)
+    # print(len(features))
+    nb_test()

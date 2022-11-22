@@ -1,7 +1,7 @@
 import numpy as np
 import jieba.analyse
 import pandas as pd
-from train_model import tf_idf_by_python
+from train_model import tf_idf_by_python, b_train_parameter
 from count_category_num import count_the_number_of_categories
 import re
 
@@ -75,3 +75,5 @@ if __name__ == '__main__':
     # category = find_category(csv_data)
     # 获取高频特征词
     save_data = count_the_number_of_categories(csv_data)
+    # 训练贝叶斯模型
+    b_train_parameter(csv_data)

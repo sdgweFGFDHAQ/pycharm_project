@@ -17,7 +17,8 @@ def count_the_number_of_categories(csv_data):
     print(dummies)
     # 获取高频特征词,根据信息增益
     gain_list = get_info_gain(dummies, csv_data["type"])
-    return gain_list
+    print(gain_list)
+    return dummies
 
 
 def get_info_gain(dummies, categories):
@@ -31,7 +32,6 @@ def get_info_gain(dummies, categories):
         info_gain = entropy - cond_entropy
         info_gain_list[index] = info_gain
     info_gain_list = sorted(info_gain_list.items(), key=lambda x: x[1], reverse=True)
-    print(info_gain_list)
     return info_gain_list
 
 
