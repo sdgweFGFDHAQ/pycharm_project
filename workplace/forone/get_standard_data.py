@@ -24,10 +24,10 @@ def cut_word(word):
     word = re.sub(r'\(.*?\)', '', word)
     word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', word)
     # 不可分割的词
-    # with open("../inseparable_word_list.txt", 'r', encoding='utf-8') as in_word:
-    #     for word in in_word:
-    #         word = word.strip('\n')
-    jieba.suggest_freq("瑷丝坊", True)
+    with open("../inseparable_word_list.txt", 'r', encoding='utf-8') as in_word:
+        for iw in in_word:
+            iw = iw.strip('\n')
+            jieba.suggest_freq(iw, True)
     l_cut_words = jieba.lcut(word)
     for lc_word in l_cut_words:
         if lc_word not in stop_words:
@@ -56,7 +56,22 @@ def find_category(csv_data):
     return category
 
 
+# 对数据进行统计保存
+def save_data_info(csv_data):
+    # 对类别分组计数
+    type_group = csv_data[["typecode"]].groupby(csv_data["type"])
+    category_frequency = type_group.value_counts()
+    print(category_frequency)
+    category_frequency.to_csv("../term_category_frequency.csv", index=True)
+    # csv_2.to_csv("../category_frequency.csv", index=False)
+
+
 if __name__ == '__main__':
+    # 获取处理好的数据
     csv_data = get_data_from_CSV()
-    category = find_category(csv_data)
+    # 对数据进行统计保存
+    # save_data_info(csv_data)
+    # 实现算法
+    # category = find_category(csv_data)
+    # 获取高频特征词
     save_data = count_the_number_of_categories(csv_data)
