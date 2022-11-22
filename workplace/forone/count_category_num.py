@@ -15,7 +15,7 @@ def count_the_number_of_categories(csv_data):
                 dummies[word].iloc[index] = 1
     # dummies = pd.get_dummies(word_list)
     print(dummies)
-    # 获取高频特征词
+    # 获取高频特征词,根据信息增益
     gain_list = get_info_gain(dummies, csv_data["type"])
     return gain_list
 
