@@ -8,7 +8,7 @@ from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import cross_val_score
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
-from count_category_num import count_the_number_of_categories
+from .count_category_num import count_the_number_of_categories
 
 
 def loadDataSet():
