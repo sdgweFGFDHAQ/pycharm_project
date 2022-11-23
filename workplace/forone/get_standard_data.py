@@ -8,7 +8,7 @@ import re
 
 # 获取处理好的数据
 def get_data_from_CSV():
-    csv_data = pd.read_csv("../guangzhou.csv", usecols=["id", "name", "type", "typecode"], nrows=1000)
+    csv_data = pd.read_csv("../guangzhou.csv", usecols=["id", "name", "type", "typecode"], nrows=5000)
     csv_data["word_name"] = csv_data["name"].apply(cut_word)
     csv_data["word_name"].to_csv("../cut_word_list.csv", index=False)
     print(csv_data.head(10))
