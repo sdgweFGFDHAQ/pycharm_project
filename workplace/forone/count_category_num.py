@@ -12,7 +12,7 @@ def count_the_number_of_categories(csv_data):
     for index in range(0, len(csv_data)):
         for word in csv_data["word_name"].iloc[index]:
             if word in word_list:
-                dummies[word].iloc[index] = 1
+                dummies.loc[index, word] = 1
     # dummies = pd.get_dummies(word_list)
     print(dummies)
     # 获取高频特征词,根据信息增益

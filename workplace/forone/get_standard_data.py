@@ -1,8 +1,8 @@
 import numpy as np
 import jieba.analyse
 import pandas as pd
-from .train_model import tf_idf_by_python, b_train_parameter
-from .count_category_num import count_the_number_of_categories
+from workplace.forone.train_model import tf_idf_by_python, b_train_parameter
+from workplace.forone.count_category_num import count_the_number_of_categories
 import re
 
 
