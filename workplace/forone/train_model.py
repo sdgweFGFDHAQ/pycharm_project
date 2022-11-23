@@ -8,7 +8,6 @@ from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import cross_val_score
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
-from workplace.forone.count_category_num import count_the_number_of_categories
 
 
 def loadDataSet():
@@ -85,8 +84,7 @@ def nb_test():
 
 
 # 朴素贝叶斯训练模型
-def b_train_parameter(csv_data):
-    X, y = count_the_number_of_categories(csv_data), csv_data["type"]
+def b_train_parameter(X, y):
     nb_model = BernoulliNB()
     scores = cross_val_score(nb_model, X, y, cv=10, scoring="accuracy")
     print("Accuracy:{:.4f}".format(scores.mean()))

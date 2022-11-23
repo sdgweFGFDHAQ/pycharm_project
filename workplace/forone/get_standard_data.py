@@ -2,14 +2,13 @@ import numpy as np
 import jieba.analyse
 import pandas as pd
 from workplace.forone.train_model import tf_idf_by_python, b_train_parameter
-from workplace.forone.count_category_num import count_the_number_of_categories
+from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain
 import re
 
 
 # 获取处理好的数据
 def get_data_from_CSV():
     csv_data = pd.read_csv("../guangzhou.csv", usecols=["id", "name", "type", "typecode"], nrows=1000)
-    print(csv_data.head(10))
     csv_data["word_name"] = csv_data["name"].apply(cut_word)
     csv_data["word_name"].to_csv("../cut_word_list.csv", index=False)
     print(csv_data.head(10))
@@ -71,9 +70,14 @@ if __name__ == '__main__':
     csv_data = get_data_from_CSV()
     # 对数据进行统计保存
     # save_data_info(csv_data)
-    # 实现算法
+    # TF-IDF获取高频特征词
     # category = find_category(csv_data)
-    # 获取高频特征词
-    save_data = count_the_number_of_categories(csv_data)
+    # 信息增益获取高频特征词
+    dummies = count_the_number_of_categories(csv_data)
+    gain_list = get_info_gain(dummies, csv_data["type"])
     # 训练贝叶斯模型
-    b_train_parameter(csv_data)
+    b_train_parameter(dummies, csv_data["type"])
+    # 对新数据分类
+    new_data = csv_data.iloc[4000]
+    print(new_data)
+    b_use_model(new_data)
