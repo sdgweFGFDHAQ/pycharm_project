@@ -7,6 +7,7 @@ from sklearn.naive_bayes import MultinomialNB, GaussianNB, BernoulliNB, Compleme
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import cross_val_score
 from sklearn import preprocessing
+from sklearn.decomposition import PCA
 from count_category_num import count_the_number_of_categories
 
 
@@ -69,6 +70,10 @@ def nb_test():
     enc = preprocessing.OneHotEncoder()
     enc.fit(X)
     X = enc.transform(X).toarray()
+    # pca降维
+    # pca = PCA(n_components=3)  # 从5列降到3列
+    # pca.fit(X)
+    # X = pca.transform(X)
     print(X)
     nb1 = GaussianNB()
     nb2 = MultinomialNB()
