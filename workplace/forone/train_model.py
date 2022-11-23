@@ -54,6 +54,39 @@ def tf_idf_by_python(list_words):
     return dict_feature_select
 
 
+def tf_iwf_by_python(list_words):
+    # 总词频统计
+    doc_frequency = defaultdict(int)
+    for word_list in list_words:
+        for i in word_list:
+            doc_frequency[i] += 1
+
+    # 计算每个词的TF值
+    word_tf = {}  # 存储每个词的tf值
+    for i in doc_frequency:
+        word_tf[i] = doc_frequency[i] / sum(doc_frequency.values())
+
+    # 计算每个词的IDF值
+    doc_num = len(list_words)
+    word_idf = {}  # 存储每个词的idf值
+    word_doc = defaultdict(int)  # 存储包含该词的文档数
+    for i in doc_frequency:
+        for j in list_words:
+            if i in j:
+                word_doc[i] += 1
+    for i in doc_frequency:
+        word_idf[i] = math.log(doc_num / (word_doc[i] + 1))
+
+    # 计算每个词的TF*IDF的值
+    word_tf_idf = {}
+    for i in doc_frequency:
+        word_tf_idf[i] = word_tf[i] * word_idf[i]
+
+    # 对字典按值由大到小排序
+    dict_feature_select = sorted(word_tf_idf.items(), key=operator.itemgetter(1), reverse=True)
+    return dict_feature_select
+
+
 # wordlists只有一个文档，那IDF？
 def tf_idf_by_jieba(csv_data):
     wordlists = [csv_data["word_name"].values]

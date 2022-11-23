@@ -78,6 +78,6 @@ if __name__ == '__main__':
     # 训练贝叶斯模型
     b_train_parameter(dummies, csv_data["type"])
     # 对新数据分类
-    new_data = csv_data.iloc[4000]
-    print(new_data)
-    b_use_model(new_data)
+    # new_data = csv_data.iloc[4000]
+    # print(new_data)
+    # b_use_model(new_data)
