@@ -23,14 +23,11 @@ def count_the_number_of_categories(csv_data):
 # 提取高频词的向量空间
 def get_categories(word_list, csv_data):
     word_list = list(word_list.keys())[: int(0.8 * len(word_list))]
-    print(word_list)
     dummies = pd.DataFrame(np.zeros((len(csv_data), len(word_list))), columns=word_list)
     for index in range(0, len(csv_data)):
         for word in csv_data['word_name'].iloc[index]:
             if word in word_list:
                 dummies.loc[index, word] = 1
-    # dummies = pd.get_dummies(word_list)
-    print('特征词转向量:{}'.format(dummies.head(10)))
     return dummies
 
 
@@ -38,6 +35,7 @@ def get_info_gain_rate(dummies, categories):
     # 属性信息熵
     info_gain_list = dict()
     entropy = get_info_entropy(categories)
+    print(dummies)
     for index, row in dummies.items():
         d = dict()
         for i in list(range(len(row))):

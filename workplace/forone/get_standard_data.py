@@ -90,9 +90,10 @@ if __name__ == '__main__':
         gain_lists.update(gain_list)
     pool.close()
     pool.join()
+    print(gain_lists)
     info_gain_list = sorted(gain_lists.items(), key=lambda x: x[1], reverse=True)
     print(gain_lists)
-    # pd.DataFrame(gain_lists).to_csv('../save_info_weight.csv', index=False)
+    pd.DataFrame(gain_lists).to_csv('../save_info_weight.csv', index=False)
     end = time.perf_counter()
     print('计算信息增益率耗时: %s Seconds' % (end - start))
     # 训练贝叶斯模型
