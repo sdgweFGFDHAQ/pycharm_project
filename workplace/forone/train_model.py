@@ -89,7 +89,7 @@ def tf_iwf_by_python(list_words):
 
 # wordlists只有一个文档，那IDF？
 def tf_idf_by_jieba(csv_data):
-    wordlists = [csv_data["word_name"].values]
+    wordlists = [csv_data['word_name'].values]
     print(wordlists)
     category = jieba.analyse.extract_tags(wordlists, topK=10, withWeight=False, allowPOS=())
     print(category)
@@ -113,14 +113,14 @@ def nb_test():
     nb4 = ComplementNB()
     for model in [nb1, nb2, nb3, nb4]:
         scores = cross_val_score(model, X, y, cv=10, scoring='accuracy')
-        print("Accuracy:{:.4f}".format(scores.mean()))
+        print('Accuracy:{:.4f}'.format(scores.mean()))
 
 
 # 朴素贝叶斯训练模型
 def b_train_parameter(X, y):
     nb_model = BernoulliNB()
-    scores = cross_val_score(nb_model, X, y, cv=10, scoring="accuracy")
-    print("Accuracy:{:.4f}".format(scores.mean()))
+    scores = cross_val_score(nb_model, X, y, cv=5, scoring='accuracy')
+    print('Accuracy:{:.4f}'.format(scores.mean()))
 
 
 if __name__ == '__main__':

@@ -4,12 +4,12 @@ import numpy as np
 
 def count_the_number_of_categories(csv_data):
     word_list = []
-    for v in csv_data["word_name"]:
+    for v in csv_data['word_name']:
         word_list.extend(v)
     print(word_list)
     dummies = pd.DataFrame(np.zeros((len(csv_data), len(word_list))), columns=word_list)
     for index in range(0, len(csv_data)):
-        for word in csv_data["word_name"].iloc[index]:
+        for word in csv_data['word_name'].iloc[index]:
             if word in word_list:
                 dummies.loc[index, word] = 1
     # dummies = pd.get_dummies(word_list)
@@ -33,6 +33,7 @@ def get_info_gain_rate(dummies, categories):
         info_gain_list[index] = info_gain_rate
     info_gain_list = sorted(info_gain_list.items(), key=lambda x: x[1], reverse=True)
     print(info_gain_list)
+    pd.DataFrame(info_gain_list).to_csv('../save_info_weight.txt', index=False)
     return info_gain_list
 
 
