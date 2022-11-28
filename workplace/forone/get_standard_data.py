@@ -3,6 +3,7 @@ import jieba.analyse
 import pandas as pd
 from workplace.forone.train_model import tf_idf_by_python, b_train_parameter
 from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain, get_info_gain_rate
+from multiprocessing import Pool
 import re
 
 
@@ -74,7 +75,15 @@ if __name__ == '__main__':
     # category = find_category(csv_data)
     # 信息增益获取高频特征词
     dummies = count_the_number_of_categories(csv_data)
-    gain_list = get_info_gain_rate(dummies, csv_data['type'])
+    pool = Pool(processes=4)
+    gain_lists = []
+    for i in range(2):
+        gain_list = pool.apply(get_info_gain_rate, (dummies, csv_data['type']))
+        gain_lists.append(gain_list)
+    pool.close()
+    pool.join()
+    print(gain_lists)
+    # gain_list = get_info_gain_rate(dummies, csv_data['type'])
     # 训练贝叶斯模型
     b_train_parameter(dummies, csv_data['type'])
     # 对新数据分类

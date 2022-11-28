@@ -32,7 +32,7 @@ def get_info_gain_rate(dummies, categories):
         info_gain_rate = info_gain / info_intrinsic
         info_gain_list[index] = info_gain_rate
     info_gain_list = sorted(info_gain_list.items(), key=lambda x: x[1], reverse=True)
-    print(info_gain_list)
+    # print(info_gain_list)
     pd.DataFrame(info_gain_list).to_csv('../save_info_weight.txt', index=False)
     return info_gain_list
 
