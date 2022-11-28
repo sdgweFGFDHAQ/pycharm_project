@@ -2,14 +2,15 @@ import numpy as np
 import jieba.analyse
 import pandas as pd
 from workplace.forone.train_model import tf_idf_by_python, b_train_parameter
-from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain, get_info_gain_rate
+from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain_rate, get_categories
 from multiprocessing import Pool
 import re
+import time
 
 
 # 获取处理好的数据
 def get_data_from_CSV():
-    csv_data = pd.read_csv('../guangzhou.csv', usecols=['id', 'name', 'type', 'typecode'], nrows=1000)
+    csv_data = pd.read_csv('../guangzhou.csv', usecols=['id', 'name', 'type', 'typecode'], nrows=5000)
     csv_data['word_name'] = csv_data['name'].apply(cut_word)
     csv_data['word_name'].to_csv('../cut_word_list.csv', index=False)
     print(csv_data.head(10))
@@ -66,6 +67,7 @@ def save_data_info(csv_data):
     # csv_2.to_csv('../category_frequency.csv', index=False)
 
 
+# 注意：数字4为进程数，根据硬件性能修改
 if __name__ == '__main__':
     # 获取处理好的数据
     csv_data = get_data_from_CSV()
@@ -75,17 +77,27 @@ if __name__ == '__main__':
     # category = find_category(csv_data)
     # 信息增益获取高频特征词
     dummies = count_the_number_of_categories(csv_data)
+    c_num = len(dummies.columns)
+    dummy = list()
+    for i in range(5):
+        dummy.append(int(c_num * i / 4))
+    start = time.perf_counter()
     pool = Pool(processes=4)
-    gain_lists = []
-    for i in range(2):
-        gain_list = pool.apply(get_info_gain_rate, (dummies, csv_data['type']))
-        gain_lists.append(gain_list)
+    gain_lists = {}
+    for i in range(4):
+        dummy_i = dummies.iloc[:, dummy[i]:dummy[i + 1]]
+        gain_list = pool.apply(get_info_gain_rate, (dummy_i, csv_data['type']))
+        gain_lists.update(gain_list)
     pool.close()
     pool.join()
+    info_gain_list = sorted(gain_lists.items(), key=lambda x: x[1], reverse=True)
     print(gain_lists)
-    # gain_list = get_info_gain_rate(dummies, csv_data['type'])
+    # pd.DataFrame(gain_lists).to_csv('../save_info_weight.csv', index=False)
+    end = time.perf_counter()
+    print('计算信息增益率耗时: %s Seconds' % (end - start))
     # 训练贝叶斯模型
-    b_train_parameter(dummies, csv_data['type'])
+    new_dummies = get_categories(gain_lists, csv_data)
+    b_train_parameter(new_dummies, csv_data['type'])
     # 对新数据分类
     # new_data = csv_data.iloc[4000]
     # print(new_data)
