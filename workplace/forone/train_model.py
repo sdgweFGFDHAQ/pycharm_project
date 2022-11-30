@@ -3,10 +3,11 @@ import jieba.analyse
 from collections import defaultdict
 import math
 import operator
-from sklearn.naive_bayes import MultinomialNB, GaussianNB, BernoulliNB, ComplementNB
+from sklearn.naive_bayes import MultinomialNB, GaussianNB, BernoulliNB, ComplementNB, CategoricalNB
 from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn import preprocessing
+from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer
 from sklearn.decomposition import PCA
 
 
@@ -119,8 +120,21 @@ def nb_test():
 # 朴素贝叶斯训练模型
 def b_train_parameter(X, y):
     nb_model = BernoulliNB()
-    scores = cross_val_score(nb_model, X, y, cv=5, scoring='accuracy')
-    print('Accuracy:{:.4f}'.format(scores.mean()))
+    # nb1 = CategoricalNB(alpha=1)
+    nb2 = MultinomialNB()
+    nb3 = ComplementNB()
+    # scores = cross_val_score(nb_model, X, y, cv=10, scoring='accuracy')
+    # print('Accuracy:{:.4f}'.format(scores.mean()))
+    x_train, x_test, y_train, y_test = train_test_split(X, y)
+    transfer = TfidfTransformer()
+    x_train = transfer.fit_transform(x_train)
+    x_test = transfer.fit_transform(x_test)
+    for model in [nb_model, nb2, nb3]:
+        model.fit(x_train, y_train)
+        score = model.score(x_test, y_test)
+        print("准确率为:", score)
+
+
 
 
 if __name__ == '__main__':
