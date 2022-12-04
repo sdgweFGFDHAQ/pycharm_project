@@ -120,7 +120,7 @@ def nb_test():
 # 朴素贝叶斯训练模型
 def b_train_parameter(X, y):
     nb_model = BernoulliNB()
-    # nb1 = CategoricalNB(alpha=1)
+    nb1 = CategoricalNB(alpha=1)
     nb2 = MultinomialNB()
     nb3 = ComplementNB()
     # scores = cross_val_score(nb_model, X, y, cv=10, scoring='accuracy')
