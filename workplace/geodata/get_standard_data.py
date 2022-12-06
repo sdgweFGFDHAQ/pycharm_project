@@ -2,8 +2,8 @@ import numpy as np
 import jieba.analyse
 import pandas as pd
 import sklearn
-from workplace.forone.train_model import tf_idf_by_python, b_train_parameter
-from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain, get_info_gain_rate, \
+from workplace.geodata.train_model import tf_idf_by_python, b_train_parameter
+from workplace.geodata.count_category_num import count_the_number_of_categories, get_info_gain, get_info_gain_rate, \
     get_categories
 from multiprocessing import Manager, Pool
 import re
