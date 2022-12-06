@@ -7,7 +7,7 @@ from ast import literal_eval
 
 
 def set_file_standard_data(path):
-    csv_data = pd.read_csv(path, usecols=['name', 'category1_new', 'category2_new', 'category3_new'], nrows=1000)
+    csv_data = pd.read_csv(path, usecols=['name', 'category1_new', 'category2_new', 'category3_new'])
     # 用一级标签填充空白(NAN)的二级标签、三级标签
     csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
     csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
@@ -62,5 +62,5 @@ if __name__ == '__main__':
     # 前期准备：更新每种类别对应的关键字
     # set_category_words()
     # 先构建一个空间向量再说
-    data = get_data()
-    categories = count_the_number_of_categories(data)
+    # data = get_data()
+    # categories = count_the_number_of_categories(data)
