@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
-import jieba.analyse
-from collections import defaultdict
 import math
 import operator
-from sklearn.naive_bayes import MultinomialNB, GaussianNB, BernoulliNB, ComplementNB, CategoricalNB
-from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import cross_val_score, train_test_split
-from sklearn import preprocessing
-from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer
-from sklearn.decomposition import PCA
+from collections import defaultdict
+
+import jieba.analyse
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB, BernoulliNB, ComplementNB, CategoricalNB
 
 
 def tf_idf_by_python(list_words):
@@ -79,7 +77,7 @@ def tf_iwf_by_python(list_words):
 
 # wordlists只有一个文档，那IDF？
 def tf_idf_by_jieba(csv_data):
-    wordlists = [csv_data['word_name'].values]
+    wordlists = [csv_data['cut_name'].values]
     print(wordlists)
     category = jieba.analyse.extract_tags(wordlists, topK=10, withWeight=False, allowPOS=())
     print(category)

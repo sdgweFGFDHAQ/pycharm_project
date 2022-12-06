@@ -2,7 +2,8 @@ import pandas as pd
 import re
 import jieba
 import time
-from workplace.forone.count_category_num import count_the_number_of_categories
+from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain_rate, get_categories
+from workplace.forone.train_model import b_train_parameter
 from ast import literal_eval
 
 
@@ -17,7 +18,7 @@ def set_file_standard_data(path):
     # 各级标签映射字典
     category = csv_data[['category1_new', 'category2_new', 'category3_new']]
     category = category.drop_duplicates(keep='first')
-    # category_data = category_data.reset_index(inplace=True, drop=True)
+    category.reset_index(inplace=True, drop=True)
     category.to_csv('../category_dict.csv')
     print("类别个数：", len(category['category3_new']))
 
@@ -63,4 +64,10 @@ if __name__ == '__main__':
     # set_category_words()
     # 先构建一个空间向量再说
     data = get_data()
-    categories = count_the_number_of_categories(data)
+    dummy = count_the_number_of_categories(data)
+    gain_lists = get_info_gain_rate(dummy, data['category3_new'])
+    print(gain_lists)
+    info_gain_list = dict(sorted(gain_lists.items(), key=lambda x: x[1], reverse=True))
+    new_dummies = get_categories(list(info_gain_list.keys()), data)
+    b_train_parameter(new_dummies, data['category3_new'])
+
