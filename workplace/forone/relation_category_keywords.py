@@ -2,6 +2,7 @@ import pandas as pd
 import re
 import jieba
 import time
+from workplace.forone.count_category_num import count_the_number_of_categories
 
 
 def get_file_standard_data(path):
@@ -13,11 +14,11 @@ def get_file_standard_data(path):
     csv_data['cut_name'] = csv_data['name'].apply(cut_word)
     csv_data.to_csv('../standard_store_gz.csv', columns=['name', 'category3_new', 'cut_name'])
     # 各级标签映射字典
-    category_data = csv_data[['category1_new', 'category2_new', 'category3_new']]
-    category_data = category_data.drop_duplicates(keep='first')
+    category = csv_data[['category1_new', 'category2_new', 'category3_new']]
+    category = category.drop_duplicates(keep='first')
     # category_data = category_data.reset_index(inplace=True, drop=True)
-    category_data.to_csv('../category_dict.csv')
-    print("类别个数：", len(category_data['category3_new']))
+    category.to_csv('../category_dict.csv')
+    print("类别个数：", len(category['category3_new']))
 
 
 def cut_word(word):
@@ -39,17 +40,19 @@ def cut_word(word):
     return out_word_list
 
 
-def analysis_category():
-    print("dwe")
-
-
-
-
-def out_model():
-    print("data")
+def get_category_words():
+    category_keyword = pd.read_csv('../di_keyword_map.csv')
+    ck = category_keyword.groupby(by='category')['keyword'].apply(list)
+    ck.to_csv('../keyword_dict.csv')
+    print("品类种数：", len(ck))
 
 
 if __name__ == '__main__':
-    # 前期准备：数据
-    data_path = '../di_store_gz.csv'
-    get_file_standard_data(data_path)
+    # 前期准备：获取店名数据，统计三级分类
+    # data_path = '../di_store_gz.csv'
+    # get_file_standard_data(data_path)
+    # 前期准备：更新每种类别对应的关键字
+    # get_category_words()
+    # 先构建一个空间向量再说
+    category_data = pd.read_csv('../cut_word_list.csv')
+    count_the_number_of_categories(category_data)

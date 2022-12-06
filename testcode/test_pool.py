@@ -3,11 +3,15 @@ from multiprocessing import Pool
 import re
 import jieba
 import torch
+import torchvision
 
 
 def test():
     x = torch.empty(5, 3)
     print(x)
+    print(torch.__version__)
+    print(torchvision.__version__)
+    print(torch.cuda.is_available())
 
 
 # import torch
