@@ -89,7 +89,7 @@ if __name__ == '__main__':
     # info_gain_list = get_info_gain_rate(dummies, csv_data['type'])
     end = time.perf_counter()
     print('计算信息增益率耗时: %s Seconds' % (end - start))
-    pd.DataFrame(list(info_gain_list)).to_csv('../save_info_weight.csv', index=True)
+    pd.DataFrame(list(info_gain_list)).to_csv('save_info_weight.csv', index=True)
     # 训练贝叶斯模型
     new_dummies = get_categories(list(info_gain_list.keys()), csv_data)
     b_train_parameter(new_dummies, csv_data['type'])

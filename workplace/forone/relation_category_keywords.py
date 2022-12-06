@@ -59,5 +59,5 @@ if __name__ == '__main__':
     # 前期准备：更新每种类别对应的关键字
     # set_category_words()
     # 先构建一个空间向量再说
-    category_data = pd.read_csv('../cut_word_list.csv')
+    category_data = pd.read_csv('../geodata/cut_word_list.csv')
     count_the_number_of_categories(category_data)
