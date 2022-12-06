@@ -57,10 +57,10 @@ def get_data():
 
 if __name__ == '__main__':
     # 前期准备：获取店名数据，统计三级分类
-    data_path = '../di_store_gz.csv'
-    set_file_standard_data(data_path)
+    # data_path = '../di_store_gz.csv'
+    # set_file_standard_data(data_path)
     # 前期准备：更新每种类别对应的关键字
     # set_category_words()
     # 先构建一个空间向量再说
-    # data = get_data()
-    # categories = count_the_number_of_categories(data)
+    data = get_data()
+    categories = count_the_number_of_categories(data)
