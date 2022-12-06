@@ -135,8 +135,6 @@ def b_train_parameter(X, y):
         print("准确率为:", score)
 
 
-
-
 if __name__ == '__main__':
     # data_list, label_list = loadDataSet()  # 加载数据
     # features = tf_idf_by_python(data_list)  # 所有词的TF-IDF值

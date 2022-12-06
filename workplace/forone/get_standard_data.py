@@ -3,7 +3,8 @@ import jieba.analyse
 import pandas as pd
 import sklearn
 from workplace.forone.train_model import tf_idf_by_python, b_train_parameter
-from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain, get_info_gain_rate, get_categories
+from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain, get_info_gain_rate, \
+    get_categories
 from multiprocessing import Manager, Pool
 import re
 import time
@@ -11,7 +12,7 @@ import time
 
 # 获取处理好的数据
 def get_data_from_CSV():
-    csv_data = pd.read_csv('../guangzhou.csv', usecols=['id', 'name', 'type', 'typecode'], nrows=20000)
+    csv_data = pd.read_csv('../guangzhou.csv', usecols=['id', 'name', 'type', 'typecode'], nrows=2000)
     # csv_data = csv_data[20000: 40000]
     csv_data['word_name'] = csv_data['name'].apply(cut_word)
     csv_data['word_name'].to_csv('../cut_word_list.csv', index=False)
@@ -23,7 +24,7 @@ def get_data_from_CSV():
 def cut_word(word):
     out_word_list = []
     # 加载停用词
-    stop_words = stop_words_list('../stop_word_plug.txt')
+    stop_words = [line.strip() for line in open('../stop_word_plug.txt', 'r', encoding='utf-8').readlines()]
     word = re.sub(r'\(.*?\)', '', word)
     word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', word)
     # 不可分割的词
@@ -37,12 +38,6 @@ def cut_word(word):
             if lc_word != '\t':
                 out_word_list.append(lc_word)
     return out_word_list
-
-
-# 创建停用词list
-def stop_words_list(filepath):
-    stopwords = [line.strip() for line in open(filepath, 'r', encoding='utf-8').readlines()]
-    return stopwords
 
 
 # jieba实现算法
