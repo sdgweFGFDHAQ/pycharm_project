@@ -1,63 +1,49 @@
 import pandas as pd
 import re
-import jieba
 import time
-from workplace.forone.count_category_num import count_the_number_of_categories
+import math
+import operator
+from collections import defaultdict
+import jieba.analyse
+import numpy as np
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB, ComplementNB
 
 
-def set_file_standard_data(path):
-    csv_data = pd.read_csv(path, usecols=['name', 'category1_new', 'category2_new', 'category3_new'])
-    # 用一级标签填充空白(NAN)的二级标签、三级标签
-    csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
-    csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
-    # 得到标准数据
-    csv_data['cut_name'] = csv_data['name'].apply(cut_word)
-    csv_data.to_csv('../standard_store_gz.csv', columns=['name', 'category3_new', 'cut_name'])
-    # 各级标签映射字典
-    category = csv_data[['category1_new', 'category2_new', 'category3_new']]
-    category = category.drop_duplicates(keep='first')
-    # category_data = category_data.reset_index(inplace=True, drop=True)
-    category.to_csv('../category_dict.csv')
-    print("类别个数：", len(category['category3_new']))
+def get_feature_prob(X, y):
+    c_nb = ComplementNB()
+    c_nb.fit(X, y)
+    feature_prob = pd.DataFrame(c_nb.feature_log_prob_, index=c_nb.classes_, columns=X.columns)
+    to_dict = feature_prob.to_dict(orient='index')
+    keyword_dict = pd.read_csv('../keyword_dict.csv')
+    for key, value in to_dict.items():
+        if key not in keyword_dict['category'].values:
+            keyword_dict.append({'category': key, 'keyword': list(value.keys())}, ignore_index=True)
+        mean = np.mean(list(value.values()))
+        for si in keyword_dict.loc[keyword_dict['category'] == key, 'keyword'].values:
+            print(si)
+            for i in list(si):
+                if i not in value.keys():
+                    value[i] = mean
+        value = dict(sorted(value.items(), key=lambda x: (float(x[1])), reverse=True))
+        new_value = {}
+        keys = value.keys()
+        for k in list(keys)[0:int(0.8*len(keys))]:
+            new_value[k] = value[k]
+        to_dict[key] = new_value
+    print(to_dict)
 
 
-def cut_word(word):
-    out_word_list = []
-    # 加载停用词
-    stop_words = [line.strip() for line in open('../stop_word_plug.txt', 'r', encoding='utf-8').readlines()]
-    word = re.sub(r'\(.*?\)', '', word)
-    word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', word)
-    # 不可分割的词
-    with open('../inseparable_word_list.txt', 'r', encoding='utf-8') as in_word:
-        for iw in in_word:
-            iw = iw.strip('\n')
-            jieba.suggest_freq(iw, True)
-    l_cut_words = jieba.lcut(word)
-    for lc_word in l_cut_words:
-        if lc_word not in stop_words:
-            if lc_word != '\t':
-                out_word_list.append(lc_word)
-    return out_word_list
+def out_key_word():
+    print("result")
 
 
-def set_category_words():
-    category_keyword = pd.read_csv('../di_keyword_map.csv')
-    ck = category_keyword.groupby(by='category')['keyword'].apply(list)
-    ck.to_csv('../keyword_dict.csv')
-    print("品类种数：", len(ck))
-
-
-def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=2000)
-    print(csv_data.head(10))
-
-
-if __name__ == '__main__':
-    # 前期准备：获取店名数据，统计三级分类
-    # data_path = '../di_store_gz.csv'
-    # set_file_standard_data(data_path)
-    # 前期准备：更新每种类别对应的关键字
-    # set_category_words()
-    # 先构建一个空间向量再说
-    category_data = pd.read_csv('../geodata/cut_word_list.csv')
-    count_the_number_of_categories(category_data)
+def forecast_results(X, y):
+    c_nb = ComplementNB()
+    transfer = TfidfTransformer()
+    X = transfer.fit_transform(X)
+    c_nb.fit(X, y)
+    print(c_nb.predict(X))
+    print("准确率为:", c_nb.score(X, y))
+    print(c_nb.predict_proba(X))

@@ -8,7 +8,7 @@ def count_the_number_of_categories(csv_data):
     for v in csv_data['cut_name']:
         word_list.extend(v)
     new_word_list = list(set(word_list))
-    new_word_list.sort(key=word_list.index)
+    # new_word_list.sort(key=word_list.index)
     print(new_word_list[:10])
     dummies = pd.DataFrame(np.zeros((len(csv_data), len(new_word_list))), columns=new_word_list)
     for index in range(0, len(csv_data)):
