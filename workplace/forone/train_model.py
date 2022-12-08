@@ -1,25 +1,12 @@
 # -*- coding: utf-8 -*-
-import jieba.analyse
-from collections import defaultdict
 import math
 import operator
-from sklearn.naive_bayes import MultinomialNB, GaussianNB, BernoulliNB, ComplementNB, CategoricalNB
-from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import cross_val_score, train_test_split
-from sklearn import preprocessing
-from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer
-from sklearn.decomposition import PCA
+from collections import defaultdict
 
-
-def loadDataSet():
-    dataset = [['my', 'dog', 'has', 'flea', 'problems', 'help', 'please'],  # 切分的词条
-               ['maybe', 'not', 'take', 'him', 'to', 'dog', 'park', 'stupid'],
-               ['my', 'dalmation', 'is', 'so', 'cute', 'I', 'love', 'him'],
-               ['stop', 'posting', 'stupid', 'worthless', 'garbage'],
-               ['mr', 'licks', 'ate', 'my', 'steak', 'how', 'to', 'stop', 'him'],
-               ['quit', 'buying', 'worthless', 'dog', 'food', 'stupid']]
-    classVec = [0, 1, 0, 1, 0, 1]  # 类别标签向量，1代表好，0代表不好
-    return dataset, classVec
+import jieba.analyse
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB, BernoulliNB, ComplementNB, CategoricalNB
 
 
 def tf_idf_by_python(list_words):
@@ -90,31 +77,10 @@ def tf_iwf_by_python(list_words):
 
 # wordlists只有一个文档，那IDF？
 def tf_idf_by_jieba(csv_data):
-    wordlists = [csv_data['word_name'].values]
+    wordlists = [csv_data['cut_name'].values]
     print(wordlists)
     category = jieba.analyse.extract_tags(wordlists, topK=10, withWeight=False, allowPOS=())
     print(category)
-
-
-# 贝叶斯测试
-def nb_test():
-    X, y = load_breast_cancer().data, load_breast_cancer().target
-    # one-hot
-    enc = preprocessing.OneHotEncoder()
-    enc.fit(X)
-    X = enc.transform(X).toarray()
-    # pca降维
-    # pca = PCA(n_components=3)  # 从5列降到3列
-    # pca.fit(X)
-    # X = pca.transform(X)
-    print(X)
-    nb1 = GaussianNB()
-    nb2 = MultinomialNB()
-    nb3 = BernoulliNB()
-    nb4 = ComplementNB()
-    for model in [nb1, nb2, nb3, nb4]:
-        scores = cross_val_score(model, X, y, cv=10, scoring='accuracy')
-        print('Accuracy:{:.4f}'.format(scores.mean()))
 
 
 # 朴素贝叶斯训练模型
@@ -133,13 +99,3 @@ def b_train_parameter(X, y):
         model.fit(x_train, y_train)
         score = model.score(x_test, y_test)
         print("准确率为:", score)
-
-
-
-
-if __name__ == '__main__':
-    # data_list, label_list = loadDataSet()  # 加载数据
-    # features = tf_idf_by_python(data_list)  # 所有词的TF-IDF值
-    # print(features)
-    # print(len(features))
-    nb_test()

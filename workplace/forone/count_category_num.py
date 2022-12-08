@@ -1,18 +1,18 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 
 # 原始向量空间
 def count_the_number_of_categories(csv_data):
     word_list = []
-    for v in csv_data['word_name']:
+    for v in csv_data['cut_name']:
         word_list.extend(v)
     new_word_list = list(set(word_list))
-    new_word_list.sort(key=word_list.index)
+    # new_word_list.sort(key=word_list.index)
     print(new_word_list[:10])
     dummies = pd.DataFrame(np.zeros((len(csv_data), len(new_word_list))), columns=new_word_list)
     for index in range(0, len(csv_data)):
-        for word in csv_data['word_name'].iloc[index]:
+        for word in csv_data['cut_name'].iloc[index]:
             if word in new_word_list:
                 dummies.loc[index, word] = 1
     # dummies = pd.get_dummies(word_list)
@@ -26,13 +26,13 @@ def get_categories(word_list_key, csv_data):
     print(word_list)
     dummies = pd.DataFrame(np.zeros((len(csv_data), len(word_list))), columns=word_list)
     for index in range(0, len(csv_data)):
-        for word in csv_data['word_name'].iloc[index]:
+        for word in csv_data['cut_name'].iloc[index]:
             if word in word_list:
                 dummies.loc[index, word] = 1
     return dummies
 
 
-def get_info_gain_rate(dummies, categories, gain_lists):
+def get_info_gain_rate(dummies, categories):
     # 属性信息熵
     info_gain_list = dict()
     entropy = get_info_entropy(categories)
@@ -46,8 +46,7 @@ def get_info_gain_rate(dummies, categories, gain_lists):
         info_intrinsic = - sum([np.log2(len(d[k]) / float(len(row))) * len(d[k]) / float(len(row)) for k in d])
         info_gain_rate = info_gain / info_intrinsic
         info_gain_list[index] = info_gain_rate
-    gain_lists.update(info_gain_list)
-    return gain_lists
+    return info_gain_list
 
 
 def get_info_gain(dummies, categories, gain_lists):

@@ -1,29 +1,33 @@
-import numpy as np
-import jieba.analyse
 import pandas as pd
-import sklearn
-from workplace.forone.train_model import tf_idf_by_python, b_train_parameter
-from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain, get_info_gain_rate, get_categories
-from multiprocessing import Manager, Pool
 import re
+import jieba
 import time
+from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain_rate, get_categories
+from workplace.forone.train_model import b_train_parameter
+from workplace.forone.relation_category_keywords import forecast_results, get_feature_prob
+from ast import literal_eval
 
 
-# 获取处理好的数据
-def get_data_from_CSV():
-    csv_data = pd.read_csv('../guangzhou.csv', usecols=['id', 'name', 'type', 'typecode'], nrows=20000)
-    # csv_data = csv_data[20000: 40000]
-    csv_data['word_name'] = csv_data['name'].apply(cut_word)
-    csv_data['word_name'].to_csv('../cut_word_list.csv', index=False)
-    print(csv_data.head(10))
-    return csv_data
+def set_file_standard_data(path):
+    csv_data = pd.read_csv(path, usecols=['name', 'category1_new', 'category2_new', 'category3_new'])
+    # 用一级标签填充空白(NAN)的二级标签、三级标签
+    csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
+    csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
+    # 得到标准数据
+    csv_data['cut_name'] = csv_data['name'].apply(cut_word)
+    csv_data.to_csv('../standard_store_gz.csv', columns=['name', 'category3_new', 'cut_name'])
+    # 各级标签映射字典
+    category = csv_data[['category1_new', 'category2_new', 'category3_new']]
+    category = category.drop_duplicates(keep='first')
+    category.reset_index(inplace=True, drop=True)
+    category.to_csv('../category_dict.csv')
+    print("类别个数：", len(category['category3_new']))
 
 
-# 分词并过滤无用字符
 def cut_word(word):
     out_word_list = []
     # 加载停用词
-    stop_words = stop_words_list('../stop_word_plug.txt')
+    stop_words = [line.strip() for line in open('../stop_word_plug.txt', 'r', encoding='utf-8').readlines()]
     word = re.sub(r'\(.*?\)', '', word)
     word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', word)
     # 不可分割的词
@@ -39,68 +43,29 @@ def cut_word(word):
     return out_word_list
 
 
-# 创建停用词list
-def stop_words_list(filepath):
-    stopwords = [line.strip() for line in open(filepath, 'r', encoding='utf-8').readlines()]
-    return stopwords
+def set_category_words():
+    category_keyword = pd.read_csv('../di_keyword_map.csv')
+    ck = category_keyword.groupby(by='category')['keyword'].apply(list)
+    ck.to_csv('../keyword_dict.csv')
+    print("品类种数：", len(ck))
 
 
-# jieba实现算法
-def find_category0(csv_data):
-    name_text = ''.join(csv_data['name'].tolist())
-    category = jieba.analyse.extract_tags(name_text, topK=10, withWeight=True, allowPOS=())
-    print(category)
+def get_data():
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=5)
+    csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
+    print(csv_data.head(10))
+    return csv_data
 
 
-# 手写算法
-def find_category(csv_data):
-    category = tf_idf_by_python(csv_data['word_name'].tolist())
-    print(category)
-    return category
-
-
-# 对数据进行统计保存
-def save_data_info(csv_data):
-    # 对类别分组计数
-    type_group = csv_data[['type']].groupby(csv_data['type'])
-    category_frequency = type_group.value_counts()
-    print(category_frequency)
-    category_frequency.to_csv('../term_category_frequency.csv', index=True)
-    # csv_2.to_csv('../category_frequency.csv', index=False)
-
-
-# 注意：数字4为进程数，根据硬件性能修改
 if __name__ == '__main__':
-    # 获取处理好的数据
-    csv_data = get_data_from_CSV()
-    # 对数据进行统计保存
-    # save_data_info(csv_data)
-    # TF-IDF获取高频特征词
-    # category = find_category(csv_data)
-    # 信息增益获取高频特征词
-    dummies = count_the_number_of_categories(csv_data)
-    pool = Pool(processes=4)
-    c_num = len(dummies.columns)
-    dummy = [int(c_num * i / 10) for i in range(11)]
-    start = time.perf_counter()
-    gain_lists = Manager().dict()
-    for i in range(10):
-        dummy_i = dummies.iloc[:, dummy[i]:dummy[i + 1]]
-        gain_list = pool.apply_async(get_info_gain_rate, args=(dummy_i, csv_data['type'], gain_lists))
-    pool.close()
-    pool.join()
-    print(gain_lists)
-    info_gain_list = dict(sorted(gain_lists.items(), key=lambda x: x[1], reverse=True))
-    # info_gain_list = get_info_gain_rate(dummies, csv_data['type'])
-    end = time.perf_counter()
-    print('计算信息增益率耗时: %s Seconds' % (end - start))
-    pd.DataFrame(list(info_gain_list)).to_csv('../save_info_weight.csv', index=True)
-    # 训练贝叶斯模型
-    new_dummies = get_categories(list(info_gain_list.keys()), csv_data)
-    b_train_parameter(new_dummies, csv_data['type'])
-    end1 = time.perf_counter()
-    print('计算信息增益率耗时: %s Seconds' % (end1 - start))
-    # 对新数据分类
-    # new_data = csv_data.iloc[4000]
-    # print(new_data)
-    # b_use_model(new_data)
+    # 前期准备：获取店名数据，统计三级分类
+    # data_path = '../di_store_gz.csv'
+    # set_file_standard_data(data_path)
+    # 前期准备：更新每种类别对应的关键字
+    # set_category_words()
+    # 先构建一个空间向量再说
+    data = get_data()
+    dummy = count_the_number_of_categories(data)
+    get_feature_prob(dummy, data['category3_new'])
+    # 计算模型准确率
+    # forecast_results(dummy, data['category3_new'])
