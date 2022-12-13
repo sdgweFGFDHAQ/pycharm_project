@@ -32,7 +32,7 @@ def get_feature_prob(X, y):
         new_value = {}
         keys = value.keys()
         if len(keys) > 100:
-            for k in list(keys)[0:int(0.4 * len(keys))]:
+            for k in list(keys)[int(0.05 * len(keys)):int(0.4 * len(keys))]:
                 new_value[k] = value[k]
             to_dict[key] = new_value
     keys = to_dict.keys()
@@ -53,7 +53,9 @@ def update_keyword(X, y):
         mean = np.mean(list(value.values()))
         ndarray_values = str(keyword_dict.loc[keyword_dict['category'] == key, 'keyword'].values)
         # 现在是字典
-        values = ast.literal_eval(re.sub(r"\[|\]", '', ndarray_values))
+        values = re.sub(r"\[|\]", '', ndarray_values)
+        literal_eval = ast.literal_eval(values)
+        print(literal_eval)
     #     for i_key in values:
     #         if i_key not in value.keys():
     #             value[i_key] = mean
