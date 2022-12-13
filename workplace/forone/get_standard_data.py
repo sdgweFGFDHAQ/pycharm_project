@@ -4,7 +4,7 @@ import jieba
 import time
 from workplace.forone.count_category_num import count_the_number_of_categories, get_info_gain_rate, get_categories
 from workplace.forone.train_model import b_train_parameter
-from workplace.forone.relation_category_keywords import forecast_results, get_feature_prob
+from workplace.forone.relation_category_keywords import forecast_results, get_feature_prob, update_keyword
 from ast import literal_eval
 
 
@@ -29,7 +29,7 @@ def cut_word(word):
     # 加载停用词
     stop_words = [line.strip() for line in open('../stop_word_plug.txt', 'r', encoding='utf-8').readlines()]
     word = re.sub(r'\(.*?\)', '', word)
-    word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', word)
+    word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]|[丨]', '', word)
     # 不可分割的词
     with open('../inseparable_word_list.txt', 'r', encoding='utf-8') as in_word:
         for iw in in_word:
@@ -51,7 +51,7 @@ def set_category_words():
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=5)
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=5000)
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(10))
     return csv_data
@@ -67,5 +67,6 @@ if __name__ == '__main__':
     data = get_data()
     dummy = count_the_number_of_categories(data)
     get_feature_prob(dummy, data['category3_new'])
+    update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
     # forecast_results(dummy, data['category3_new'])

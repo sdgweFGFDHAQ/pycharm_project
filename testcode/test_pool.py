@@ -2,8 +2,9 @@ import os
 from multiprocessing import Pool
 import re
 import jieba
-import torch
-import torchvision
+# import torch
+# import torchvision
+import ast
 
 
 def test():
@@ -22,13 +23,25 @@ class Test(object):
         self.st = st
         self.stop_word = stop_word
 
-    def delete_sw(self):
-        st_cuts = jieba.lcut(st)
-        print(st_cuts)
-        for st_cut in st_cuts:
-            if stop_word.__contains__(st_cut):
-                re.sub(st_cut, '已删除', st)
+    # def delete_sw(self):
+    #     st_cuts = jieba.lcut(st)
+    #     print(st_cuts)
+    #     for st_cut in st_cuts:
+    #         if stop_word.__contains__(st_cut):
+    #             re.sub(st_cut, '已删除', st)
 
+def resub():
+    word = "发as|sdf35%^丨&*但是的风格aad$"
+    word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]|[丨]', '', word)
+    print(word)
+    word = "[dsgfd]g[dff]]"
+    word = re.sub(r'\[|\]', '', word)
+    print(word)
+
+def evaltest():
+    value = "{'烤面包': 8.736542888491194, '系列': 9.142007996599357, '兰姐': 9.142007996599357, '旺城': 9.142007996599357,'莱': 9.142007996599357, '茂映': 9.142007996599357, '百家': 8.736542888491194, '林鲜生': 9.142007996599357,'Darling': 9.835155177159303, '升记': 9.142007996599357, '太鱼': 9.142007996599357, '客商': 9.142007996599357}"
+    literal_eval = ast.literal_eval(value)
+    print(literal_eval)
 
 if __name__ == '__main__':
     # address_stopwords_set = {")", "(", "(", ")", "(", ")", "）", "（", "-", "号", "楼", "斋", "馆", "堂", "路",
@@ -40,4 +53,6 @@ if __name__ == '__main__':
     #     if address_stopwords_set.__contains__(s1):
     #         s.remove(s1)
     # print(s)
-    test()
+    # test()
+    # resub()
+    evaltest()
