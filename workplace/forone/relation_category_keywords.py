@@ -1,17 +1,13 @@
-import pandas as pd
-import re
-import time
-import math
-import operator
-from collections import defaultdict
-import jieba.analyse
-import numpy as np
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import MultinomialNB, ComplementNB
 import ast
+import re
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.naive_bayes import ComplementNB
+from workplace.forone.tools import cut_word
 
 
+# 获得特征词权重
 def get_feature_prob(X, y):
     c_nb = ComplementNB()
     c_nb.fit(X, y)
@@ -39,6 +35,7 @@ def get_feature_prob(X, y):
     values = to_dict.values()
     df = pd.DataFrame({'category': keys, 'keyword': values})
     df.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\filename.csv', index=False)
+    return to_dict
 
 
 def update_keyword(X, y):
@@ -69,12 +66,49 @@ def update_keyword(X, y):
     # df = pd.DataFrame({'category': keys, 'keyword': values})
     # df.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\filename.csv', index=False)
 
-def out_key_word():
-    print("得到的分类模型为")
+
+# 输出指定格式的模型
+def out_key_word(csv_data, to_dict):
+    core_words = []
+    category_words = []
+    values = to_dict.values()
+    for key, value in to_dict.items():
+        keys = value.keys()
+        core_word = {}
+        category_word = {}
+        for k in list(keys)[0:int(0.4 * len(keys))]:
+            category_word[k] = values[k]
+        for k in list(keys)[int(0.4 * len(keys)):]:
+            core_word[k] = values[k]
+        category_words.append(category_word)
+        core_words.append(core_word)
+    result_model = pd.DataFrame({'category': csv_data, 'category_words': category_words, 'core_words': core_words})
+    result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', index=False)
 
 
-def coculate_category():
-    print("新数据的类别为")
+# 判断新数据
+def coculate_category(names):
+    model_data = pd.read_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', usecols=['category', 'category_words'])
+    categories = names.apply(judge_category, args=(model_data))
+    df = pd.DataFrame({'names': names, 'category': categories})
+    df.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\atest.csv', index=False)
+
+
+def judge_category(name, model_data):
+    word_list = cut_word(name)
+    probability = dict(zip(model_data['category'].tolist(), np.zeros((len(model_data['category'])))))
+    result = []
+    for word in word_list:
+        for index, row in model_data.iterrows():
+            if word.__contains__(row['category_words']):
+                probability[row['category']] = ast.literal_eval(row['category_words'])[word]
+        sort_result0 = dict(sorted(probability.items(), key=lambda x: (float(x[1])), reverse=True))
+        sort_result = {}
+        keys = sort_result0.keys()
+        for k in list(keys)[0:int(0.1 * len(keys))]:
+            sort_result[k] = sort_result0[k]
+        result.append(sort_result)
+    return result
 
 def forecast_results(X, y):
     c_nb = ComplementNB()
