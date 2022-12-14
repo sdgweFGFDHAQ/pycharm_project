@@ -68,7 +68,7 @@ def update_keyword(X, y):
 
 
 # 输出指定格式的模型
-def out_key_word(csv_data, to_dict):
+def out_keyword(csv_data, to_dict):
     core_words = []
     category_words = []
     values = to_dict.values()
@@ -77,13 +77,13 @@ def out_key_word(csv_data, to_dict):
         core_word = {}
         category_word = {}
         for k in list(keys)[0:int(0.4 * len(keys))]:
-            category_word[k] = values[k]
+            category_word[k] = value[k]
         for k in list(keys)[int(0.4 * len(keys)):]:
-            core_word[k] = values[k]
+            core_word[k] = value[k]
         category_words.append(category_word)
         core_words.append(core_word)
-    result_model = pd.DataFrame({'category': csv_data, 'category_words': category_words, 'core_words': core_words})
-    result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', index=False)
+        result_model = pd.DataFrame({'category': csv_data, 'category_words': category_words, 'core_words': core_words})
+        result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', index=False)
 
 
 # 判断新数据

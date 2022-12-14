@@ -2,7 +2,7 @@ from ast import literal_eval
 import pandas as pd
 from workplace.forone.tools import cut_word
 from workplace.forone.count_category_num import count_the_number_of_categories
-from workplace.forone.relation_category_keywords import get_feature_prob, out_key_word
+from workplace.forone.relation_category_keywords import get_feature_prob, out_keyword
 
 
 def set_file_standard_data(path):
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     dummy = count_the_number_of_categories(data)
     prob = get_feature_prob(dummy, data['category3_new'])
     # 输出指定格式的模型
-    out_key_word(data, prob)
+    out_keyword(data, prob)
     # update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
     # forecast_results(dummy, data['category3_new'])
