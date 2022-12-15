@@ -46,7 +46,7 @@ if __name__ == '__main__':
     dummy = count_the_number_of_categories(data)
     prob = get_feature_prob(dummy, data['category3_new'])
     # 输出指定格式的模型
-    out_keyword(data, prob)
+    out_keyword(prob)
     # update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
     # forecast_results(dummy, data['category3_new'])

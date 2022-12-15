@@ -67,11 +67,10 @@ def update_keyword(X, y):
     # df.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\filename.csv', index=False)
 
 
-# 输出指定格式的模型
-def out_keyword(csv_data, to_dict):
+# 输出指定格式的模型,带权重
+def out_keyword(to_dict):
     core_words = []
     category_words = []
-    values = to_dict.values()
     for key, value in to_dict.items():
         keys = value.keys()
         core_word = {}
@@ -82,8 +81,26 @@ def out_keyword(csv_data, to_dict):
             core_word[k] = value[k]
         category_words.append(category_word)
         core_words.append(core_word)
-        result_model = pd.DataFrame({'category': csv_data, 'category_words': category_words, 'core_words': core_words})
-        result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', index=False)
+    result_model = pd.DataFrame({'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
+    result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', index=False)
+
+
+# 输出指定格式的模型,不带权重
+def out_keyword_no_weight(to_dict):
+    core_words = []
+    category_words = []
+    for key, value in to_dict.items():
+        keys = value.keys()
+        core_word = []
+        category_word = []
+        for k in list(keys)[0:int(0.4 * len(keys))]:
+            category_word.append(k)
+        for k in list(keys)[int(0.4 * len(keys)):]:
+            core_word.append(k)
+        category_words.append(category_word)
+        core_words.append(core_word)
+    result_model = pd.DataFrame({'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
+    result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model_no_weight.csv', index=False)
 
 
 # 判断新数据
