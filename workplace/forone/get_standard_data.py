@@ -2,7 +2,7 @@ from ast import literal_eval
 import pandas as pd
 from workplace.forone.tools import cut_word
 from workplace.forone.count_category_num import count_the_number_of_categories
-from workplace.forone.relation_category_keywords import get_feature_prob, out_keyword
+from workplace.forone.relation_category_keywords import get_feature_prob, out_keyword, forecast_results, coculate_category
 
 
 def set_file_standard_data(path):
@@ -49,6 +49,6 @@ if __name__ == '__main__':
     out_keyword(prob)
     # update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
-    # forecast_results(dummy, data['category3_new'])
-    # d_f = pd.DataFrame()
-    # coculate_category(d_f)
+    forecast_results(dummy, data['category3_new'])
+    d_f = pd.DataFrame()
+    coculate_category(d_f)
