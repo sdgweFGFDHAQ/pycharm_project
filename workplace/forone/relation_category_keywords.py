@@ -81,7 +81,8 @@ def out_keyword(to_dict):
             core_word[k] = value[k]
         category_words.append(category_word)
         core_words.append(core_word)
-    result_model = pd.DataFrame({'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
+    result_model = pd.DataFrame(
+        {'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
     result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', index=False)
 
 
@@ -99,13 +100,15 @@ def out_keyword_no_weight(to_dict):
             core_word.append(k)
         category_words.append(category_word)
         core_words.append(core_word)
-    result_model = pd.DataFrame({'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
+    result_model = pd.DataFrame(
+        {'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
     result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model_no_weight.csv', index=False)
 
 
 # 判断新数据
-def coculate_category(names):
-    model_data = pd.read_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', usecols=['category', 'category_words'])
+def calculate_category(names):
+    model_data = pd.read_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv',
+                             usecols=['category', 'category_words'])
     categories = names.apply(judge_category, args=(model_data))
     df = pd.DataFrame({'names': names, 'category': categories})
     df.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\atest.csv', index=False)
@@ -127,6 +130,7 @@ def judge_category(name, model_data):
         result.append(sort_result)
     return result
 
+
 def forecast_results(X, y):
     c_nb = ComplementNB()
     transfer = TfidfTransformer()
@@ -135,3 +139,13 @@ def forecast_results(X, y):
     print(c_nb.predict(X))
     print("准确率为:", c_nb.score(X, y))
     print(c_nb.predict_proba(X))
+
+
+def new_forecast_results(x, y):
+    count = 0
+    csv = pd.read_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\atest.csv')
+    category = list(csv['category'])
+    for i in range(len(y)):
+        if y[i] == category[i]:
+            count += 1
+    return count / len(y)

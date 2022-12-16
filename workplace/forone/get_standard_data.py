@@ -2,7 +2,7 @@ from ast import literal_eval
 import pandas as pd
 from workplace.forone.tools import cut_word
 from workplace.forone.count_category_num import count_the_number_of_categories
-from workplace.forone.relation_category_keywords import get_feature_prob, out_keyword, forecast_results, coculate_category
+from workplace.forone.relation_category_keywords import get_feature_prob, out_keyword, forecast_results, calculate_category, new_forecast_results
 
 
 def set_file_standard_data(path):
@@ -29,7 +29,7 @@ def set_category_words():
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=5000)
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'])
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(10))
     return csv_data
@@ -44,11 +44,13 @@ if __name__ == '__main__':
     # 先构建一个空间向量再说
     data = get_data()
     dummy = count_the_number_of_categories(data)
-    prob = get_feature_prob(dummy, data['category3_new'])
+    # prob = get_feature_prob(dummy, data['category3_new'])
     # 输出指定格式的模型
-    out_keyword(prob)
+    # out_keyword(prob)
+    # out_keyword_no_weight(prob)
     # update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
     forecast_results(dummy, data['category3_new'])
-    d_f = pd.DataFrame()
-    coculate_category(d_f)
+    d_f = data.sample(n=100, random_state=111, axis=0)
+    calculate_category(d_f['name'])
+    new_forecast_results(d_f['name'], d_f['category3_new'])
