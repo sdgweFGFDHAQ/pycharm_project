@@ -29,7 +29,7 @@ def set_category_words():
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'])
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=40000)
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(10))
     return csv_data
@@ -51,6 +51,6 @@ if __name__ == '__main__':
     # update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
     forecast_results(dummy, data['category3_new'])
-    d_f = data.sample(n=100, random_state=111, axis=0)
-    calculate_category(d_f['name'])
-    new_forecast_results(d_f['name'], d_f['category3_new'])
+    # d_f = data.sample(n=100, random_state=111, axis=0)
+    # calculate_category(d_f['name'])
+    # new_forecast_results(d_f['name'], d_f['category3_new'])

@@ -3,7 +3,7 @@ import re
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.naive_bayes import ComplementNB
+from sklearn.naive_bayes import ComplementNB, GaussianNB, MultinomialNB, BernoulliNB
 from workplace.forone.tools import cut_word
 
 
@@ -27,10 +27,9 @@ def get_feature_prob(X, y):
         value = dict(sorted(value.items(), key=lambda x: (float(x[1])), reverse=True))
         new_value = {}
         keys = value.keys()
-        if len(keys) > 100:
-            for k in list(keys)[0:int(0.4 * len(keys))]:
-                new_value[k] = value[k]
-            to_dict[key] = new_value
+        for k in list(keys)[0:int(len(keys))]:
+            new_value[k] = value[k]
+        to_dict[key] = new_value
     keys = to_dict.keys()
     values = to_dict.values()
     df = pd.DataFrame({'category': keys, 'keyword': values})
@@ -73,12 +72,12 @@ def out_keyword(to_dict):
     category_words = []
     for key, value in to_dict.items():
         keys = value.keys()
-        core_word = {}
+        core_word = []
         category_word = {}
-        for k in list(keys)[0:int(0.4 * len(keys))]:
+        for k in list(keys)[0:int(0.002 * len(keys))]:
             category_word[k] = value[k]
-        for k in list(keys)[int(0.4 * len(keys)):]:
-            core_word[k] = value[k]
+        for k in list(keys)[int(0.002 * len(keys)):]:
+            core_word.append(k)
         category_words.append(category_word)
         core_words.append(core_word)
     result_model = pd.DataFrame(
@@ -94,9 +93,9 @@ def out_keyword_no_weight(to_dict):
         keys = value.keys()
         core_word = []
         category_word = []
-        for k in list(keys)[0:int(0.4 * len(keys))]:
+        for k in list(keys)[0:int(0.1 * len(keys))]:
             category_word.append(k)
-        for k in list(keys)[int(0.4 * len(keys)):]:
+        for k in list(keys)[int(0.1 * len(keys)):int(0.3 * len(keys))]:
             core_word.append(k)
         category_words.append(category_word)
         core_words.append(core_word)
@@ -109,7 +108,7 @@ def out_keyword_no_weight(to_dict):
 def calculate_category(names):
     model_data = pd.read_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv',
                              usecols=['category', 'category_words'])
-    categories = names.apply(judge_category, args=(model_data))
+    categories = names.apply(judge_category, args=model_data)
     df = pd.DataFrame({'names': names, 'category': categories})
     df.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\atest.csv', index=False)
 
@@ -133,12 +132,15 @@ def judge_category(name, model_data):
 
 def forecast_results(X, y):
     c_nb = ComplementNB()
+    nb2 = MultinomialNB()
+    nb3 = BernoulliNB()
     transfer = TfidfTransformer()
     X = transfer.fit_transform(X)
-    c_nb.fit(X, y)
-    print(c_nb.predict(X))
-    print("准确率为:", c_nb.score(X, y))
-    print(c_nb.predict_proba(X))
+    for model in [c_nb, nb2, nb3]:
+        model.fit(X, y)
+        print(model.predict(X))
+        print("准确率为:", model.score(X, y))
+    # print(c_nb.predict_proba(X))
 
 
 def new_forecast_results(x, y):
