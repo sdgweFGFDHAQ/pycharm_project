@@ -34,7 +34,7 @@ def get_feature_prob(X, y):
     keys = to_dict.keys()
     values = to_dict.values()
     df = pd.DataFrame({'category': keys, 'keyword': values})
-    df.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\filename.csv', index=False)
+    df.to_csv('../filename.csv', index=False)
     return to_dict
 
 
@@ -83,7 +83,7 @@ def out_keyword(to_dict):
         core_words.append(core_word)
     result_model = pd.DataFrame(
         {'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
-    result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv', index=False)
+    result_model.to_csv('../result_model.csv', index=False)
 
 
 # 输出指定格式的模型,不带权重
@@ -102,19 +102,19 @@ def out_keyword_no_weight(to_dict):
         core_words.append(core_word)
     result_model = pd.DataFrame(
         {'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
-    result_model.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model_no_weight.csv', index=False)
+    result_model.to_csv('../result_model_no_weight.csv', index=False)
 
 
 # 判断新数据
 def calculate_category(names):
     categories = []
-    model_data = pd.read_csv('E:\\pyProjects\\pycharm_project\\workplace\\result_model.csv',
+    model_data = pd.read_csv('../result_model.csv',
                              usecols=['category', 'category_words'])
     for name_list in names['cut_name'].values:
         category = judge_category(name_list, model_data)
         categories.append(category)
     df = pd.DataFrame({'names': names['name'], 'category': categories})
-    df.to_csv('E:\\pyProjects\\pycharm_project\\workplace\\atest.csv', index=False)
+    df.to_csv('../atest.csv', index=False)
 
 
 def judge_category(name_list, model_data):
@@ -151,7 +151,7 @@ def forecast_results(X, y):
 
 def new_forecast_results(x, y):
     count = 0
-    csv = pd.read_csv('E:\\pyProjects\\pycharm_project\\workplace\\atest.csv')
+    csv = pd.read_csv('../atest.csv')
     category = list(csv['category'])
     for i in range(len(y)):
         if y[i] == category[i]:
