@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import ComplementNB, GaussianNB, MultinomialNB, BernoulliNB
 from workplace.forone.tools import cut_word
+import sys
 
 
 # 获得特征词权重
@@ -106,46 +107,51 @@ def out_keyword_no_weight(to_dict):
 
 # 判断新数据
 def calculate_category(names):
-    model_data = pd.read_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\result_model.csv',
+    categories = []
+    model_data = pd.read_csv('E:\\pyProjects\\pycharm_project\\workplace\\result_model.csv',
                              usecols=['category', 'category_words'])
-    categories = names.apply(judge_category, args=model_data)
-    df = pd.DataFrame({'names': names, 'category': categories})
-    df.to_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\atest.csv', index=False)
+    for name_list in names['cut_name'].values:
+        category = judge_category(name_list, model_data)
+        categories.append(category)
+    df = pd.DataFrame({'names': names['name'], 'category': categories})
+    df.to_csv('E:\\pyProjects\\pycharm_project\\workplace\\atest.csv', index=False)
 
 
-def judge_category(name, model_data):
-    word_list = cut_word(name)
+def judge_category(name_list, model_data):
+    sort_result = {}
     probability = dict(zip(model_data['category'].tolist(), np.zeros((len(model_data['category'])))))
-    result = []
-    for word in word_list:
+    for word in name_list:
         for index, row in model_data.iterrows():
-            if word.__contains__(row['category_words']):
-                probability[row['category']] = ast.literal_eval(row['category_words'])[word]
+            category_words_dict = ast.literal_eval(row['category_words'])
+            if word in category_words_dict:
+                probability[row['category']] += category_words_dict[word]
         sort_result0 = dict(sorted(probability.items(), key=lambda x: (float(x[1])), reverse=True))
-        sort_result = {}
         keys = sort_result0.keys()
         for k in list(keys)[0:int(0.1 * len(keys))]:
             sort_result[k] = sort_result0[k]
-        result.append(sort_result)
-    return result
+    return sort_result
 
 
 def forecast_results(X, y):
     c_nb = ComplementNB()
-    nb2 = MultinomialNB()
-    nb3 = BernoulliNB()
+    # nb2 = MultinomialNB()
+    # nb3 = BernoulliNB()
     transfer = TfidfTransformer()
     X = transfer.fit_transform(X)
-    for model in [c_nb, nb2, nb3]:
-        model.fit(X, y)
-        print(model.predict(X))
-        print("准确率为:", model.score(X, y))
+    print(sys.getsizeof(X) / 1024 / 1024, 'MB')
+    # for model in [c_nb, nb2, nb3]:
+    #     model.fit(X, y)
+    #     print(model.predict(X))
+    #     print("准确率为:", model.score(X, y))
+    c_nb.fit(X, y)
+    print(c_nb.predict(X))
+    print("准确率为:", c_nb.score(X, y))
     # print(c_nb.predict_proba(X))
 
 
 def new_forecast_results(x, y):
     count = 0
-    csv = pd.read_csv('E:\\testwhat\pyProjects\\testPY\\workplace\\atest.csv')
+    csv = pd.read_csv('E:\\pyProjects\\pycharm_project\\workplace\\atest.csv')
     category = list(csv['category'])
     for i in range(len(y)):
         if y[i] == category[i]:
