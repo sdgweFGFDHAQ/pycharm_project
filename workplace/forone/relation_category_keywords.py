@@ -39,10 +39,11 @@ def get_feature_prob(X, y):
         for i_key in kd_keyword:
             if i_key not in cnd_cut_name:
                 word_weight[i_key] = mean
-            word_weight[i_key] = mean + 0.1
+            else:
+                word_weight[i_key] = mean + 0.1
         result_dict[cnd_category] = word_weight
     df = pd.DataFrame({'category': result_dict.keys(), 'keyword': result_dict.values()})
-    df.to_csv('../filename.csv', index=False)
+    # df.to_csv('../filename.csv', index=False)
     return result_dict
 
 
