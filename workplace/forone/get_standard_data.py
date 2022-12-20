@@ -1,24 +1,34 @@
 from ast import literal_eval
 import pandas as pd
+import numpy as np
 from workplace.forone.tools import cut_word
 from workplace.forone.count_category_num import count_the_number_of_categories
-from workplace.forone.relation_category_keywords import get_feature_prob, out_keyword, forecast_results, calculate_category, new_forecast_results
+from workplace.forone.relation_category_keywords import get_feature_prob, out_keyword, forecast_results, \
+    calculate_category, new_forecast_results
 
 
+# 读取原始文件,将数据格式标准化
 def set_file_standard_data(path):
     csv_data = pd.read_csv(path, usecols=['name', 'category1_new', 'category2_new', 'category3_new'])
     # 用一级标签填充空白(NAN)的二级标签、三级标签
     csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
     csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
-    # 得到标准数据
-    csv_data['cut_name'] = csv_data['name'].apply(cut_word)
-    csv_data.to_csv('../standard_store_gz.csv', columns=['name', 'category3_new', 'cut_name'])
-    # 各级标签映射字典
+    # 得到各级标签映射字典
     category = csv_data[['category1_new', 'category2_new', 'category3_new']]
     category = category.drop_duplicates(keep='first')
     category.reset_index(inplace=True, drop=True)
     category.to_csv('../category_dict.csv')
     print("类别个数：", len(category['category3_new']))
+    # 得到标准数据
+    csv_data['cut_name'] = csv_data['name'].apply(cut_word)
+    csv_data.to_csv('../standard_store_gz.csv', columns=['name', 'category3_new', 'cut_name'])
+    # 读取分类标准, 设置每个类别对应的关键字
+    category_cut_name = csv_data[['category3_new', 'cut_name']]
+    # 相比numpy().append(), concatenate()效率更高，适合大规模的数据拼接
+    ccn = category_cut_name.groupby(by='category3_new')['cut_name']\
+        .apply(lambda x: list(np.unique(np.concatenate(list(x)))))
+    cnd = pd.DataFrame({'category3_new': ccn.index, 'cut_name': ccn.values})
+    cnd.to_csv('../cut_name_dict.csv')
 
 
 def set_category_words():
@@ -29,7 +39,7 @@ def set_category_words():
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'])
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=2000)
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(10))
     return csv_data

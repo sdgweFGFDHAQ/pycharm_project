@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import ComplementNB, GaussianNB, MultinomialNB, BernoulliNB
-from workplace.forone.tools import cut_word
 import sys
 
 
@@ -13,29 +12,38 @@ def get_feature_prob(X, y):
     c_nb = ComplementNB()
     c_nb.fit(X, y)
     feature_prob = pd.DataFrame(c_nb.feature_log_prob_, index=c_nb.classes_, columns=X.columns)
+    # 获取根据贝叶斯计算的权重
     to_dict = feature_prob.to_dict(orient='index')
+    # 只获取该类别下出现过的关键词
+    cut_name_dict = pd.read_csv('../cut_name_dict.csv')
+    # 获取预设的关键词
     keyword_dict = pd.read_csv('../keyword_dict.csv')
-    for key, value in to_dict.items():
-        if key not in keyword_dict['category'].values:
-            pd.concat([keyword_dict, pd.DataFrame({'category': key, 'keyword': list(value.keys())})], axis=0)
-            # keyword_dict.append({'category': key, 'keyword': list(value.keys())}, ignore_index=True)
-        mean = np.mean(list(value.values()))
-        ndarray_values = str(keyword_dict.loc[keyword_dict['category'] == key, 'keyword'].values)
-        values = re.sub(r"\[|\]|'|\"", '', ndarray_values).split(',')
-        for i_key in values:
-            if i_key not in value.keys():
-                value[i_key] = mean + 0.1
-        value = dict(sorted(value.items(), key=lambda x: (float(x[1])), reverse=True))
-        new_value = {}
-        keys = value.keys()
-        for k in list(keys)[0:int(len(keys))]:
-            new_value[k] = value[k]
-        to_dict[key] = new_value
-    keys = to_dict.keys()
-    values = to_dict.values()
-    df = pd.DataFrame({'category': keys, 'keyword': values})
+    # 获取每个类别对应的权重
+    result_dict = dict()
+    for index, row in cut_name_dict.iterrows():
+        cnd_category = row['category3_new']
+        cnd_cut_name = ast.literal_eval(row['cut_name'])
+        word_weight = dict()
+        if cnd_category not in to_dict.keys():
+            continue
+        kv_weight = to_dict[cnd_category]
+        # 把to_dict里对应的权重赋给cut_name_dict
+        for kw in cnd_cut_name:
+            if kw not in kv_weight.keys():
+                continue
+            word_weight[kw] = kv_weight[kw]
+        # 把keyword_dict的关键词，加上平均值赋给cut_name_dict
+        mean = np.mean(list(word_weight.values()))
+        ndarray_values = str(keyword_dict.loc[keyword_dict['category'] == cnd_category, 'keyword'].values)
+        kd_keyword = re.sub(r"\[|\]|'|\"", '', ndarray_values).split(',')
+        for i_key in kd_keyword:
+            if i_key not in cnd_cut_name:
+                word_weight[i_key] = mean
+            word_weight[i_key] = mean + 0.1
+        result_dict[cnd_category] = word_weight
+    df = pd.DataFrame({'category': result_dict.keys(), 'keyword': result_dict.values()})
     df.to_csv('../filename.csv', index=False)
-    return to_dict
+    return result_dict
 
 
 def update_keyword(X, y):
@@ -68,21 +76,21 @@ def update_keyword(X, y):
 
 
 # 输出指定格式的模型,带权重
-def out_keyword(to_dict):
+def out_keyword(prob):
     core_words = []
     category_words = []
-    for key, value in to_dict.items():
+    for key, value in prob.items():
         keys = value.keys()
         core_word = []
         category_word = {}
-        for k in list(keys)[0:int(0.002 * len(keys))]:
+        for k in list(keys)[0:int(0.03 * len(keys))]:
             category_word[k] = value[k]
-        for k in list(keys)[int(0.002 * len(keys)):]:
+        for k in list(keys)[int(0.03 * len(keys)):]:
             core_word.append(k)
         category_words.append(category_word)
         core_words.append(core_word)
     result_model = pd.DataFrame(
-        {'category': to_dict.keys(), 'category_words': category_words, 'core_words': core_words})
+        {'category': prob.keys(), 'category_words': category_words, 'core_words': core_words})
     result_model.to_csv('../result_model.csv', index=False)
 
 
