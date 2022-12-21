@@ -54,13 +54,13 @@ if __name__ == '__main__':
     # 先构建一个空间向量再说
     data = get_data()
     dummy = count_the_number_of_categories(data)
-    prob = get_feature_prob(dummy, data['category3_new'])
+    # prob = get_feature_prob(dummy, data['category3_new'])
     # 输出指定格式的模型
-    out_keyword(prob)
+    # out_keyword(prob)
     # out_keyword_no_weight(prob)
     # update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
-    # forecast_results(dummy, data['category3_new'])
+    forecast_results(dummy, data['category3_new'])
     # d_f = data.sample(n=100, random_state=111, axis=0)
     # d_f['cut_name'] = d_f['name'].apply(cut_word)
     # calculate_category(d_f)

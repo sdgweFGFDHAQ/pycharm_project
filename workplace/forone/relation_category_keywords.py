@@ -35,15 +35,19 @@ def get_feature_prob(X, y):
         # 把keyword_dict的关键词，加上平均值赋给cut_name_dict
         mean = np.mean(list(word_weight.values()))
         ndarray_values = str(keyword_dict.loc[keyword_dict['category'] == cnd_category, 'keyword'].values)
-        kd_keyword = re.sub(r"\[|\]|'|\"", '', ndarray_values).split(',')
+        kd_keyword = re.sub(r"\[|\]|'|\"", '', ndarray_values)
+        kd_keyword = kd_keyword.replace(' ', '').split(',')
         for i_key in kd_keyword:
+            if i_key not in word_weight:
+                continue
             if i_key not in cnd_cut_name:
                 word_weight[i_key] = mean
             else:
-                word_weight[i_key] = mean + 0.1
-        result_dict[cnd_category] = word_weight
+                word_weight[i_key] += 0.1
+        desc_word_weight = dict(sorted(word_weight.items(), key=lambda x: (float(x[1])), reverse=True))
+        result_dict[cnd_category] = desc_word_weight
     df = pd.DataFrame({'category': result_dict.keys(), 'keyword': result_dict.values()})
-    # df.to_csv('../filename.csv', index=False)
+    df.to_csv('../filename.csv', index=False)
     return result_dict
 
 
@@ -80,14 +84,18 @@ def update_keyword(X, y):
 def out_keyword(prob):
     core_words = []
     category_words = []
-    for key, value in prob.items():
-        keys = value.keys()
+    for category, words in prob.items():
+        key_word = words.keys()
         core_word = []
-        category_word = {}
-        for k in list(keys)[0:int(0.03 * len(keys))]:
-            category_word[k] = value[k]
-        for k in list(keys)[int(0.03 * len(keys)):]:
-            core_word.append(k)
+        category_word = dict()
+        # 对特征词切片，区分品类词和核心词
+        if len(key_word) < 50:
+            category_word = words
+        else:
+            for k in list(key_word)[:50]:
+                category_word[k] = words[k]
+            for k in list(key_word)[50:]:
+                core_word.append(k)
         category_words.append(category_word)
         core_words.append(core_word)
     result_model = pd.DataFrame(
