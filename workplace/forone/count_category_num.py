@@ -15,7 +15,6 @@ def count_the_number_of_categories(csv_data):
         for word in csv_data['cut_name'].iloc[index]:
             if word in new_word_list:
                 dummies.loc[index, word] += 1
-    # dummies = pd.get_dummies(word_list)
     print('特征词转向量:{}'.format(dummies.head(3)))
     return dummies
     # return dummies.astype('category')

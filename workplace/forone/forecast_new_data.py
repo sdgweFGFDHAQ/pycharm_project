@@ -1,6 +1,6 @@
 import ast
 import sys
-
+import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import ComplementNB
@@ -38,7 +38,7 @@ def forecast_results(X, y):
     # nb2 = MultinomialNB()
     # nb3 = BernoulliNB()
     transfer = TfidfTransformer()
-    X = transfer.fit_transform(list(X))
+    X = transfer.fit_transform(X)
     print(sys.getsizeof(X) / 1024 / 1024, 'MB')
     # for model in [c_nb, nb2, nb3]:
     #     model.fit(X, y)
