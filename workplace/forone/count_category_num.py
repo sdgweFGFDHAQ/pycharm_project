@@ -18,6 +18,7 @@ def count_the_number_of_categories(csv_data):
     # dummies = pd.get_dummies(word_list)
     print('特征词转向量:{}'.format(dummies.head(3)))
     return dummies
+    # return dummies.astype('category')
 
 
 # 提取高频词的向量空间

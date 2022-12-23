@@ -1,10 +1,11 @@
+import time
 from ast import literal_eval
 import pandas as pd
 import numpy as np
 from workplace.forone.tools import cut_word
 from workplace.forone.count_category_num import count_the_number_of_categories
-from workplace.forone.relation_category_keywords import get_feature_prob, out_keyword, forecast_results, \
-    calculate_category, new_forecast_results
+from workplace.forone.relation_category_keywords import get_feature_prob, get_feature_prob_part, out_keyword
+from workplace.forone.forecast_new_data import forecast_results, calculate_category, new_forecast_results
 
 
 # 读取原始文件,将数据格式标准化
@@ -53,14 +54,17 @@ if __name__ == '__main__':
     # set_category_words()
     # 先构建一个空间向量再说
     data = get_data()
+    print("=========开始处理数据========", time.localtime(time.time()))
     dummy = count_the_number_of_categories(data)
-    # prob = get_feature_prob(dummy, data['category3_new'])
+    print("=======结束构建空间向量=======", time.localtime(time.time()))
+    prob = get_feature_prob(dummy, data['category3_new'])
+    print("=========结束权重计算========", time.localtime(time.time()))
     # 输出指定格式的模型
     # out_keyword(prob)
     # out_keyword_no_weight(prob)
     # update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
-    forecast_results(dummy, data['category3_new'])
+    # forecast_results(data['cut_name'], data['category3_new'])
     # d_f = data.sample(n=100, random_state=111, axis=0)
     # d_f['cut_name'] = d_f['name'].apply(cut_word)
     # calculate_category(d_f)
