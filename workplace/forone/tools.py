@@ -6,7 +6,7 @@ def cut_word(word):
     out_word_list = []
     # 清洗特殊字符
     word = re.sub(r'\(.*?\)', '', word)
-    word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]|[丨]', '', word)
+    word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]|(丨)', '', word)
     # 形如:"EXO店x铺excelAxB" 去除x
     word = re.sub(r'(?<=[\u4e00-\u9fa5])(x|X)(?=[\u4e00-\u9fa5])|(?<=[A-B])x(?=[A-B])', '', word)
     # 设置不可分割的词
