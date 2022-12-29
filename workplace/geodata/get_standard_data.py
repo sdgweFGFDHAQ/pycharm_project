@@ -24,11 +24,11 @@ def get_data_from_CSV():
 def cut_word(word):
     out_word_list = []
     # 加载停用词
-    stop_words = [line.strip() for line in open('../stop_word_plug.txt', 'r', encoding='utf-8').readlines()]
+    stop_words = [line.strip() for line in open('../useless_word.txt', 'r', encoding='utf-8').readlines()]
     word = re.sub(r'\(.*?\)', '', word)
     word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', word)
     # 不可分割的词
-    with open('../inseparable_word_list.txt', 'r', encoding='utf-8') as in_word:
+    with open('../no_cut_word.txt', 'r', encoding='utf-8') as in_word:
         for iw in in_word:
             iw = iw.strip('\n')
             jieba.suggest_freq(iw, True)

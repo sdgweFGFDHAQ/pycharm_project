@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 
 
-# 原始向量空间
-def count_the_number_of_categories(csv_data):
+# 特征向量化
+def feature_vectorization(csv_data):
     word_list = []
     for v in csv_data['cut_name']:
         word_list.extend(v)
@@ -15,7 +15,7 @@ def count_the_number_of_categories(csv_data):
         for word in csv_data['cut_name'].iloc[index]:
             if word in new_word_list:
                 dummies.loc[index, word] += 1
-    print('特征词转向量:{}'.format(dummies.head(3)))
+    print('特征词转向量:{}'.format(dummies.head(10)))
     return dummies
     # return dummies.astype('category')
 
