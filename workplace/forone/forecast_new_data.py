@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.naive_bayes import ComplementNB
+from sklearn.naive_bayes import ComplementNB, MultinomialNB, BernoulliNB
 
 
 # 判断新数据
@@ -39,15 +39,15 @@ def forecast_results(X, y):
     # nb3 = BernoulliNB()
     transfer = TfidfTransformer()
     X = transfer.fit_transform(X)
-    print(sys.getsizeof(X) / 1024 / 1024, 'MB')
     # for model in [c_nb, nb2, nb3]:
     #     model.fit(X, y)
+    #     print(sys.getsizeof(X) / 1024 / 1024, 'MB')
     #     print(model.predict(X))
     #     print("准确率为:", model.score(X, y))
     c_nb.fit(X, y)
     print(c_nb.predict(X))
     print("准确率为:", c_nb.score(X, y))
-    # print(c_nb.predict_proba(X))
+    print(c_nb.predict_proba(X))
 
 
 def new_forecast_results(x, y):

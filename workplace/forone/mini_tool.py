@@ -1,6 +1,6 @@
 import re
 import jieba
-
+import logging
 
 def cut_word(word):
     out_word_list = []
@@ -15,11 +15,10 @@ def cut_word(word):
             iw = iw.strip('\n')
             jieba.suggest_freq(iw, True)
     l_cut_words = jieba.lcut(word)
-    print(l_cut_words)
     # 人工去除明显无用的词
     stop_words = [line.strip() for line in open('../useless_word.txt', 'r', encoding='utf-8').readlines()]
     for lc_word in l_cut_words:
         if lc_word not in stop_words:
             if lc_word != '\t':
                 out_word_list.append(lc_word)
-    return ' '.join(out_word_list)
+    return out_word_list

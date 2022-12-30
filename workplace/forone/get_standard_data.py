@@ -2,8 +2,8 @@ import time
 from ast import literal_eval
 import pandas as pd
 import numpy as np
-from workplace.forone.tools import cut_word
-from workplace.forone.count_category_num import feature_vectorization
+from workplace.forone.mini_tool import cut_word
+from workplace.forone.count_category_num import feature_vectorization, reduce_by_IGR
 from workplace.forone.relation_category_keywords import get_feature_prob, get_feature_prob_part, out_keyword
 from workplace.forone.forecast_new_data import forecast_results, calculate_category, new_forecast_results
 
@@ -48,25 +48,28 @@ def get_data():
 
 if __name__ == '__main__':
     # 前期准备：获取店名数据，统计三级分类
-    # data_path = '../di_store_gz.csv'
-    # set_file_standard_data(data_path)
-    # 前期准备：更新每种类别对应的关键字
+    # set_file_standard_data(SP.DATA_PATH)
+    # 前期准备：人为设置每种类别的关键字
     # set_category_words()
-    # 先构建一个空间向量再说
+    # 获取标准数据
     data = get_data()
     print("=========开始处理数据========", time.localtime(time.time()))
+    # 构建一个向量空间
     dummy = feature_vectorization(data)
+    # 计算信息增益降维
+    new_dummy = reduce_by_IGR(dummy, data['category3_new'])
     print("=======结束构建空间向量=======", time.localtime(time.time()))
-    prob = get_feature_prob_part(dummy, data['category3_new'])
-    print("=========结束权重计算========", time.localtime(time.time()))
+    # 获取权重
+    # prob = get_feature_prob(new_dummy, data['category3_new'])
+    # print("=========结束权重计算========", time.localtime(time.time()))
     # 输出指定格式的模型
-    # out_keyword(prob)
+    # result_model = out_keyword(prob)
+    # print(result_model.head(10))
     # out_keyword_no_weight(prob)
-    # update_keyword(dummy, data['category3_new'])
     # 计算模型准确率
-    forecast_results(dummy, data['category3_new'])
+    forecast_results(new_dummy, data['category3_new'])
     # d_f = data.sample(n=100, random_state=111, axis=0)
     # d_f['cut_name'] = d_f['name'].apply(cut_word)
     # calculate_category(d_f)
     # new_forecast_results(d_f['name'], d_f['category3_new'])
-    print("=======代码结束=======", time.localtime(time.time()))
+    # print("=======代码结束=======", time.localtime(time.time()))

@@ -1,35 +1,40 @@
 import numpy as np
 import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer, TfidfVectorizer
+from sklearn.feature_selection import mutual_info_classif
+from workplace.forone.global_parameter import StaticParameter as SP
 
 
 # 特征向量化
 def feature_vectorization(csv_data):
-    word_list = []
-    for v in csv_data['cut_name']:
-        word_list.extend(v)
-    new_word_list = list(set(word_list))
-    # new_word_list.sort(key=word_list.index)
-    print(new_word_list[:10])
-    dummies = pd.DataFrame(np.zeros((len(csv_data), len(new_word_list)), dtype=np.int8), columns=new_word_list)
-    for index in range(0, len(csv_data)):
-        for word in csv_data['cut_name'].iloc[index]:
-            if word in new_word_list:
-                dummies.loc[index, word] += 1
-    print('特征词转向量:{}'.format(dummies.head(10)))
-    return dummies
+    cut_name_list = list()
+    for i in csv_data['cut_name']:
+        cut_name_list.append(' '.join(i))
+    c_v = CountVectorizer()
+    transform = c_v.fit_transform(cut_name_list)
+    vector_matrix = transform.toarray().astype(np.int8)
+    dummy = pd.DataFrame(vector_matrix, index=csv_data['name'], columns=c_v.get_feature_names_out())
+    # 提取高频词的向量空间
+    dummy_sum = dummy.sum()
+    useless_feature = []
+    for index, num in dummy_sum.items():
+        if num < SP.MIN_NUMBER or num > dummy_sum.sum() * SP.MAX_RATE:
+            useless_feature.append(index)
+    dummy.drop(useless_feature, axis=1, inplace=True)
+    return dummy
     # return dummies.astype('category')
 
 
-# 提取高频词的向量空间
-def get_categories(word_list_key, csv_data):
-    word_list = word_list_key[: int(0.8 * len(word_list_key))]
-    print(word_list)
-    dummies = pd.DataFrame(np.zeros((len(csv_data), len(word_list))), columns=word_list)
-    for index in range(0, len(csv_data)):
-        for word in csv_data['cut_name'].iloc[index]:
-            if word in word_list:
-                dummies.loc[index, word] = 1
-    return dummies
+def reduce_by_IGR(dummy, category):
+    igr_list = dict(zip(dummy.columns, mutual_info_classif(dummy, category, discrete_features=True)))
+    low_igr_feature = list()
+    igr_dict = dict(sorted(igr_list.items(), key=lambda x: (float(x[1])), reverse=False))
+    print(igr_dict)
+    for k in list(igr_dict.keys())[:int(SP.LOW_IGR_PERCENT * len(igr_dict))]:
+        low_igr_feature.append(k)
+    dummy.drop(low_igr_feature, axis=1, inplace=True)
+    print('去除低信息增益的特征:{}'.format(dummy.head(5)))
+    return dummy
 
 
 def get_info_gain_rate(dummies, categories):

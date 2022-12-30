@@ -11,6 +11,7 @@ def get_feature_prob(X, y):
     result_dict = calculate_feature_prob(X, y)
     df = pd.DataFrame({'category': result_dict.keys(), 'keyword': result_dict.values()})
     df.to_csv('../filename.csv', index=False)
+    return df
 
 
 # 计算特征词权重
@@ -133,7 +134,7 @@ def out_keyword(prob):
     result_model = pd.DataFrame(
         {'category': prob.keys(), 'category_words': category_words, 'core_words': core_words})
     result_model.to_csv('../result_model.csv', index=False)
-
+    return result_model
 
 # 输出指定格式的模型,不带权重
 def out_keyword_no_weight(to_dict):
