@@ -33,12 +33,12 @@ def judge_category(name_list, model_data):
     return sort_result
 
 
-def forecast_results(X, y):
+def forecast_results(dummy, y):
     c_nb = ComplementNB()
     # nb2 = MultinomialNB()
     # nb3 = BernoulliNB()
     transfer = TfidfTransformer()
-    X = transfer.fit_transform(X)
+    X = transfer.fit_transform(dummy)
     # for model in [c_nb, nb2, nb3]:
     #     model.fit(X, y)
     #     print(sys.getsizeof(X) / 1024 / 1024, 'MB')

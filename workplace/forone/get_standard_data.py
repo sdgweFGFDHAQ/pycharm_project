@@ -3,7 +3,7 @@ from ast import literal_eval
 import pandas as pd
 import numpy as np
 from workplace.forone.mini_tool import cut_word
-from workplace.forone.count_category_num import feature_vectorization, reduce_by_IGR
+from workplace.forone.count_category_num import feature_vectorization, reduce_by_mutual
 from workplace.forone.relation_category_keywords import get_feature_prob, get_feature_prob_part, out_keyword
 from workplace.forone.forecast_new_data import forecast_results, calculate_category, new_forecast_results
 
@@ -35,14 +35,15 @@ def set_file_standard_data(path):
 def set_category_words():
     category_keyword = pd.read_csv('../di_keyword_map.csv')
     ck = category_keyword.groupby(by='category')['keyword'].apply(list)
+    print(ck)
     ck.to_csv('../keyword_dict.csv')
     print("品类种数：", len(ck))
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=20000)
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=30000)
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
-    print(csv_data.head(10))
+    print(csv_data.head(3))
     return csv_data
 
 
@@ -57,17 +58,15 @@ if __name__ == '__main__':
     # 构建一个向量空间
     dummy = feature_vectorization(data)
     # 计算信息增益降维
-    new_dummy = reduce_by_IGR(dummy, data['category3_new'])
+    new_dummy = reduce_by_mutual(dummy, data['category3_new'])
     print("=======结束构建空间向量=======", time.localtime(time.time()))
     # 获取权重
-    # prob = get_feature_prob(new_dummy, data['category3_new'])
-    # print("=========结束权重计算========", time.localtime(time.time()))
+    prob = get_feature_prob(new_dummy, data['category3_new'])
+    print("=========结束权重计算========", time.localtime(time.time()))
     # 输出指定格式的模型
-    # result_model = out_keyword(prob)
-    # print(result_model.head(10))
-    # out_keyword_no_weight(prob)
+    result_model = out_keyword(prob)
     # 计算模型准确率
-    forecast_results(new_dummy, data['category3_new'])
+    # forecast_results(new_dummy, data['category3_new'])
     # d_f = data.sample(n=100, random_state=111, axis=0)
     # d_f['cut_name'] = d_f['name'].apply(cut_word)
     # calculate_category(d_f)

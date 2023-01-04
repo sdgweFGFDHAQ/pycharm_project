@@ -1,12 +1,16 @@
+import logging
 import time
 from ast import literal_eval
 import sys
+from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
 import numpy
+import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer, CountVectorizer
 from sklearn.naive_bayes import ComplementNB, BernoulliNB, MultinomialNB
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
+from sklearn.feature_selection import mutual_info_classif
 from workplace.forone.count_category_num import feature_vectorization
 from workplace.forone.mini_tool import cut_word
 
@@ -20,15 +24,50 @@ def test_transform():
         str_data = ' '.join(list1)
         lll.append(str_data)
     print(lll)
-    vectorized = TfidfVectorizer()
-    transform = vectorized.fit_transform(lll)
-    toarray = transform.toarray()
+    vectorized = CountVectorizer()
+    toarray = vectorized.fit_transform(lll).astype(np.int8).toarray()
     print(toarray)
+    print(csc_matrix(toarray).sum(axis=0))
     s3 = time.localtime(time.time())
+
+
+def test_getCategory():
+    csv_data = pd.read_csv('aaa.csv', usecols=['name', 'category3_new', 'cut_name'])
+    csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
+    dummy = feature_vectorization(csv_data)
+    print(dummy)
+    classif = mutual_info_classif(dummy, csv_data['category3_new'], discrete_features=True)
+    igr_list = dict(zip(dummy.columns, classif))
+    print(igr_list)
+
+
+def test_dict_遍历性能():
+    dict1 = {}
+    dict0 = dict()
+    for j in range(88):
+        dict1['类别' + str(j)] = j - 1
+    for i in range(100000):
+        dict0['特征' + str(i)] = dict1
+    print(dict0)
+    list1 = []
+    list0 = {}
+    for n in range(100000):
+        list1.append('特征' + str(n))
+    for m in range(88):
+        list0['类别' + str(m)] = list1
+    print(list0)
+    print(time.localtime(time.time()))
+    for a, b in dict0.items():
+        for c, d in b.items():
+            list_x = list0[c]
+            if a in list_x:
+                continue
+    print(time.localtime(time.time()))
 
 
 if __name__ == '__main__':
     test_transform()
+    # test_dict_遍历性能()
 
 
 def log_record():
