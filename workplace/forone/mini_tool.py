@@ -2,6 +2,7 @@ import re
 import jieba
 import logging
 
+
 def cut_word(word):
     out_word_list = []
     # 清洗特殊字符
@@ -22,3 +23,7 @@ def cut_word(word):
             if lc_word != '\t':
                 out_word_list.append(lc_word)
     return out_word_list
+
+
+def error_callback(error):
+    print(f"Error info: {error}")

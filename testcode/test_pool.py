@@ -33,6 +33,7 @@ def pool_test():
     pool.close()
     pool.join()
     print(c)
+    return c
 
 
 def co_num(a, b, c):

@@ -2,6 +2,7 @@ import logging
 import time
 from ast import literal_eval
 import sys
+import os
 from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
 import numpy
 import numpy as np
@@ -11,9 +12,10 @@ from sklearn.naive_bayes import ComplementNB, BernoulliNB, MultinomialNB
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import mutual_info_classif
+from multiprocessing import Manager, Pool
 from workplace.forone.count_category_num import feature_vectorization
 from workplace.forone.mini_tool import cut_word
-
+from testcode.test_pool import pool_test
 
 def test_transform():
     csv_data = pd.read_csv('./aaa.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=5)
@@ -46,12 +48,12 @@ def test_dict_遍历性能():
     dict0 = dict()
     for j in range(88):
         dict1['类别' + str(j)] = j - 1
-    for i in range(100000):
+    for i in range(10000):
         dict0['特征' + str(i)] = dict1
     print(dict0)
     list1 = []
     list0 = {}
-    for n in range(100000):
+    for n in range(10000):
         list1.append('特征' + str(n))
     for m in range(88):
         list0['类别' + str(m)] = list1
@@ -65,9 +67,34 @@ def test_dict_遍历性能():
     print(time.localtime(time.time()))
 
 
+def test_dict():
+    dict_list = [{'a1': 1},{'a2': 2},{'a3': 3},{'a4': 4}]
+    series = pd.Series(['a', 'b', 'c'])
+    print(series.values)
+    manager_dict = Manager().dict()
+    for i in series.values:
+        manager_dict[i] = dict()
+    print(manager_dict)
+    pool = Pool(processes=4)
+    for i in range(4):
+        pool.apply_async(use_update, args=(dict_list[i], manager_dict))
+    pool.close()
+    pool.join()
+    print("就此结束", manager_dict)
+    return manager_dict
+
+
+def use_update(new_dict, manager_dict):
+    # manager_dict['a'].update(new_dict)
+    copy = manager_dict['a']|new_dict
+    manager_dict['a'] = copy
+    print("{}:{}".format(os.getpid(), manager_dict))
+
+
 if __name__ == '__main__':
-    test_transform()
+    # test_transform()
     # test_dict_遍历性能()
+    double_dict = test_dict()
 
 
 def log_record():
