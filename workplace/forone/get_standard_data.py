@@ -43,35 +43,35 @@ def set_category_words():
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=100000)
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=20000)
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(3))
     return csv_data
 
 
 if __name__ == '__main__':
+    # print("=======数据标准化======", time.localtime(time.time()))
     # 前期准备：获取店名数据，统计三级分类
     # set_file_standard_data(SP.DATA_PATH)
     # 前期准备：人为设置每种类别的关键字
     # set_category_words()
+    # print("=======数据标准化结束======", time.localtime(time.time()))
+    print("=======开始数据预处理======", time.localtime(time.time()))
     # 获取标准数据
     data = get_data()
-    print("=========开始处理数据========", time.localtime(time.time()))
     # 构建一个向量空间
     dummy = feature_vectorization(data)
     # 计算信息增益降维
     new_dummy = reduce_by_mutual(dummy, data['category3_new'])
-    print("=======结束构建空间向量=======", time.localtime(time.time()))
+    print("=====结束构建空间向量=====", time.localtime(time.time()))
     # 获取权重
     prob = get_feature_prob_part(new_dummy, data['category3_new'])
     keywords = add_artificial_keywords(prob)
-    print("=========结束权重计算========", time.localtime(time.time()))
+    print("=======结束权重计算======", time.localtime(time.time()))
     # 输出指定格式的模型
     result_model = out_keyword(keywords)
-    # 计算模型准确率
+    print("=======结束分类模型写入文件======", time.localtime(time.time()))
+    # print("=======开始贝叶斯分类预测======", time.localtime(time.time()))
+    # 比对分类模型准确率
     # forecast_results(new_dummy, data['category3_new'])
-    # d_f = data.sample(n=100, random_state=111, axis=0)
-    # d_f['cut_name'] = d_f['name'].apply(cut_word)
-    # calculate_category(d_f)
-    # new_forecast_results(d_f['name'], d_f['category3_new'])
-    # print("=======代码结束=======", time.localtime(time.time()))
+    # print("=======结束贝叶斯分类预测======", time.localtime(time.time()))

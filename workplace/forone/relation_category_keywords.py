@@ -13,9 +13,7 @@ from workplace.forone.global_parameter import StaticParameter as SP
 def get_feature_prob(X, y) -> dict:
     c_nb = ComplementNB()
     c_nb.fit(X, y)
-    c_nb.feature_log_prob_ = -c_nb.feature_log_prob_
-    feature_prob = pd.DataFrame(np.float32(np.exp(c_nb.feature_log_prob_)), index=c_nb.classes_, columns=X.columns)
-    # feature_prob = pd.DataFrame(np.float32(c_nb.feature_log_prob_), index=c_nb.classes_, columns=X.columns)
+    feature_prob = pd.DataFrame(np.float32(c_nb.feature_log_prob_), index=c_nb.classes_, columns=X.columns)
     # 获取根据贝叶斯计算的权重
     to_dict = feature_prob.to_dict(orient='index')
     # 只获取该类别下出现过的关键词
@@ -32,7 +30,6 @@ def get_feature_prob(X, y) -> dict:
             if feature in to_dict[cnd_category].keys():
                 word_weight[feature] = to_dict[cnd_category][feature]
         feature_weight_dict[cnd_category] = word_weight
-    print(feature_weight_dict)
     return feature_weight_dict
 
 
@@ -53,7 +50,6 @@ def get_feature_prob_part(X, y) -> dict:
                          error_callback=error_callback)
     pool.close()
     pool.join()
-    print(result_dict)
     return result_dict
 
 
@@ -62,8 +58,7 @@ def calculate_feature_prob_part(dummy_i, y, cut_name_dict, result_dict) -> dict:
     c_nb = ComplementNB()
     c_nb.fit(dummy_i, y)
     # 把取对数的feature_log_prob_值还原成概率
-    c_nb.feature_log_prob_ = -c_nb.feature_log_prob_
-    feature_prob = pd.DataFrame(np.float32(np.exp(c_nb.feature_log_prob_)), index=c_nb.classes_,
+    feature_prob = pd.DataFrame(np.float32(c_nb.feature_log_prob_), index=c_nb.classes_,
                                 columns=dummy_i.columns)
     # 获取根据贝叶斯计算的权重
     to_dict = feature_prob.to_dict(orient='index')
@@ -101,10 +96,9 @@ def add_artificial_keywords(result_dict):
             if i_key not in result_dict[key].keys():
                 word_weight[i_key] = mean
             else:
-                word_weight[i_key] = mean * 1.5
+                word_weight[i_key] = result_dict[key][i_key] * 1.5
         feature_weight_dict[key].update(word_weight)
         feature_weight_dict[key] = dict(sorted(feature_weight_dict[key].items(), key=lambda x: (float(x[1])), reverse=True))
-    print(feature_weight_dict)
     return feature_weight_dict
 
 
@@ -129,6 +123,6 @@ def out_keyword(prob):
     result_model = pd.DataFrame(
         {'category': prob.keys(), 'category_words': category_words, 'core_words': core_words})
     result_model.to_csv('../result_model.csv', index=False)
-    print(result_model.head(10))
+    print(result_model.head(5))
     return result_model
 # float_format='%.3f'

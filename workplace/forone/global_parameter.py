@@ -1,4 +1,5 @@
 class StaticParameter:
+    """训练样本集"""
     # 原始数据文件路径
     DATA_PATH = '../di_store_gz.csv'
     # 人工设置每种类别的关键词
@@ -13,3 +14,6 @@ class StaticParameter:
     LOW_IGR_PERCENT = 0.4
     # 品类词切分个数
     CATEGORY_WORDS_NUM = 100
+    """测试样本集"""
+    # 待分类数据文件路径
+    TEST_DATA_PATH = '../di_store_gz.csv'

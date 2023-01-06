@@ -1,9 +1,12 @@
-import ast
 import sys
+import time
+from ast import literal_eval
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import ComplementNB, MultinomialNB, BernoulliNB
+from workplace.forone.global_parameter import StaticParameter as SP
+from workplace.forone.mini_tool import cut_word
 
 
 # 判断新数据
@@ -33,12 +36,12 @@ def judge_category(name_list, model_data):
     return sort_result
 
 
-def forecast_results(dummy, y):
+def forecast_results(csv_data):
     c_nb = ComplementNB()
     # nb2 = MultinomialNB()
     # nb3 = BernoulliNB()
     transfer = TfidfTransformer()
-    X = transfer.fit_transform(dummy)
+    X = transfer.fit_transform(csv_data['cut_name'])
     # for model in [c_nb, nb2, nb3]:
     #     model.fit(X, y)
     #     print(sys.getsizeof(X) / 1024 / 1024, 'MB')
@@ -58,3 +61,21 @@ def new_forecast_results(x, y):
         if y[i] == category[i]:
             count += 1
     return count / len(y)
+
+
+if __name__ == '__main__':
+    print("=======数据分词提取特征=======", time.localtime(time.time()))
+    # 店名分词
+    csv_data = pd.read_csv(SP.TEST_DATA_PATH, usecols=['name'], nrows=100)
+    csv_data['cut_name'] = csv_data['name'].apply(cut_word)
+    csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
+    print(csv_data.head(3))
+    print("=======结束分词=======", time.localtime(time.time()))
+    # 获得分类结果
+    calculate_category(csv_data)
+    # 计算模型准确率
+    new_forecast_results(csv_data['name'], csv_data['category3_new'])
+    print("=======结束预测=======", time.localtime(time.time()))
+    # 比对贝叶斯
+    forecast_results(csv_data)
+    print("=======结束贝叶斯分类=======", time.localtime(time.time()))
