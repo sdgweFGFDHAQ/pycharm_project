@@ -12,7 +12,7 @@ from workplace.forone.forecast_new_data import bayes_forecast_results, classify_
 
 # 读取原始文件,将数据格式标准化
 def set_file_standard_data(path) -> str:
-    csv_data = pd.read_csv(path, usecols=['name', 'category1_new', 'category2_new', 'category3_new'])
+    csv_data = pd.read_csv(path, usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'])
     # 用一级标签填充空白(NAN)的二级标签、三级标签
     csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
     csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
@@ -24,7 +24,7 @@ def set_file_standard_data(path) -> str:
     print("类别个数：", len(category['category3_new']))
     # 得到标准数据
     csv_data['cut_name'] = csv_data['name'].apply(cut_word)
-    csv_data.to_csv('../standard_store_gz.csv', columns=['name', 'category3_new', 'cut_name'])
+    csv_data.to_csv('../standard_store_gz.csv', columns=['id', 'name', 'category3_new', 'cut_name'])
     # 读取分类标准, 设置每个类别对应的关键字
     category_cut_name = csv_data[['category3_new', 'cut_name']]
     # 相比numpy().append(), concatenate()效率更高，适合大规模的数据拼接
@@ -45,7 +45,7 @@ def set_category_words() -> str:
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=150000)
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['id', 'name', 'category3_new', 'cut_name'], nrows=200000)
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(3))
     return csv_data
@@ -53,7 +53,7 @@ def get_data():
 
 if __name__ == '__main__':
     # print("=======数据标准化======", time.localtime(time.time()))
-    # 前期准备：获取店名数据，统计三级分类
+    # # 前期准备：获取店名数据，统计三级分类
     # set_file_standard_data(SP.DATA_PATH)
     # 前期准备：人为设置每种类别的关键字
     # set_category_words()

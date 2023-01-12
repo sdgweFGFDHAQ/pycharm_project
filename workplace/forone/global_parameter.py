@@ -1,7 +1,8 @@
 class StaticParameter:
     """训练样本集"""
     # 原始数据文件路径
-    DATA_PATH = '../di_store_gz.csv'
+    DATA_PATH = '../76W.csv'
+    # DATA_PATH = '../di_store_gz.csv'
     # 人工设置每种类别的关键词
     KEY_WORD_PATH = '../di_keyword_map.csv'
     # 对店名分词字段
