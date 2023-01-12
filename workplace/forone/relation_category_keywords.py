@@ -54,7 +54,7 @@ def get_feature_prob_part(X, y) -> dict:
 
 
 # 计算特征词权重-多进程
-def calculate_feature_prob_part(dummy_i, y, cut_name_dict, result_dict) -> dict:
+def calculate_feature_prob_part(dummy_i, y, cut_name_dict, result_dict):
     c_nb = ComplementNB()
     c_nb.fit(dummy_i, y)
     # 把取对数的feature_log_prob_值还原成概率
@@ -88,7 +88,10 @@ def add_artificial_keywords(result_dict):
         word_weight = dict()
         if key not in result_dict:
             continue
-        mean = np.mean(list(result_dict[key].values()))
+        if len(result_dict[key].keys()) == 0:
+            mean = 0
+        else:
+            mean = np.mean(list(result_dict[key].values()))
         keyword_list = keyword_dict[key]
         kd_keyword = re.sub(r"\[|\]|'|\"", '', keyword_list)
         kd_keyword = kd_keyword.replace(' ', '').split(',')
@@ -98,7 +101,8 @@ def add_artificial_keywords(result_dict):
             else:
                 word_weight[i_key] = result_dict[key][i_key] * 1.5
         feature_weight_dict[key].update(word_weight)
-        feature_weight_dict[key] = dict(sorted(feature_weight_dict[key].items(), key=lambda x: (float(x[1])), reverse=True))
+        feature_weight_dict[key] = dict(
+            sorted(feature_weight_dict[key].items(), key=lambda x: (float(x[1])), reverse=True))
     return feature_weight_dict
 
 

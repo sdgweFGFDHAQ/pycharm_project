@@ -16,4 +16,4 @@ class StaticParameter:
     CATEGORY_WORDS_NUM = 100
     """测试样本集"""
     # 待分类数据文件路径
-    TEST_DATA_PATH = '../di_store_gz.csv'
+    TEST_DATA_PATH = '../standard_store_gz.csv'

@@ -7,11 +7,11 @@ from workplace.forone.global_parameter import StaticParameter as SP
 from workplace.forone.count_category_num import feature_vectorization, reduce_by_mutual
 from workplace.forone.relation_category_keywords import get_feature_prob, get_feature_prob_part, \
     add_artificial_keywords, out_keyword
-from workplace.forone.forecast_new_data import forecast_results, calculate_category, new_forecast_results
+from workplace.forone.forecast_new_data import bayes_forecast_results, classify_forecast_results
 
 
 # 读取原始文件,将数据格式标准化
-def set_file_standard_data(path):
+def set_file_standard_data(path) -> str:
     csv_data = pd.read_csv(path, usecols=['name', 'category1_new', 'category2_new', 'category3_new'])
     # 用一级标签填充空白(NAN)的二级标签、三级标签
     csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
@@ -28,18 +28,20 @@ def set_file_standard_data(path):
     # 读取分类标准, 设置每个类别对应的关键字
     category_cut_name = csv_data[['category3_new', 'cut_name']]
     # 相比numpy().append(), concatenate()效率更高，适合大规模的数据拼接
-    ccn = category_cut_name.groupby(by='category3_new')['cut_name']\
+    ccn = category_cut_name.groupby(by='category3_new')['cut_name'] \
         .apply(lambda x: list(np.unique(np.concatenate(list(x)))))
     cnd = pd.DataFrame({'category3_new': ccn.index, 'cut_name': ccn.values})
     cnd.to_csv('../cut_name_dict.csv')
+    return '../cut_name_dict.csv'
 
 
-def set_category_words():
+def set_category_words() -> str:
     category_keyword = pd.read_csv(SP.KEY_WORD_PATH)
     ck_series = category_keyword.groupby(by='category')['keyword'].apply(list)
     keyword_csv = pd.DataFrame(ck_series)
     keyword_csv.to_csv('../keyword_dict.csv')
     print("品类种数：", len(ck_series))
+    return '../keyword_dict.csv'
 
 
 def get_data():
@@ -73,5 +75,6 @@ if __name__ == '__main__':
     print("=======结束分类模型写入文件======", time.localtime(time.time()))
     # print("=======开始贝叶斯分类预测======", time.localtime(time.time()))
     # 比对分类模型准确率
-    # forecast_results(new_dummy, data['category3_new'])
+    # classify_forecast_results()
+    # bayes_forecast_results(new_dummy, data['category3_new'])
     # print("=======结束贝叶斯分类预测======", time.localtime(time.time()))
