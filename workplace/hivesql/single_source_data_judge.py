@@ -131,15 +131,15 @@ def judge_data_s(x_df1: pd.DataFrame, x_df2: pd.DataFrame):
 
 
 if __name__ == '__main__':
-    # c_time = 'createtime'
-    # yy_table = 'di_store_yy_display'
-    # # yy_df = get_connection(c_time, yy_table)
+    c_time = 'createtime'
+    yy_table = 'di_store_yy_display'
+    yy_df = get_connection(c_time, yy_table)
     # yy_df = pd.read_csv('yy_data.csv', usecols=['storeid', 'createtime'])
-    # judge_data(yy_df)
+    judge_data(yy_df)
 
-    time_list = ['createtime', 'create_time']
-    table_list = ['di_store_hn_display_project', 'di_store_hn_display_purchase']
-    hn_df1, hn_df2 = get_connection_s(time_list, table_list)
+    # time_list = ['createtime', 'create_time']
+    # table_list = ['di_store_hn_display_project', 'di_store_hn_display_purchase']
+    # hn_df1, hn_df2 = get_connection_s(time_list, table_list)
     # hn_df1 = pd.read_csv('hn_data1.csv', usecols=['storeid', 'createtime'])
     # hn_df2 = pd.read_csv('hn_data2.csv', usecols=['storeid', 'createtime'])
     # judge_data_s(hn_df1, hn_df2)
