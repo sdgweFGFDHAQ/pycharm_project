@@ -45,7 +45,7 @@ def set_category_words() -> str:
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=20000)
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=150000)
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(3))
     return csv_data
@@ -73,8 +73,4 @@ if __name__ == '__main__':
     # 输出指定格式的模型
     result_model = out_keyword(keywords)
     print("=======结束分类模型写入文件======", time.localtime(time.time()))
-    # print("=======开始贝叶斯分类预测======", time.localtime(time.time()))
-    # 比对分类模型准确率
-    # classify_forecast_results()
-    # bayes_forecast_results(new_dummy, data['category3_new'])
-    # print("=======结束贝叶斯分类预测======", time.localtime(time.time()))
+

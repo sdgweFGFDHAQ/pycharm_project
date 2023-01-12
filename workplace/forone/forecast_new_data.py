@@ -37,26 +37,27 @@ def classify_forecast_results(names_data):
 
 
 def calculate_accuracy(tset_data):
-    real_result = tset_data['category3_new'].values()
+    real_result = list(tset_data['category3_new'])
     forecast_result = list()
     classify_data = pd.read_csv('../atest.csv')
-    categories = literal_eval(classify_data['category_result'])
+    categories = classify_data['category_result'].apply(literal_eval)
     for category in categories:
-        forecast_result.append(category[0])
+        forecast_result.append(list(category.keys())[0])
     # 计算
     count = 0
     data_num = len(real_result)
     for i in range(data_num):
         if real_result[i] == forecast_result[i]:
             count += 1
-    return count / data_num
+    print("分类模型准确率：", count / data_num)
 
 
 def bayes_forecast_results(test_data):
     # 训练贝叶斯模型
-    train_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=10000)
+    train_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=40000)
+    train_data['cut_name'] = train_data['cut_name'].apply(literal_eval)
     cut_name_list = list()
-    for i in train_data['cut_name']:
+    for i in list(train_data['cut_name']):
         cut_name_list.append(' '.join(i))
     c_v = CountVectorizer()
     train_x = c_v.fit_transform(cut_name_list).astype(np.int8)
@@ -73,12 +74,10 @@ def bayes_forecast_results(test_data):
     cut_name_list = list()
     for i in test_data['cut_name']:
         cut_name_list.append(' '.join(i))
-    c_v = CountVectorizer()
-    test_x = c_v.fit_transform(cut_name_list).astype(np.int8)
+    test_x = c_v.transform(cut_name_list).astype(np.int8)
     predict_result = c_nb.predict(test_x)
     print(predict_result)
-    with open('../predict_result.txt', 'r') as file:
-        file.write(predict_result)
+    pd.DataFrame(predict_result, columns=['category']).to_csv('../predict_result.csv')
     print("准确率为:", c_nb.score(test_x, test_data['category3_new']))
 
 
@@ -90,13 +89,16 @@ if __name__ == '__main__':
     # csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     # print(csv_data.head(3))
     # 店名分词-有标签的测试数据
-    test_data = pd.read_csv(SP.TEST_DATA_PATH, usecols=['name', 'category3_new'], nrows=10)
+    test_data = pd.read_csv(SP.TEST_DATA_PATH, usecols=['name', 'category3_new'], nrows=100)
     test_data['cut_name'] = test_data['name'].apply(cut_word)
     print(test_data.head(3))
     print("=======结束分词=======", time.localtime(time.time()))
+    print("=======开始分类模型分类预测======", time.localtime(time.time()))
     # 计算模型准确率
     classify_forecast_results(test_data)
+    calculate_accuracy(test_data)
     print("=======结束预测=======", time.localtime(time.time()))
+    print("=======开始贝叶斯模型分类预测======", time.localtime(time.time()))
     # 比对贝叶斯
     bayes_forecast_results(test_data)
-    print("=======结束贝叶斯分类=======", time.localtime(time.time()))
+    print("=======结束贝叶斯模型分类预测=======", time.localtime(time.time()))
