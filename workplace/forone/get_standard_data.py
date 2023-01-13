@@ -14,6 +14,8 @@ from workplace.forone.forecast_new_data import bayes_forecast_results, classify_
 def set_file_standard_data(path) -> str:
     csv_data = pd.read_csv(path, usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'])
     # 用一级标签填充空白(NAN)的二级标签、三级标签
+    csv_data = csv_data[csv_data['category1_new'].notnull() & (csv_data['category1_new'] != "")]
+    # 删除至少有3个NaN值的行 # data = data.dropna(axis=0, thresh=3)
     csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
     csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
     # 得到各级标签映射字典
@@ -45,7 +47,8 @@ def set_category_words() -> str:
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['id', 'name', 'category3_new', 'cut_name'], nrows=200000)
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['id', 'name', 'category3_new', 'cut_name'],
+                           nrows=20000)
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(3))
     return csv_data
@@ -55,7 +58,7 @@ if __name__ == '__main__':
     # print("=======数据标准化======", time.localtime(time.time()))
     # # 前期准备：获取店名数据，统计三级分类
     # set_file_standard_data(SP.DATA_PATH)
-    # 前期准备：人为设置每种类别的关键字
+    # # 前期准备：人为设置每种类别的关键字
     # set_category_words()
     # print("=======数据标准化结束======", time.localtime(time.time()))
     print("=======开始数据预处理======", time.localtime(time.time()))
@@ -73,4 +76,3 @@ if __name__ == '__main__':
     # 输出指定格式的模型
     result_model = out_keyword(keywords)
     print("=======结束分类模型写入文件======", time.localtime(time.time()))
-

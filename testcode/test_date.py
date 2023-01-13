@@ -1,10 +1,11 @@
 import datetime, time
 from dateutil.relativedelta import relativedelta
+import pandas as pd
 
 
 def trans():
     # 时间戳转日期
-    timestamp = 1670987512869
+    timestamp = 1670371048124
     time_local = time.localtime(timestamp / 1000)
     print(time_local)
     dt = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
@@ -28,10 +29,17 @@ def trans():
     t2 = time.strptime(str(font_6_time), "%Y-%m-%d")
     font_6 = int(time.mktime(t2))
     print(font_6)
-    print(now-font_6)
-    print((now - font_6)/3600/24/30)
+    print(now - font_6)
+    print((now - font_6) / 3600 / 24 / 30)
 
 
 if __name__ == '__main__':
     trans()
     print(time.localtime(time.time()))
+    lsl = ['20201102', '20210221']
+    df = pd.DataFrame({'date': lsl})
+    df['date'] = pd.to_datetime(df['date'], format='%Y%m%d')
+    print(df)
+    iloc_1 = df.iloc[0]['date']
+    iloc_2 = df.iloc[1]['date']
+    print((iloc_2 - iloc_1).days)
