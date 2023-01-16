@@ -80,8 +80,8 @@ def count_matching_number(ti_list, ta_list):
             # f.write("visit_count: " + str(visit_count) + "\r\n")
             f.write("activity_hn_count: " + str(activity_hn_count) + "\r\n")
             f.write("purchase_hn_count: " + str(purchase_hn_count) + "\r\n")
-    except ZeroDivisionError:
-        print("出错了！")
+    except Exception:
+        print("出错了！ ")
     finally:
         # 关闭连接
         cursor.close()
