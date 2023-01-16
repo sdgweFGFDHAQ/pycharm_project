@@ -51,7 +51,7 @@ def judge_data(x_df1: pd.DataFrame, x_df2: pd.DataFrame, x_df3: pd.DataFrame):
     sum_weight1 = get_weight(x_df1, today_date)
     sum_weight2 = get_weight(x_df2, today_date)
     sum_weight3 = get_weight_8(x_df3, today_date)
-    # 对陈列、交易和拜访表赋权重
+    # 对陈列、交易和拜访表赋权重 a=0.2 b=0.5 c=0.3
     sum_weight1['weight'] = sum_weight1['weight'].apply(lambda x: 0.2 * x)
     sum_weight2['weight'] = sum_weight2['weight'].apply(lambda x: 0.5 * x)
     sum_weight3['weight'] = sum_weight3['weight'].apply(lambda x: 0.3 * x)
@@ -73,13 +73,3 @@ if __name__ == '__main__':
     visit_df = pd.read_csv('.csv', usecols=['storeid', 'createtime'])
     judge_data(display_df, order_df, visit_df)
 
-# from pyhive import hive
-# conn = hive.Connection(host='192.168.0.150',port=10015,
-# username='hive',password='xwbigdata2022',
-# database='standard_db',auth='CUSTOM')
-# cursor = conn.cursor()
-# cursor.execute("SELECT * FROM standard_db.di_store_dedupe LIMIT 10")
-# print(cursor.fetchall())
-# cursor.close()
-# conn.close()
-# a=0.2 b=0.5 c=0.3

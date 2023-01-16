@@ -13,6 +13,7 @@ def get_connection_all(ti_list, ta_list):
                    database='standard_db'  # 数据库
                    )
     cursor = conn.cursor()
+    # cursor.arraysize = 1
     # 陈列信息
     sql_yy = "select tenantcode, storeid, {0} from standard_db.{1} " \
              "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
@@ -57,7 +58,7 @@ def get_connection_all(ti_list, ta_list):
     # 拜访信息
     sql = "select id, storeid, {0} as createname from standard_db.{1} " \
           "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
-          "limit 2000000".format(ti_list[2], ta_list[8])
+          "limit 500000".format(ti_list[2], ta_list[8])
     cursor.execute(sql)
     dl_order = as_pandas(cursor)
     dl_order.to_csv('visit_data.csv')
