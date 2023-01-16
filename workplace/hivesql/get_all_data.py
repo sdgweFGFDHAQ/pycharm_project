@@ -4,7 +4,7 @@ from impala.util import as_pandas
 
 # 1获取目标表中，在di_store_dedupe表中存在且单源的数据df
 def get_connection_all(ti_list, ta_list):
-    # 192.168.0.150
+    #  192.168.0.150
     conn = connect(host='124.71.220.115',  # 主机
                    port=10015,  # 端口
                    auth_mechanism='PLAIN',
