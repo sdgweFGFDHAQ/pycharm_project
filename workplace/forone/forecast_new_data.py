@@ -85,6 +85,7 @@ if __name__ == '__main__':
     print("=======数据分词提取特征=======", time.localtime(time.time()))
     # # 店名分词-无标签的应用数据
     # csv_data = pd.read_csv(SP.TEST_DATA_PATH, usecols=['name'], nrows=100)
+    # csv_data = csv_data[csv_data['category1_new'].notnull() & (csv_data['category1_new'] != "")]
     # csv_data['cut_name'] = csv_data['name'].apply(cut_word)
     # csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     # print(csv_data.head(3))

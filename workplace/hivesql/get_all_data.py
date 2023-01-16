@@ -13,16 +13,16 @@ def get_connection_all(ti_list, ta_list):
                    )
     # 陈列信息
     cursor = conn.cursor()
-    sql_yy = "select storeid, {0} from standard_db.{1} " \
+    sql_yy = "select tenantcode, storeid, {0} from standard_db.{1} " \
              "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
         .format(ti_list[0], ta_list[0])
-    sql_hn = "select storeid, {0} as createname from standard_db.{1} " \
+    sql_hn = "select storeid, display_name, {0} as createname from standard_db.{1} " \
              "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
         .format(ti_list[1], ta_list[2])
-    sql_dl = "select storeid, {0} from standard_db.{1} " \
+    sql_dl = "select tenantcode, storeid, {0} from standard_db.{1} " \
              "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
         .format(ti_list[0], ta_list[5])
-    sql_jdb = "select storeid, {0} from standard_db.{1} " \
+    sql_jdb = "select tenantcode, storeid, {0} from standard_db.{1} " \
               "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
         .format(ti_list[0], ta_list[7])
     sql = sql_yy + " union all " + sql_hn + " union all " + sql_dl + " union all " + sql_jdb
@@ -43,10 +43,10 @@ def get_connection_all(ti_list, ta_list):
     # hn_display_purchase = as_pandas(cursor)
     # hn_display_purchase.to_csv('hn_display_purchase.csv')
     # 交易信息
-    sql_hn = "select storeid, {0} from standard_db.{1} " \
+    sql_hn = "select tenantcode, storeid, {0} from standard_db.{1} " \
              "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
         .format(ti_list[0], ta_list[4])
-    sql_dl = "select storeid, {0} from standard_db.{1} " \
+    sql_dl = "select tenantcode, storeid, {0} from standard_db.{1} " \
              "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
         .format(ti_list[0], ta_list[6])
     sql = sql_hn + " union all " + sql_dl
@@ -54,7 +54,7 @@ def get_connection_all(ti_list, ta_list):
     dl_order = as_pandas(cursor)
     dl_order.to_csv('order_data.csv')
     # 拜访信息
-    sql = "select storeid, {0} as createname from standard_db.{1} " \
+    sql = "select id, storeid, {0} as createname from standard_db.{1} " \
           "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
         .format(ti_list[2], ta_list[8])
     cursor.execute(sql)
