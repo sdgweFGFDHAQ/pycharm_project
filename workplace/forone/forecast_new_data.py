@@ -42,7 +42,10 @@ def calculate_accuracy(tset_data):
     classify_data = pd.read_csv('../atest.csv')
     categories = classify_data['category_result'].apply(literal_eval)
     for category in categories:
-        forecast_result.append(list(category.keys())[0])
+        if list(category.keys()) and category[list(category.keys())[0]]:
+            forecast_result.append(list(category.keys())[0])
+        else:
+            forecast_result.append('-1')
     # 计算
     count = 0
     data_num = len(real_result)

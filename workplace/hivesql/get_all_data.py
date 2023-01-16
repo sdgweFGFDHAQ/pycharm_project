@@ -16,40 +16,33 @@ def get_connection_all(ti_list, ta_list):
     # cursor.arraysize = 1
     # 陈列信息
     sql_yy = "select tenantcode, storeid, {0} from standard_db.{1} " \
-             "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
+             "where storeid in " \
+             "(select original_id from standard_db.di_store_dedupe where appcode <> '高德' and appcode not like '%,%') " \
         .format(ti_list[0], ta_list[0])
     sql_hn = "select storeid, display_name, {0} as createname from standard_db.{1} " \
-             "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
+             "where storeid in " \
+             "(select original_id from standard_db.di_store_dedupe where appcode <> '高德' and appcode not like '%,%') " \
         .format(ti_list[1], ta_list[2])
     sql_dl = "select tenantcode, storeid, {0} from standard_db.{1} " \
-             "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
+             "where storeid in " \
+             "(select original_id from standard_db.di_store_dedupe where appcode <> '高德' and appcode not like '%,%') " \
         .format(ti_list[0], ta_list[5])
     sql_jdb = "select tenantcode, storeid, {0} from standard_db.{1} " \
-              "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
+              "where storeid in " \
+              "(select original_id from standard_db.di_store_dedupe where appcode <> '高德' and appcode not like '%,%') " \
         .format(ti_list[0], ta_list[7])
     sql = "(" + sql_yy + ") union all (" + sql_hn + ") union all (" + sql_dl + ") union all (" + sql_jdb + ")"
     cursor.execute(sql)
     yy_display = as_pandas(cursor)
     yy_display.to_csv('display_data.csv')
-    # sql = "select storeid, {0} from standard_db.{1} " \
-    #       "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
-    #       .format(ti_list[0], ta_list[1])
-    # cursor.execute(sql)
-    # hn_display = as_pandas(cursor)
-    # hn_display.to_csv('hn_activity.csv')
-
-    # sql = "select storeid, {0} from standard_db.{1} " \
-    #       "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
-    #       .format(ti_list[0], ta_list[3])
-    # cursor.execute(sql)
-    # hn_display_purchase = as_pandas(cursor)
-    # hn_display_purchase.to_csv('hn_display_purchase.csv')
     # 交易信息
     sql_hn = "select tenantcode, storeid, {0} from standard_db.{1} " \
-             "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
+             "where storeid in " \
+             "(select original_id from standard_db.di_store_dedupe where appcode <> '高德' and appcode not like '%,%') " \
         .format(ti_list[0], ta_list[4])
     sql_dl = "select tenantcode, storeid, {0} from standard_db.{1} " \
-             "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
+             "where storeid in " \
+             "(select original_id from standard_db.di_store_dedupe where appcode <> '高德' and appcode not like '%,%') " \
         .format(ti_list[0], ta_list[6])
     sql = sql_hn + " union all " + sql_dl
     cursor.execute(sql)
@@ -59,6 +52,9 @@ def get_connection_all(ti_list, ta_list):
     sql = "select id, storeid, {0} as createname from standard_db.{1} " \
           "where storeid in (select original_id from standard_db.di_store_dedupe where appcode not like '%,%') " \
           "limit 500000".format(ti_list[2], ta_list[8])
+    # "select count(DISTINCT storeid) from standard_db.di_store_visit_all as t1
+    # inner join standard_db.di_store_dedupe t
+    # on t.appcode <> '高德' and t.appcode not like '%,%' and t1.storeid=t.original_id"
     cursor.execute(sql)
     dl_order = as_pandas(cursor)
     dl_order.to_csv('visit_data.csv')
