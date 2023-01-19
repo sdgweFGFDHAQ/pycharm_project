@@ -70,6 +70,6 @@ def judge_data(x_df1: pd.DataFrame, x_df2: pd.DataFrame, x_df3: pd.DataFrame):
 if __name__ == '__main__':
     display_df = pd.read_csv('display_data.csv', usecols=['storeid', 'createtime'])
     order_df = pd.read_csv('order_data.csv', usecols=['storeid', 'createtime'])
-    visit_df = pd.read_csv('.csv', usecols=['storeid', 'createtime'])
+    visit_df = pd.read_csv('visit_data.csv', usecols=['storeid', 'createtime'])
     judge_data(display_df, order_df, visit_df)
 

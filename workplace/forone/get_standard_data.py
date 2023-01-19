@@ -47,8 +47,7 @@ def set_category_words() -> str:
 
 
 def get_data():
-    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['id', 'name', 'category3_new', 'cut_name'],
-                           nrows=20000)
+    csv_data = pd.read_csv('../standard_store_gz.csv', usecols=['id', 'name', 'category3_new', 'cut_name'])
     csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     print(csv_data.head(3))
     return csv_data

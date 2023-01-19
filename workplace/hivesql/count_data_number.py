@@ -1,15 +1,11 @@
-from impala.dbapi import connect
+# from impala.dbapi import connect
+from pyhive import hive
 
 
 # 对查询表数据量进行统计
 def count_matching_number(ti_list, ta_list):
-    conn = connect(host='124.71.220.115',  # 主机
-                   port=10015,  # 端口
-                   auth_mechanism='PLAIN',
-                   user='hive',  # 用户
-                   password='xwbigdata2022',
-                   database='standard_db'  # 数据库
-                   )
+    conn = hive.Connection(host='192.168.0.150', port=10015, username='hive', password='xwbigdata2022',
+                           database='standard_db', auth='CUSTOM')
     cursor = conn.cursor()
     try:
         # 陈列信息表
