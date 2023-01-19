@@ -5,7 +5,7 @@ from impala.dbapi import connect
 def count_matching_number(ti_list, ta_list):
     conn = connect(host='124.71.220.115',  # 主机
                    port=10015,  # 端口
-                   auth_mechanism='CUSTOM',
+                   auth_mechanism='PLAIN',
                    user='hive',  # 用户
                    password='xwbigdata2022',
                    database='standard_db'  # 数据库
