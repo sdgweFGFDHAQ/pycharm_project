@@ -4,19 +4,18 @@ from impala.util import as_pandas
 
 # 1获取目标表中，在di_store_dedupe表中存在且单源的数据df
 def get_connection_all(ti_list, ta_list):
-    global cursor, conn
+    #  192.168.0.150
+    # 124.71.220.115
+    conn = connect(host='192.168.0.150',  # 主机
+                   port=10015,  # 端口
+                   auth_mechanism='CUSTOM',
+                   user='hive',  # 用户
+                   password='xwbigdata2022',
+                   database='standard_db'  # 数据库
+                   )
+    cursor = conn.cursor()
+    # cursor.arraysize = 1
     try:
-        #  192.168.0.150
-        # 124.71.220.115
-        conn = connect(host='192.168.0.150',  # 主机
-                       port=10015,  # 端口
-                       auth_mechanism='CUSTOM',
-                       user='hive',  # 用户
-                       password='xwbigdata2022',
-                       database='standard_db'  # 数据库
-                       )
-        cursor = conn.cursor()
-        # cursor.arraysize = 1
         # 陈列信息
         sql_yy = "select storeid, {0} from standard_db.{1} sd " \
                  "inner join standard_db.di_store_dedupe dedupe " \
