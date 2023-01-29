@@ -56,19 +56,22 @@ def judge_data(x_df1: pd.DataFrame, x_df2: pd.DataFrame, x_df3: pd.DataFrame):
     critical_weight2 = get_threshold(x_df2, font_6_time)
     critical_weight3 = get_threshold_8(x_df3, today_date - relativedelta(months=6))
     critical_weight = (critical_weight1 + critical_weight2 + critical_weight3) / 3
+    print('critical_weight', critical_weight1, ',', critical_weight2, ',', critical_weight3, ',', critical_weight)
     # 3根据时间-权重映射函数计算单源企业数据的权重值weight
     sum_weight1 = get_weight(x_df1, today_date)
     sum_weight2 = get_weight(x_df2, today_date)
     sum_weight3 = get_weight_8(x_df3, today_datetime)
+    sum_weight3.to_csv('13.csv')
     # 对陈列、交易和拜访表赋权重 a=0.2 b=0.5 c=0.3
-    sum_weight1['weight'] = sum_weight1['weight'].apply(lambda x: 0.2 * x)
-    sum_weight2['weight'] = sum_weight2['weight'].apply(lambda x: 0.5 * x)
-    sum_weight3['weight'] = sum_weight3['weight'].apply(lambda x: 0.3 * x)
+    sum_weight1['weight'] = sum_weight1['weight'].apply(lambda x: 0.05 * x)
+    sum_weight2['weight'] = sum_weight2['weight'].apply(lambda x: 0.10 * x)
+    sum_weight3['weight'] = sum_weight3['weight'].apply(lambda x: 0.85 * x)
     s_w = sum_weight1.add(sum_weight2, fill_value=0)
     sum_weight = s_w.add(sum_weight3, fill_value=0)
     # 4根据最终的sum_weight和critical_weight打标，字段为is_existence（是否存在），计算percentage（存在概率）
     percent_df = pd.DataFrame(sum_weight).reset_index()
     diff_num = percent_df['weight'].max() - percent_df['weight'].min()
+    print(diff_num)
     critical_percentage = (critical_weight - percent_df['weight'].min()) / diff_num
     percent_df['percentage'] = (percent_df['weight'] - percent_df['weight'].min()) / diff_num
     result_df = percent_df[percent_df.percentage >= critical_percentage]
