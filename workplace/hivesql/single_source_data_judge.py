@@ -99,3 +99,4 @@ if __name__ == '__main__':
     visit_df = pd.read_csv('visit_data.csv', usecols=['storeid', 'createtime'],
                            dtype={"storeid": str, "createtime": str})
     judge_data(display_df, order_df, visit_df)
+
