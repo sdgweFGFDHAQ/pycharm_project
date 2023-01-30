@@ -37,19 +37,23 @@ def classify_forecast_results(names_data):
 
 
 def calculate_accuracy(tset_data):
+    bayes_results = bayes_forecast_results(test_data)
     real_result = list(tset_data['category3_new'])
     forecast_result = list()
     classify_data = pd.read_csv('../atest.csv')
     categories = classify_data['category_result'].apply(literal_eval)
     for category in categories:
-        if list(category.keys()) and category[list(category.keys())[0]]:
-            forecast_result.append(list(category.keys())[0])
+        result_k = list(category.keys())[0]
+        if category.get(result_k) == 0 or category.get(result_k) == '0':
+            forecast_result.append('无')
         else:
-            forecast_result.append('-1')
+            forecast_result.append(result_k)
     # 计算
     count = 0
     data_num = len(real_result)
     for i in range(data_num):
+        if forecast_result[i] == '无':
+            forecast_result[i] = bayes_results[i]
         if real_result[i] == forecast_result[i]:
             count += 1
     print("分类模型准确率：", count / data_num)
@@ -57,7 +61,7 @@ def calculate_accuracy(tset_data):
 
 def bayes_forecast_results(test_data):
     # 训练贝叶斯模型
-    train_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=40000)
+    train_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=80000)
     train_data['cut_name'] = train_data['cut_name'].apply(literal_eval)
     cut_name_list = list()
     for i in list(train_data['cut_name']):
@@ -82,6 +86,7 @@ def bayes_forecast_results(test_data):
     print(predict_result)
     pd.DataFrame(predict_result, columns=['category']).to_csv('../predict_result.csv')
     print("准确率为:", c_nb.score(test_x, test_data['category3_new']))
+    return list(predict_result)
 
 
 if __name__ == '__main__':
@@ -102,7 +107,7 @@ if __name__ == '__main__':
     classify_forecast_results(test_data)
     calculate_accuracy(test_data)
     print("=======结束预测=======", time.localtime(time.time()))
-    print("=======开始贝叶斯模型分类预测======", time.localtime(time.time()))
+    # print("=======开始贝叶斯模型分类预测======", time.localtime(time.time()))
     # 比对贝叶斯
-    bayes_forecast_results(test_data)
-    print("=======结束贝叶斯模型分类预测=======", time.localtime(time.time()))
+    # bayes_forecast_results(test_data)
+    # print("=======结束贝叶斯模型分类预测=======", time.localtime(time.time()))
