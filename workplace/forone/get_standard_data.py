@@ -7,7 +7,6 @@ from workplace.forone.global_parameter import StaticParameter as SP
 from workplace.forone.count_category_num import feature_vectorization, reduce_by_mutual
 from workplace.forone.relation_category_keywords import get_feature_prob, get_feature_prob_part, \
     add_artificial_keywords, out_keyword
-from workplace.forone.forecast_new_data import bayes_forecast_results, classify_forecast_results
 
 
 # 读取原始文件,将数据格式标准化
@@ -68,10 +67,10 @@ if __name__ == '__main__':
     # 计算信息增益降维
     new_dummy = reduce_by_mutual(dummy, data['category3_new'])
     print("=====结束构建空间向量=====", time.localtime(time.time()))
-    # 获取权重
-    prob = get_feature_prob_part(new_dummy, data['category3_new'])
-    keywords = add_artificial_keywords(prob)
-    print("=======结束权重计算======", time.localtime(time.time()))
-    # 输出指定格式的模型
-    result_model = out_keyword(keywords)
-    print("=======结束分类模型写入文件======", time.localtime(time.time()))
+    # # 获取权重
+    # prob = get_feature_prob_part(new_dummy, data['category3_new'])
+    # keywords = add_artificial_keywords(prob)
+    # print("=======结束权重计算======", time.localtime(time.time()))
+    # # 输出指定格式的模型
+    # result_model = out_keyword(keywords)
+    # print("=======结束分类模型写入文件======", time.localtime(time.time()))

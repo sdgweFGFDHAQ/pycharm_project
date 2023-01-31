@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.naive_bayes import ComplementNB, MultinomialNB, BernoulliNB
+from sklearn.model_selection import train_test_split
+from workplace.forone.get_standard_data import get_data, feature_vectorization, reduce_by_mutual
 from workplace.forone.global_parameter import StaticParameter as SP
 from workplace.forone.mini_tool import cut_word
 
@@ -89,6 +91,18 @@ def bayes_forecast_results(test_data):
     return list(predict_result)
 
 
+def bayes_forecast(train_data, test_data, y_train, y_test):
+    # 训练贝叶斯模型
+    c_nb = ComplementNB()
+    c_nb.fit(train_data, y_train)
+    # 测试
+    predict_result = c_nb.predict(test_data)
+    print(predict_result)
+    pd.DataFrame(predict_result, columns=['category']).to_csv('../predict.csv')
+    print("准确率为:", c_nb.score(test_data, y_test))
+    return list(predict_result)
+
+
 if __name__ == '__main__':
     print("=======数据分词提取特征=======", time.localtime(time.time()))
     # # 店名分词-无标签的应用数据
@@ -98,16 +112,25 @@ if __name__ == '__main__':
     # csv_data['cut_name'] = csv_data['cut_name'].apply(literal_eval)
     # print(csv_data.head(3))
     # 店名分词-有标签的测试数据
-    test_data = pd.read_csv(SP.TEST_DATA_PATH, usecols=['name', 'category3_new'], nrows=100)
-    test_data['cut_name'] = test_data['name'].apply(cut_word)
-    print(test_data.head(3))
-    print("=======结束分词=======", time.localtime(time.time()))
-    print("=======开始分类模型分类预测======", time.localtime(time.time()))
+    # test_data = pd.read_csv(SP.TEST_DATA_PATH, usecols=['name', 'category3_new'], nrows=100)
+    # test_data['cut_name'] = test_data['name'].apply(cut_word)
+    # print(test_data.head(3))
+    # print("=======结束分词=======", time.localtime(time.time()))
+    # print("=======开始分类模型分类预测======", time.localtime(time.time()))
     # 计算模型准确率
-    classify_forecast_results(test_data)
-    calculate_accuracy(test_data)
-    print("=======结束预测=======", time.localtime(time.time()))
+    # classify_forecast_results(test_data)
+    # calculate_accuracy(test_data)
+    # print("=======结束预测=======", time.localtime(time.time()))
     # print("=======开始贝叶斯模型分类预测======", time.localtime(time.time()))
     # 比对贝叶斯
     # bayes_forecast_results(test_data)
     # print("=======结束贝叶斯模型分类预测=======", time.localtime(time.time()))
+    data = get_data()
+    # 构建一个向量空间
+    dummy, c_v = feature_vectorization(data)
+    # 计算信息增益降维
+    new_dummy = reduce_by_mutual(dummy, data['category3_new'])
+    train_data, test_data, y_train, y_test = train_test_split(new_dummy, data['category3_new'], test_size=0.2,
+                                                              random_state=0)
+
+    bayes_forecast(train_data, test_data, y_train, y_test)

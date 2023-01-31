@@ -12,56 +12,62 @@ def get_connection_all(ti_list, ta_list, ac_list):
     cursor = conn.cursor()
     # cursor.arraysize = 1
     try:
-        # 陈列信息
-        sql_yy = "select storeid, {0} from standard_db.{1} sd " \
-                 "inner join standard_db.di_store_dedupe dedupe " \
-                 "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
-            .format(ti_list[0], ta_list[0])
-        sql_hn = "select storeid, {0} as createname from standard_db.{1} sd " \
-                 "inner join standard_db.di_store_dedupe dedupe " \
-                 "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
-            .format(ti_list[1], ta_list[2])
-        sql_dl = "select storeid, {0} from standard_db.{1} sd " \
-                 "inner join standard_db.di_store_dedupe dedupe " \
-                 "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
-            .format(ti_list[0], ta_list[5])
-        sql_jdb = "select storeid, {0} from standard_db.{1} sd " \
-                  "inner join standard_db.di_store_dedupe dedupe " \
-                  "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
-            .format(ti_list[0], ta_list[7])
-        sql = "(" + sql_yy + ") union all (" + sql_hn + ") union all (" + sql_dl + ") union all (" + sql_jdb + ")"
-        cursor.execute(sql)
-        yy_display = as_pandas(cursor)
-        yy_display.to_csv('display_data.csv')
-        # 交易信息
-        sql_hn = "select storeid, {0} from standard_db.{1} sd " \
-                 "inner join standard_db.di_store_dedupe dedupe " \
-                 "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
-            .format(ti_list[0], ta_list[4])
-        sql_dl = "select storeid, {0} from standard_db.{1} sd " \
-                 "inner join standard_db.di_store_dedupe dedupe " \
-                 "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
-            .format(ti_list[0], ta_list[6])
-        sql = sql_hn + " union all " + sql_dl
-        cursor.execute(sql)
-        dl_order = as_pandas(cursor)
-        dl_order.to_csv('order_data.csv')
-        # 拜访信息
-        for ac in ac_list:
-            sql = "select storeid, {0} as createtime from standard_db.{1} sd " \
-                  "inner join standard_db.di_store_dedupe dedupe " \
-                  "on sd.appcode = '{2}' and dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' " \
-                  "and sd.storeid = dedupe.original_id" \
-                .format(ti_list[2], ta_list[8], ac)
-            cursor.execute(sql)
-            dl_order = as_pandas(cursor)
-            dl_order.to_csv('visit_data.csv', mode='a')
+        # # 陈列信息
+        # sql_yy = "select storeid, {0} from standard_db.{1} sd " \
+        #          "inner join standard_db.di_store_dedupe dedupe " \
+        #          "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
+        #     .format(ti_list[0], ta_list[0])
+        # sql_hn = "select storeid, {0} as createname from standard_db.{1} sd " \
+        #          "inner join standard_db.di_store_dedupe dedupe " \
+        #          "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
+        #     .format(ti_list[1], ta_list[2])
+        # sql_dl = "select storeid, {0} from standard_db.{1} sd " \
+        #          "inner join standard_db.di_store_dedupe dedupe " \
+        #          "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
+        #     .format(ti_list[0], ta_list[5])
+        # sql_jdb = "select storeid, {0} from standard_db.{1} sd " \
+        #           "inner join standard_db.di_store_dedupe dedupe " \
+        #           "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
+        #     .format(ti_list[0], ta_list[7])
+        # sql = "(" + sql_yy + ") union all (" + sql_hn + ") union all (" + sql_dl + ") union all (" + sql_jdb + ")"
+        # cursor.execute(sql)
+        # yy_display = as_pandas(cursor)
+        # yy_display.to_csv('display_data.csv')
+        # # 交易信息
+        # sql_hn = "select storeid, {0} from standard_db.{1} sd " \
+        #          "inner join standard_db.di_store_dedupe dedupe " \
+        #          "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
+        #     .format(ti_list[0], ta_list[4])
+        # sql_dl = "select storeid, {0} from standard_db.{1} sd " \
+        #          "inner join standard_db.di_store_dedupe dedupe " \
+        #          "on dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' and sd.storeid = dedupe.original_id" \
+        #     .format(ti_list[0], ta_list[6])
+        # sql = sql_hn + " union all " + sql_dl
+        # cursor.execute(sql)
+        # dl_order = as_pandas(cursor)
+        # dl_order.to_csv('order_data.csv')
+        # # 拜访信息
+        # for ac in ac_list:
+        #     sql = "select storeid, {0} as createtime from standard_db.{1} sd " \
+        #           "inner join standard_db.di_store_dedupe dedupe " \
+        #           "on sd.appcode = '{2}' and dedupe.appcode <> '高德' and dedupe.appcode not like '%,%' " \
+        #           "and sd.storeid = dedupe.original_id" \
+        #         .format(ti_list[2], ta_list[8], ac)
+        #     cursor.execute(sql)
+        #     dl_order = as_pandas(cursor)
+        #     dl_order.to_csv('visit_data.csv', mode='a')
         # while True:
         #     data = cursor.fetchmany(size=50000)
         #     if len(data) == 0:
         #         break
         #     dl_order = as_pandas(data)
         #     dl_order.to_csv('visit_data.csv', mode='a')
+
+        sql = "SELECT a.*, b.appcode from standard_db.di_store_dedupe_recall a " \
+              "left join standard_db.di_store_dedupe b on a.store_id = b.id order by a.same_id limit 10000"
+        cursor.execute(sql)
+        dl_order = as_pandas(cursor)
+        dl_order.to_csv('data1.csv')
     except Exception as e:
         print(str(e))
     finally:

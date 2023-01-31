@@ -29,7 +29,7 @@ def feature_vectorization(csv_data):
             useless_feature.append(feature)
     dummy = pd.DataFrame(vector_matrix, index=csv_data['name'], columns=feature_list)
     dummy.drop(useless_feature, axis=1, inplace=True)
-    return dummy
+    return dummy, c_v
     # return dummies.astype('category')
 
 
