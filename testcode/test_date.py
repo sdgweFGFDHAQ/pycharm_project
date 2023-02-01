@@ -33,13 +33,10 @@ def trans():
     print((now - font_6) / 3600 / 24 / 30)
 
 
+def dwe():
+    df = pd.DataFrame({'d': [1, 3, 4], 'a': [2, 5, 1]})
+    print(5 in df['a'].values)
+
+
 if __name__ == '__main__':
-    trans()
-    print(time.localtime(time.time()))
-    lsl = ['20201102', '20210221']
-    df = pd.DataFrame({'date': lsl})
-    df['date'] = pd.to_datetime(df['date'], format='%Y%m%d')
-    print(df)
-    iloc_1 = df.iloc[0]['date']
-    iloc_2 = df.iloc[1]['date']
-    print((iloc_2 - iloc_1).days)
+    dwe()

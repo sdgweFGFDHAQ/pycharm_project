@@ -2,6 +2,7 @@ import pandas as pd
 import time
 import datetime
 from dateutil.relativedelta import relativedelta
+import math
 
 
 # 2对df判断半年内数据。根据数据分布设置（陈列活动、进货交易、拜访记录）次数阈值critical_weight
@@ -31,7 +32,7 @@ def get_threshold_8(x_df: pd.DataFrame, time_slot):
 def get_weight(x_df: pd.DataFrame, today_date):
     x_df['month'] = x_df['createtime'].apply(
         lambda x: (today_date - datetime.date.fromtimestamp(int(x) // 1000)).days / 30)
-    x_df['weight'] = x_df['month'].apply(lambda x: 1 / (1 + 0.8 * x) if x > 6 else 1.0)
+    x_df['weight'] = x_df['month'].apply(lambda x: 0.6 ** (x - 6) if x > 6 else 1.0)
     print(x_df)
     sum_weight = x_df[['storeid', 'weight']].groupby(by='storeid').sum()
     return sum_weight
@@ -42,7 +43,7 @@ def get_weight_8(x_df: pd.DataFrame, today_date):
     x_df['createtime'] = pd.to_datetime(x_df['createtime'], format='%Y%m%d', errors='coerce')
     x_df['month'] = x_df['createtime'].apply(
         lambda x: (today_date - x).days / 30)
-    x_df['weight'] = x_df['month'].apply(lambda x: 1 / (1 + 0.8 * x) if x > 6 else 1.0)
+    x_df['weight'] = x_df['month'].apply(lambda x: 0.9 ** (x - 6) if x > 6 else 1.0)
     print(x_df)
     sum_weight = x_df[['storeid', 'weight']].groupby(by='storeid').sum()
     return sum_weight
@@ -70,19 +71,20 @@ def judge_data(x_df1: pd.DataFrame, x_df2: pd.DataFrame, x_df3: pd.DataFrame):
     # 4根据最终的sum_weight和critical_weight打标，字段为is_existence（是否存在），计算percentage（存在概率）
     percent_df = pd.DataFrame(sum_weight).reset_index()
     # ===设置阈值，降低最大值========
-    percent_df_max = percent_df[percent_df.weight > critical_weight]
-    print(percent_df_max.index.size)
-    percent_df_min = percent_df[percent_df.weight <= critical_weight]
-    print(percent_df_min.index.size)
-    df1 = separate_percent(percent_df_max, 0.9, 1)
-    df2 = separate_percent(percent_df_min, 0.0, 0.9)
-    df_1_2 = pd.concat([df1, df2])
-    critical_percentage = (critical_weight - df_1_2['weight'].min()) / (
-            df_1_2['weight'].max() - df_1_2['weight'].min())
+    # percent_df_max = percent_df[percent_df.weight > critical_weight]
+    # print(percent_df_max.index.size)
+    # percent_df_min = percent_df[percent_df.weight <= critical_weight]
+    # print(percent_df_min.index.size)
+    # df1 = separate_percent(percent_df_max, 0.9, 1)
+    # df2 = separate_percent1(percent_df_min)
+    # df_1_2 = pd.concat([df1, df2])
+    df_1_2 = separate_percent1(percent_df)
+    critical_percentage = math.atan(critical_weight) * 2 / math.pi
+    print('置信率阈值critical_percentage:', critical_percentage)
     # result_df = df_1_2_3[df_1_2_3.percentage >= critical_percentage]
-    result_df = df_1_2.sort_values(by='percentage').reset_index()
+    result_df = df_1_2.sort_values(by='percentage', ascending=False).reset_index()
     print(result_df)
-    result_df.to_csv('result_df_new.csv')
+    result_df.to_csv('result_df.csv')
 
 
 # Y=a+k(X-Min)
@@ -90,7 +92,14 @@ def separate_percent(df, a, b):
     diff_num = df['weight'].max() - df['weight'].min()
     print(df[df['weight'] == df['weight'].max()])
     print("最大值:", df['weight'].max(), "最小值:", df['weight'].min())
-    df['percentage'] = a + (b - a) * (df['weight'] - df['weight'].min()) / diff_num
+    df['percentage'] = df['weight'].apply(lambda x: a + (b - a) * (x - df['weight'].min()) / diff_num)
+    # df['percentage'] = a + (b - a) * (df['weight'] - df['weight'].min()) / diff_num
+    return df
+
+
+# atan
+def separate_percent1(df):
+    df['percentage'] = df['weight'].apply(lambda x: math.atan(x) * 2 / math.pi)
     return df
 
 
@@ -100,4 +109,3 @@ if __name__ == '__main__':
     visit_df = pd.read_csv('visit_data.csv', usecols=['storeid', 'createtime'],
                            dtype={"storeid": str, "createtime": str})
     judge_data(display_df, order_df, visit_df)
-
