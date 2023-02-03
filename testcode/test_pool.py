@@ -3,6 +3,7 @@ from multiprocessing import Pool, Manager
 import re
 import jieba
 import ast
+from sklearn import preprocessing
 
 
 def resub():
@@ -18,9 +19,10 @@ def resub():
 
 
 def evaltest():
-    value = "{'烤面包': 8.736542888491194, '系列': 9.142007996599357, '兰姐': 9.142007996599357, '旺城': 9.142007996599357,'莱': 9.142007996599357, '茂映': 9.142007996599357, '百家': 8.736542888491194, '林鲜生': 9.142007996599357,'Darling': 9.835155177159303, '升记': 9.142007996599357, '太鱼': 9.142007996599357, '客商': 9.142007996599357}"
-    literal_eval = ast.literal_eval(value)
-    print(literal_eval)
+    value = {'烤面包': 8.755, '系列': 9.142, '兰姐': 9.152, '旺城': 9.172,'莱': 9.442, '茂映': 9.342, '百家': 8.736}
+    scale = preprocessing.minmax_scale(list(value.values()))
+    value = dict(zip(value.keys(), scale))
+    print(value)
 
 
 def pool_test():
@@ -43,15 +45,5 @@ def co_num(a, b, c):
 
 
 if __name__ == '__main__':
-    # address_stopwords_set = {")", "(", "(", ")", "(", ")", "）", "（", "-", "号", "楼", "斋", "馆", "堂", "路",
-    #                          "道", "街", "巷", "胡里", "条", "里", "省", "市", "层", "区", "县", "镇", "村",
-    #                          "街道", "屯", "大街", "·", "米", "步行", "走", "交叉口", "约"}
-    # print(address_stopwords_set)
-    # s = ['中山', '八路', '97', '-', '101', '号', '(', '中山', '八', '地铁站', 'A', '口', '步行', '80', '米', ')']
-    # for s1 in s:
-    #     if address_stopwords_set.__contains__(s1):
-    #         s.remove(s1)
-    # print(s)
-    # resub()
-    # evaltest()
-    pool_test()
+    evaltest()
+

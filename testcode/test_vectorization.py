@@ -13,8 +13,8 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import mutual_info_classif
 from multiprocessing import Manager, Pool
-from workplace.forone.count_category_num import feature_vectorization
-from workplace.forone.mini_tool import cut_word
+from workplace.label_nb.count_category_num import feature_vectorization
+from workplace.label_nb.mini_tool import cut_word
 from testcode.test_pool import pool_test
 
 def test_transform():
