@@ -1,21 +1,23 @@
 import logging
+import os
 import time
 from ast import literal_eval
-import sys
-import os
-from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
-import numpy
+from multiprocessing import Manager, Pool
+
 import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer, CountVectorizer
-from sklearn.naive_bayes import ComplementNB, BernoulliNB, MultinomialNB
-from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split
+from keras.callbacks import EarlyStopping
+from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
+from keras.models import Sequential
+from keras.preprocessing.text import Tokenizer
+from keras.utils import pad_sequences
+from scipy.sparse import csc_matrix
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_selection import mutual_info_classif
-from multiprocessing import Manager, Pool
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
 from workplace.label_nb.count_category_num import feature_vectorization
-from workplace.label_nb.mini_tool import cut_word
-from testcode.test_pool import pool_test
+
 
 def test_transform():
     csv_data = pd.read_csv('./aaa.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=5)
@@ -68,7 +70,7 @@ def test_dict_遍历性能():
 
 
 def test_dict():
-    dict_list = [{'a1': 1},{'a2': 2},{'a3': 3},{'a4': 4}]
+    dict_list = [{'a1': 1}, {'a2': 2}, {'a3': 3}, {'a4': 4}]
     series = pd.Series(['a', 'b', 'c'])
     print(series.values)
     manager_dict = Manager().dict()
@@ -86,15 +88,9 @@ def test_dict():
 
 def use_update(new_dict, manager_dict):
     # manager_dict['a'].update(new_dict)
-    copy = manager_dict['a']|new_dict
+    copy = manager_dict['a'] | new_dict
     manager_dict['a'] = copy
     print("{}:{}".format(os.getpid(), manager_dict))
-
-
-if __name__ == '__main__':
-    # test_transform()
-    # test_dict_遍历性能()
-    double_dict = test_dict()
 
 
 def log_record():
@@ -113,3 +109,22 @@ def log_record():
     # 绑定渠道到日志收集器
     log.addHandler(file_handler)
     return log
+
+
+def test_lstm():
+    df = pd.read_csv('aaa.csv')
+    df['cat_id'] = df['category3_new'].factorize()[0]
+    cat_df = df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
+    tokenizer = Tokenizer(num_words=200, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~', lower=True)
+    tokenizer.fit_on_texts(df['cut_name'].values)
+    X = tokenizer.texts_to_sequences(df['cut_name'].values)
+    print(X)
+
+
+if __name__ == '__main__':
+    # test_lstm()
+    tokenizer = Tokenizer()
+    tokenizer.fit_on_texts(['这家 店 的 衣服 好', '和睦 烧烤', '今天 天气 好'])
+    # print(word_index)
+    X = tokenizer.texts_to_sequences(['这家 店 的 衣服 好', '和睦 烧烤', '今天 天气 好'])
+    print(X)
