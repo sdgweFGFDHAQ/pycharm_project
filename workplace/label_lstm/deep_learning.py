@@ -14,12 +14,11 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score, confusion_matrix
 import warnings
 from global_parameter import StaticParameter as SP
-from mini_tool import set_jieba, cut_word
+from mini_tool import set_jieba, cut_word, error_callback
 # from workplace.label_lstm.global_parameter import StaticParameter as SP
-# from workplace.label_lstm.mini_tool import set_jieba, cut_word
+# from workplace.label_lstm.mini_tool import set_jieba, cut_word, error_callback
 import gc
 
-from workplace.label_lstm.mini_tool import error_callback
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -63,11 +62,10 @@ def random_get_trainset():
             standard_df_i = df_i
         standard_df = pd.concat([standard_df, standard_df_i])
     standard_df.to_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv', index=False)
-    return standard_df
 
 
 def get_dataset():
-    gz_df = random_get_trainset()
+    gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv')
     gz_df['cat_id'] = gz_df['category3_new'].factorize()[0]
     cat_df = gz_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
     print(len(cat_df.index))
@@ -200,18 +198,20 @@ if __name__ == '__main__':
     # 合并城市,分为8部分
     city_num = len(cities)
     index_list = [int(city_num * i / SP.SEGMENT_NUMBER) for i in range(SP.SEGMENT_NUMBER + 1)]
-    pool = Pool(processes=4)
-    for index in range(len(index_list) - 1):
-        cities_i = cities[index_list[index]:index_list[index + 1]]
-        pool.apply_async(get_city, args=(cities_i, index), error_callback=error_callback)
-    pool.close()
-    pool.join()
+    # pool = Pool(processes=4)
+    # for index in range(len(index_list) - 1):
+    #     cities_i = cities[index_list[index]:index_list[index + 1]]
+    #     pool.apply_async(get_city, args=(cities_i, index), error_callback=error_callback)
+    # pool.close()
+    # pool.join()
     # # 训练模型,获取训练集
+    # random_get_trainset()
     df, id_cat_dict = get_dataset()
     tokenizer, model = fit_model_by_deeplearn(df)
     # 预测数据
-    # for i in range(len(index_list) - 1):
-    #     cities_i = cities[index_list[i]:index_list[i + 1]]
-    #     predict_result(tokenizer, model, id_cat_dict, i)
+    for i in range(len(index_list) - 1):
+        cities_i = cities[index_list[i]:index_list[i + 1]]
+        predict_result(tokenizer, model, id_cat_dict, i)
+    # 绘制收敛次数图像
     # draw_trend(model_fit)
 # nohup python -u main.py > log.log 2>&1 &

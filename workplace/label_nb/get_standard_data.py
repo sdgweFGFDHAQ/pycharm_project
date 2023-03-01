@@ -3,7 +3,7 @@ from ast import literal_eval
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from workplace.label_nb.mini_tool import cut_word
+from workplace.label_nb.mini_tool import cut_word, set_jieba
 from workplace.label_nb.global_parameter import StaticParameter as SP
 from workplace.label_nb.count_category_num import feature_vectorization, reduce_by_mutual
 from workplace.label_nb.relation_category_keywords import get_feature_prob_part, add_artificial_keywords, out_keyword
@@ -25,6 +25,7 @@ def set_file_standard_data(path) -> str:
     # category.to_csv('../category_dict.csv')
     print("类别个数：", len(category['category3_new']))
     # 得到标准数据
+    set_jieba()
     csv_data['cut_name'] = csv_data['name'].apply(cut_word)
     csv_data.to_csv('../standard_store_gz.csv', columns=['id', 'name', 'category3_new', 'cut_name'])
     # 读取分类标准, 设置每个类别对应的关键字

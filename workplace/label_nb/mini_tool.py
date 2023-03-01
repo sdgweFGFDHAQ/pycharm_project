@@ -3,6 +3,14 @@ import jieba
 import logging
 
 
+def set_jieba():
+    # 设置不可分割的词
+    with open('../indiv_words.txt', 'r', encoding='utf-8') as in_word:
+        for iw in in_word:
+            iw = iw.strip('\n')
+            jieba.suggest_freq(iw, True)
+
+
 def cut_word(word):
     out_word_list = []
     # 清洗特殊字符

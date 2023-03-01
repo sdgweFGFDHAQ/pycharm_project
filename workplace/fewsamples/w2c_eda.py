@@ -20,17 +20,17 @@ def get_word2vec():
 
 def set_word2vec():
     # 增量训练
-    few_df = pd.read_csv('few_shot.csv', usecols=[''], index_col=0)
+    few_df = pd.read_csv('few_shot.csv', index_col=0)
     name_list1 = list()
-    few_df['cut_name_new'] = few_df['cut_name_new'].apply(literal_eval)
-    for name in few_df['cut_name_new']:
+    few_df['cut_name'] = few_df['cut_name'].apply(literal_eval)
+    for name in few_df['cut_name']:
         name_list1.append(name)
     vec = Word2Vec.load('word2vec.model')
     vec.build_vocab(name_list1, update=True)
     vec.train(name_list1, total_examples=vec.corpus_count, epochs=5)
     vec.wv.save_word2vec_format('word2vec.vector')
-    topn_ = vec.wv.similar_by_word('王牌', topn=10)
-    print('增量训练', topn_)
+    # topn_ = vec.wv.similar_by_word('王牌', topn=10)
+    # print('增量训练', topn_)
     return vec
 
 
@@ -77,6 +77,7 @@ def cut_word(word):
 
 
 if __name__ == '__main__':
-    # get_few_shot()
+    # get_word2vec()
+    set_word2vec()
     w2c_model = Word2Vec.load('word2vec.model')
     grow_df = data_grow(w2c_model)
