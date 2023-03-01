@@ -22,7 +22,7 @@ def set_file_standard_data(path) -> str:
     category = csv_data[['category1_new', 'category2_new', 'category3_new']]
     category = category.drop_duplicates(keep='first')
     category.reset_index(inplace=True, drop=True)
-    category.to_csv('../category_dict.csv')
+    # category.to_csv('../category_dict.csv')
     print("类别个数：", len(category['category3_new']))
     # 得到标准数据
     csv_data['cut_name'] = csv_data['name'].apply(cut_word)
@@ -54,35 +54,35 @@ def get_data(path):
 
 
 if __name__ == '__main__':
-    print("=======数据标准化======", time.localtime(time.time()))
+    # print("=======数据标准化======", time.localtime(time.time()))
     # 前期准备：获取店名数据，统计三级分类
-    set_file_standard_data(SP.DATA_PATH)
+    # set_file_standard_data(SP.DATA_PATH)
     # 前期准备：人为设置每种类别的关键字
-    set_category_words()
-    print("=======数据标准化结束======", time.localtime(time.time()))
+    # set_category_words()
+    # print("=======数据标准化结束======", time.localtime(time.time()))
     # ============切分品类词模型====================
-    # print("=======开始数据预处理======", time.localtime(time.time()))
-    # # 获取标准数据
-    # data = get_data(path='../standard_store_gz.csv')
-    # # 构建一个向量空间
-    # dummy = feature_vectorization(data)
-    # # 计算信息增益降维
-    # new_dummy = reduce_by_mutual(dummy, data['category3_new'])
-    # print("=====结束构建空间向量=====", time.localtime(time.time()))
-    # # # 获取权重
-    # prob = get_feature_prob_part(new_dummy, data['category3_new'])
-    # keywords = add_artificial_keywords(prob)
-    # print("=======结束权重计算======", time.localtime(time.time()))
-    # # 输出指定格式的模型
-    # result_model = out_keyword(keywords)
-    # print("=======结束分类模型写入文件======", time.localtime(time.time()))
+    print("=======开始数据预处理======", time.localtime(time.time()))
+    # 获取标准数据
+    data = get_data(path='../standard_store_gz.csv')
+    # 构建一个向量空间
+    dummy = feature_vectorization(data)
+    # 计算信息增益降维
+    new_dummy = reduce_by_mutual(dummy, data['category3_new'])
+    print("=====结束构建空间向量=====", time.localtime(time.time()))
+    # # 获取权重
+    prob = get_feature_prob_part(new_dummy, data['category3_new'])
+    keywords = add_artificial_keywords(prob)
+    print("=======结束权重计算======", time.localtime(time.time()))
+    # 输出指定格式的模型
+    result_model = out_keyword(keywords)
+    print("=======结束分类模型写入文件======", time.localtime(time.time()))
     # ============朴素贝叶斯模型=====================
-    # data = get_data(path='../standard_store_gz.csv')
-    # # 构建一个向量空间
-    # dummy, c_v = feature_vectorization(data)
-    # # 计算信息增益降维
-    # new_dummy = reduce_by_mutual(dummy, data['category3_new'])
-    # print(new_dummy.index)
+    data = get_data(path='../standard_store_gz.csv')
+    # 构建一个向量空间
+    dummy, c_v = feature_vectorization(data)
+    # 计算信息增益降维
+    new_dummy = reduce_by_mutual(dummy, data['category3_new'])
+    print(new_dummy.index)
     # train_data, test_data, y_train, y_test = train_test_split(new_dummy, data['category3_new'], test_size=0.2,
     #                                                           random_state=0)
     # bayes_forecast(train_data, test_data, y_train, y_test)

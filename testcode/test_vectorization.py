@@ -122,9 +122,16 @@ def test_lstm():
 
 
 if __name__ == '__main__':
-    # test_lstm()
-    tokenizer = Tokenizer()
-    tokenizer.fit_on_texts(['这家 店 的 衣服 好', '和睦 烧烤', '今天 天气 好'])
-    # print(word_index)
-    X = tokenizer.texts_to_sequences(['这家 店 的 衣服 好', '和睦 烧烤', '今天 天气 好'])
-    print(X)
+    # # test_lstm()
+    # tokenizer = Tokenizer()
+    # tokenizer.fit_on_texts(['这家 店 的 衣服 好', '和睦 烧烤', '今天 天气 好'])
+    # # print(word_index)
+    # X = tokenizer.texts_to_sequences(['这家 店 的 衣服 好', '和睦 烧烤', '今天 天气 好'])
+    # print(X)
+    standard_df = pd.DataFrame(columns=['name', 'category3_new', 'cut_name'])
+    path = 'aaa.csv'
+    df_i = pd.read_csv(path, usecols=['name', 'category3_new', 'cut_name'])
+    standard_i = df_i[(df_i['category3_new'].notna() & df_i['category3_new'] != '')].sample(n=2, random_state=11)
+    print(standard_i)
+    standard_df = pd.concat([standard_df, standard_i])
+    print(standard_df)

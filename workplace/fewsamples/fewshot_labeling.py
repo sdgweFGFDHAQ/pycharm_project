@@ -23,7 +23,7 @@ def get_few_shot():
     sample = csv.sample(n=2000, ignore_index=True, random_state=11)
     # 设置不可分割的词
     jieba.load_userdict('indiv_words.txt')
-    sample['cut_name_new'] = sample['name'].apply(cut_word)
+    sample['cut_name'] = sample['name'].apply(cut_word)
     sample.to_csv('few_shot.csv')
     return sample
 

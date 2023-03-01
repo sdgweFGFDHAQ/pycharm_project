@@ -20,7 +20,7 @@ def get_word2vec():
 
 def set_word2vec():
     # 增量训练
-    few_df = pd.read_csv('few_shot.csv', index_col=0)
+    few_df = pd.read_csv('few_shot.csv', usecols=[''], index_col=0)
     name_list1 = list()
     few_df['cut_name_new'] = few_df['cut_name_new'].apply(literal_eval)
     for name in few_df['cut_name_new']:
@@ -36,7 +36,7 @@ def set_word2vec():
 
 def data_grow(vec):
     df = pd.read_csv('few_shot.csv', index_col=0)
-    # print(df.head(3))
+    print(df.head(3))
     # print(len(df.index))
     new_name_list, new_cut_name_list, new_category_list = list(), list(), list()
     eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
@@ -44,7 +44,10 @@ def data_grow(vec):
     # print(new_name_list)
     # print(new_cut_name_list)
     new_df = pd.DataFrame({'name': new_name_list, 'category3_new': new_category_list, 'cut_name': new_cut_name_list})
-    return new_df
+    print(new_df.head(3))
+    df = pd.concat([df, new_df])
+    print(df)
+    return df
 
 
 def random_replace(df, eda_object, name_list, cut_name_list, category_list):
@@ -60,21 +63,20 @@ def random_replace(df, eda_object, name_list, cut_name_list, category_list):
 def cut_word(word):
     out_word_list = []
     # 清洗特殊字符
-    word = re.sub(r'\(.*?\)', '', str(word))
-    word = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fa5]', '', str(word))
+    word = re.sub(r'\(.*?\)|[^a-zA-Z0-9\u4e00-\u9fa5]|(丨)', ' ', str(word))
+    # 形如:"EXO店x铺excelAxB" 去除x
+    word = re.sub(r'(?<=[\u4e00-\u9fa5])([xX])(?=[\u4e00-\u9fa5])|(?<=[A-Z])x(?=[A-Z])', ' ', word)
     l_cut_words = jieba.lcut(word)
     # 人工去除明显无用的词
-    stop_words = [line.strip() for line in open('stopwords.txt', 'r', encoding='utf-8').readlines()]
+    stop_words = [line.strip() for line in open('../stopwords.txt', 'r', encoding='utf-8').readlines()]
     for lc_word in l_cut_words:
         if lc_word not in stop_words:
-            if lc_word != '\t':
+            if lc_word != '\t' and not lc_word.isspace():
                 out_word_list.append(lc_word)
     return out_word_list
 
 
 if __name__ == '__main__':
-    # get_word2vec()
-    # w2c_model = set_word2vec()
+    # get_few_shot()
     w2c_model = Word2Vec.load('word2vec.model')
     grow_df = data_grow(w2c_model)
-    print(grow_df)
