@@ -41,7 +41,7 @@ def set_file_standard_data(city, part_i):
         # 得到标准数据
         set_jieba()
         csv_data['cut_name'] = csv_data['name'].apply(cut_word)
-        if os.path.exists(path_part) and not os.path.getsize(path_part):
+        if os.path.exists(path_part) and os.path.getsize(path_part):
             csv_data.to_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv',
                             columns=['id', 'name', 'category3_new', 'cut_name'], mode='a', header=False)
         else:
