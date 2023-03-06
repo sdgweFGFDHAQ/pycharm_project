@@ -19,7 +19,6 @@ from mini_tool import set_jieba, cut_word, error_callback
 # from workplace.label_lstm.mini_tool import set_jieba, cut_word, error_callback
 import gc
 
-
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
@@ -54,22 +53,23 @@ def random_get_trainset():
     standard_df = pd.DataFrame(columns=['id', 'name', 'category3_new', 'cut_name'])
     for i in range(SP.SEGMENT_NUMBER):
         path = SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(i) + '.csv'
-        df_i = pd.read_csv(path, usecols=['id', 'name', 'category3_new', 'cut_name'])
-        df_i = df_i[(df_i['category3_new'].notna() & df_i['category3_new'] != '')]
-        if len(df_i.index) > SP.DATA_NUMBER:
-            standard_df_i = df_i.sample(n=SP.DATA_NUMBER, random_state=11)
-        else:
-            standard_df_i = df_i
+        df_i = pd.read_csv(path, usecols=['id', 'name', 'category3_new', 'cut_name'], keep_default_na=False)
+        df_i = df_i[df_i['category3_new'] != '']
+        # standard_df_i = df_i.sample(frac=0.12, random_state=11)
+        standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.15, random_state=23)
         standard_df = pd.concat([standard_df, standard_df_i])
+        standard_df = standard_df.sample(frac=1).reset_index(drop=True)
     standard_df.to_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv', index=False)
 
 
 def get_dataset():
     gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv')
+    # gz_df = pd.read_csv('standard_store_data.csv')
+    print(len(gz_df.index))
     gz_df['cat_id'] = gz_df['category3_new'].factorize()[0]
     cat_df = gz_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
     print(len(cat_df.index))
-    cat_df.to_csv('category_to_id')
+    cat_df.to_csv('category_to_id.csv')
     ic_dict = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
     return gz_df, ic_dict
 
@@ -80,7 +80,6 @@ def fit_model_by_deeplearn(df):
     for i in df['cut_name']:
         i = literal_eval(i)
         sample_lists.append(' '.join(i))
-    print(sample_lists)
     tokenizer.fit_on_texts(sample_lists)
     word_index = tokenizer.word_index
     # print(word_index)
@@ -94,18 +93,15 @@ def fit_model_by_deeplearn(df):
     # X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.10, random_state=42)
     # print(X_train.shape, Y_train.shape)
     # print(X_test.shape, Y_test.shape)
-    # 交叉验证
-    # kfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=11)
-    # kf_scores = []
     # 定义模型
     model = Sequential()
     model.add(Embedding(SP.MAX_WORDS_NUM, SP.EMBEDDING_DIM, input_length=X.shape[1]))
     model.add(SpatialDropout1D(0.2))
-    model.add(LSTM(units=64, dropout=0.2, recurrent_dropout=0.2))
+    model.add(LSTM(units=64, dropout=0.3, recurrent_dropout=0.2))
     model.add(Dense(Y.shape[1], activation='softmax'))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     print(model.summary())
-    model.fit(X, Y, epochs=5, batch_size=64, validation_split=0.1,
+    model.fit(X, Y, epochs=5, batch_size=32, validation_split=0.1,
               callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
     # accuracy = model.evaluate(X_test, Y_test)
     # print('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accuracy[0], accuracy[1]))
@@ -129,7 +125,6 @@ def draw_trend(history):
 
 def predict_result(tokenizer, model, id_cat_dict, part_i):
     try:
-        # df = pd.read_csv('standard_store_' + city + '.csv')
         df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv')
         test_lists = list()
         for i in df['cut_name']:
@@ -138,6 +133,7 @@ def predict_result(tokenizer, model, id_cat_dict, part_i):
         seq = tokenizer.texts_to_sequences(test_lists)
         padded = pad_sequences(seq, maxlen=SP.MAX_LENGTH)
         pred_lists = model.predict(padded)
+        print(pred_lists[:10])
         id_lists = pred_lists.argmax(axis=1)
         cat_lists = list()
         for id in id_lists:
@@ -145,13 +141,15 @@ def predict_result(tokenizer, model, id_cat_dict, part_i):
         result = pd.DataFrame(
             {'store_id': df['id'], 'name': df['name'], 'category3_new': df['category3_new'],
              'predict_category': cat_lists})
-        result.to_csv(SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(part_i) + '.csv', mode='a')
+        result.to_csv(SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(part_i) + '.csv')
+        # result.to_csv('test_predict_category.csv')
     except Exception as e:
         with open('error_city.txt', 'a') as ef:
             ef.write('出错的city: ' + str(part_i) + '; 异常e:' + str(e))
 
 
-if __name__ == '__main__':
+# 用于重新切分店名，生成标准文件
+def rerun_get_file():
     cities = ['江门市', '新乡市', '河源市', '潮州市', '湛江市', '肇庆市', '开封市', '广州市', '安阳市', '茂名市', '南阳市', '焦作市',
               '漯河市', '深圳市', '韶关市', '驻马店市', '商丘市', '汕头市', '许昌市', '揭阳市', '郑州市', '汕尾市', '惠州市', '平顶山市',
               '清远市', '济源市', '洛阳市', '周口市', '云浮市', '珠海市', '三门峡市', '鹤壁市', '信阳市', '佛山市', '梅州市', '濮阳市',
@@ -188,30 +186,41 @@ if __name__ == '__main__':
               '天津城区', '伊犁哈萨克自治州', '拉萨市', '和田地区', '巴音郭楞蒙古自治州', '阿勒泰地区', '昆玉市', '图木舒克市', '昌都市',
               '重庆郊县', '重庆城区', '香港', '阳江市', '金华市', '嘉兴市', '衢州市', '绍兴市']
     # 初始化，清空文件
-    # for csv_i in range(SP.SEGMENT_NUMBER):
-    #     path_sta = SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(csv_i) + '.csv'
-    #     # path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
-    #     if os.path.exists(path_sta):
-    #         open(path_sta, "r+").truncate()
-    #     if os.path.exists(path_pre):
-    #         open(path_pre, "r+").truncate()
-    # 合并城市,分为8部分
+    for csv_i in range(SP.SEGMENT_NUMBER):
+        path_sta = SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(csv_i) + '.csv'
+        if os.path.exists(path_sta):
+            open(path_sta, "r+").truncate()
+    # 合并城市,分为12部分
     city_num = len(cities)
     index_list = [int(city_num * i / SP.SEGMENT_NUMBER) for i in range(SP.SEGMENT_NUMBER + 1)]
-    # pool = Pool(processes=4)
-    # for index in range(len(index_list) - 1):
-    #     cities_i = cities[index_list[index]:index_list[index + 1]]
-    #     pool.apply_async(get_city, args=(cities_i, index), error_callback=error_callback)
-    # pool.close()
-    # pool.join()
-    # # 训练模型,获取训练集
-    # random_get_trainset()
+    pool = Pool(processes=4)
+    for index in range(len(index_list) - 1):
+        cities_i = cities[index_list[index]:index_list[index + 1]]
+        pool.apply_async(get_city, args=(cities_i, index), error_callback=error_callback)
+    pool.close()
+    pool.join()
+
+
+# 用于重新预测打标，生成预测文件
+def rerun_get_model():
+    for csv_i in range(SP.SEGMENT_NUMBER):
+        path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
+        if os.path.exists(path_pre):
+            open(path_pre, "r+").truncate()
+    # 训练模型,获取训练集
+    random_get_trainset()
     df, id_cat_dict = get_dataset()
     tokenizer, model = fit_model_by_deeplearn(df)
     # 预测数据
-    for i in range(len(index_list) - 1):
-        cities_i = cities[index_list[i]:index_list[i + 1]]
+    for i in range(SP.SEGMENT_NUMBER):
         predict_result(tokenizer, model, id_cat_dict, i)
+
+
+if __name__ == '__main__':
+    # 用于重新切分店名，生成标准文件
+    # rerun_get_file()
+    # 用于重新预测打标，生成预测文件
+    rerun_get_model()
     # 绘制收敛次数图像
     # draw_trend(model_fit)
 # nohup python -u main.py > log.log 2>&1 &

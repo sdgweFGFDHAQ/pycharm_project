@@ -8,7 +8,7 @@ from workplace.fewsamples import eda_class
 
 def get_word2vec():
     # 训练大语料库
-    few_df = pd.read_csv('../standard_store_gz.csv', index_col=0)
+    few_df = pd.read_csv('../all_labeled_data.csv', index_col=0)
     print(few_df.head(2))
     name_list = list()
     few_df['cut_name'] = few_df['cut_name'].apply(literal_eval)
@@ -29,35 +29,37 @@ def set_word2vec():
     vec.build_vocab(name_list1, update=True)
     vec.train(name_list1, total_examples=vec.corpus_count, epochs=5)
     vec.wv.save_word2vec_format('word2vec.vector')
-    # topn_ = vec.wv.similar_by_word('王牌', topn=10)
-    # print('增量训练', topn_)
     return vec
 
 
-def data_grow(vec):
-    df = pd.read_csv('few_shot.csv', index_col=0)
-    print(df.head(3))
+def data_grow(vec, df):
+    print('data_grow', df.head(3))
     # print(len(df.index))
     new_name_list, new_cut_name_list, new_category_list = list(), list(), list()
     eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
     df.apply(random_replace, args=[eda, new_name_list, new_cut_name_list, new_category_list], axis=1)
-    # print(new_name_list)
-    # print(new_cut_name_list)
-    new_df = pd.DataFrame({'name': new_name_list, 'category3_new': new_category_list, 'cut_name': new_cut_name_list})
+    new_id_list = ['990000000000000000' + str(i) for i in range(len(new_name_list))]
+    new_df = pd.DataFrame({'id': new_id_list, 'name': new_cut_name_list, 'category3_new': new_category_list, 'cut_name': new_name_list})
     print(new_df.head(3))
     df = pd.concat([df, new_df])
-    print(df)
+    df.drop_duplicates(subset=['cut_name'], keep='first', inplace=True)
+    print(df.head(3))
     return df
 
 
 def random_replace(df, eda_object, name_list, cut_name_list, category_list):
     cn_lists = literal_eval(df['cut_name'])
-    for _ in range(5):
+    for_count = 0
+    new_name_list = list()
+    while (len(new_name_list) < 5) and (for_count < 20):
         new_cut_name = eda_object.synonym_replacement(cn_lists, n=1)
-        print(new_cut_name)
-        name_list.append(new_cut_name)
-        cut_name_list.append(''.join(new_cut_name))
-        category_list.append(df['category3_new'])
+        if new_cut_name not in new_name_list:
+            new_name_list.append(new_cut_name)
+            cut_name_list.append(''.join(new_cut_name))
+            category_list.append(df['category3_new'])
+        for_count += 1
+    name_list.extend(new_name_list)
+    # print('增加数量:{}, 循环次数:{}'.format(len(new_name_list), for_count))
 
 
 def cut_word(word):
@@ -78,6 +80,9 @@ def cut_word(word):
 
 if __name__ == '__main__':
     # get_word2vec()
-    set_word2vec()
+    # set_word2vec()
     w2c_model = Word2Vec.load('word2vec.model')
-    grow_df = data_grow(w2c_model)
+    w = ['陈体', '猪脚', '龙虾', '鲜肉', '豆腐花']
+    for i in w:
+        word = w2c_model.wv.similar_by_word(i)
+        print(word)

@@ -5,10 +5,9 @@ import random
 from random import shuffle
 import jieba
 import argparse
-import logging
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("eda")
+# import logging
+# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# logger = logging.getLogger("eda")
 
 
 class EDA(object):
@@ -34,7 +33,7 @@ class EDA(object):
         file_path = self._stop_words_path
         # 当前位置的绝对路径
         file_path = os.path.join(os.path.dirname(__file__), file_path)
-        logger.debug(f"loading stop words with file:{file_path}")
+        # logger.debug(f"loading stop words with file:{file_path}")
         stop_words = list()
         with open(file_path, 'r', encoding='utf8') as reader:
             for stop_word in reader:
@@ -48,7 +47,7 @@ class EDA(object):
         :return:
         """
         vec = self.synonyms_model
-        return [str(i[0]) for i in vec.wv.similar_by_word(word=word, topn=5)]
+        return [str(i[0]) for i in vec.wv.similar_by_word(word=word, topn=10)]
 
     def synonym_replacement(self, words, n):
         """同义词替换
@@ -73,17 +72,6 @@ class EDA(object):
         new_words = sentence.split(' ')
         return new_words
 
-    def random_insertion(self, words, n):
-        """
-        随机在语句中插入n个词
-        :param words: 语句
-        :param n: 随机插入词语的个数据
-        :return:
-        """
-        new_words = words.copy()
-        for _ in range(n):
-            self.add_word(new_words)
-        return new_words
 
     def add_word(self, new_words):
         """
@@ -133,39 +121,18 @@ class EDA(object):
         new_words[random_idx_1], new_words[random_idx_2] = new_words[random_idx_2], new_words[random_idx_1]
         return new_words
 
-    @staticmethod
-    def random_deletion(words, p):
-        """
-        以概率p删除语句中的词
-        :param words: 语句
-        :param p: 概率
-        :return:
-        """
-        if len(words) == 1:
-            return words
-        new_words = []
-        for word in words:
-            r = random.uniform(0, 1)
-            if r > p:
-                new_words.append(word)
-        if len(new_words) == 0:
-            rand_int = random.randint(0, len(words) - 1)
-            return [words[rand_int]]
-        return new_words
 
     def eda(self, sentence, alpha_sr=0.1, alpha_ri=0.1, alpha_rs=0.1, p_rd=0.1):
         """
         eda main function
         :param sentence: 待处理的语句
         :param alpha_sr: 同义词替换词语比例
-        :param alpha_ri: 随机插入比例
         :param alpha_rs: 随机交换比例
-        :param p_rd: 随机删除概率
         :return:
         """
 
         def enhance(method_inner, param_inner):
-            logger.debug(f"use method:{method_inner.__name__}")
+            # logger.debug(f"use method:{method_inner.__name__}")
             tmp_result = []
             for _ in range(num_new_per_technique):
                 a_words = method_inner(*param_inner)
@@ -183,7 +150,7 @@ class EDA(object):
         n_rs = max(1, int(alpha_rs * num_words))
 
         # 同义词替换sr，随机插入ri，随机交换rs，随机删除rd
-        methods = [self.synonym_replacement, self.random_insertion, self.random_swap, self.random_deletion]
+        methods = [self.synonym_replacement, self.random_swap]
         params = [(words, n_sr), (words, n_ri), (words, n_rs), (words, p_rd)]
         for method, param in zip(methods, params):
             augmented_sentences.extend(enhance(method, param))

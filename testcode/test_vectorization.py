@@ -111,27 +111,49 @@ def log_record():
     return log
 
 
-def test_lstm():
+def fit_model_by_deeplearn():
     df = pd.read_csv('aaa.csv')
-    df['cat_id'] = df['category3_new'].factorize()[0]
-    cat_df = df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
-    tokenizer = Tokenizer(num_words=200, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~', lower=True)
-    tokenizer.fit_on_texts(df['cut_name'].values)
-    X = tokenizer.texts_to_sequences(df['cut_name'].values)
-    print(X)
+    tokenizer = Tokenizer(num_words=20, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~', lower=True)
+    sample_lists = list()
+    for i in df['cut_name']:
+        i = literal_eval(i)
+        sample_lists.append(' '.join(i))
+    tokenizer.fit_on_texts(sample_lists)
+    word_index = tokenizer.word_index
+    print('共有 %s 个不相同的词语.' % len(word_index))
+    X = tokenizer.texts_to_sequences(sample_lists)
+    # 填充X,让X的各个列的长度统一
+    X = pad_sequences(X, maxlen=6)
+    # # 多类标签的onehot展开
+    Y = pd.get_dummies(df['cat_id']).values
+    # 拆分训练集和测试集
+    # X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.10, random_state=42)
+    # print(X_train.shape, Y_train.shape)
+    # print(X_test.shape, Y_test.shape)
+    # 定义模型
+    model = Sequential()
+    model.add(Embedding(22, 10, input_length=X.shape[1]))
+    model.add(SpatialDropout1D(0.2))
+    model.add(LSTM(units=64, dropout=0.3, recurrent_dropout=0.2))
+    model.add(Dense(Y.shape[1], activation='softmax'))
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    print(model.summary())
+    model.fit(X, Y, epochs=5, batch_size=32, validation_split=0.1,
+              callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
+    # accuracy = model.evaluate(X_test, Y_test)
+    # print('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accuracy[0], accuracy[1]))
+
+
+def tj(df):
+    sds = df['cut_name'].values
+    print(type(sds))
+    sds.append(df['category3_new'].values)
+    return sds
 
 
 if __name__ == '__main__':
-    # # test_lstm()
-    # tokenizer = Tokenizer()
-    # tokenizer.fit_on_texts(['这家 店 的 衣服 好', '和睦 烧烤', '今天 天气 好'])
-    # # print(word_index)
-    # X = tokenizer.texts_to_sequences(['这家 店 的 衣服 好', '和睦 烧烤', '今天 天气 好'])
-    # print(X)
-    standard_df = pd.DataFrame(columns=['name', 'category3_new', 'cut_name'])
-    path = 'aaa.csv'
-    df_i = pd.read_csv(path, usecols=['name', 'category3_new', 'cut_name'])
-    standard_i = df_i[(df_i['category3_new'].notna() & df_i['category3_new'] != '')].sample(n=2, random_state=11)
-    print(standard_i)
-    standard_df = pd.concat([standard_df, standard_i])
-    print(standard_df)
+    # fit_model_by_deeplearn()
+    csv = pd.read_csv('aaa.csv', index_col=0)
+    csv = csv.apply(literal_eval)
+    csv['ad'] = csv.apply(tj, axis=1)
+    print(csv['ad'])
