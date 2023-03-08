@@ -1,22 +1,25 @@
 import logging
 import os
 import time
-from ast import literal_eval
-from multiprocessing import Manager, Pool
 
-import numpy as np
-import pandas as pd
+from ast import literal_eval
+from gensim.models import Word2Vec, KeyedVectors
 from keras.callbacks import EarlyStopping
 from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
-from keras.models import Sequential
+from keras.models import Sequential, Model
 from keras.preprocessing.text import Tokenizer
 from keras.utils import pad_sequences
+from multiprocessing import Manager, Pool
+import numpy as np
+import pandas as pd
 from scipy.sparse import csc_matrix
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import BorderlineSMOTE, ADASYN
 from workplace.label_nb.count_category_num import feature_vectorization
+from keras.utils import pad_sequences
 
 
 def test_transform():
@@ -132,7 +135,7 @@ def fit_model_by_deeplearn():
     # print(X_test.shape, Y_test.shape)
     # 定义模型
     model = Sequential()
-    model.add(Embedding(22, 10, input_length=X.shape[1]))
+    model.add(Embedding(22, 10, input_length=X.shape[1], name='emb'))
     model.add(SpatialDropout1D(0.2))
     model.add(LSTM(units=64, dropout=0.3, recurrent_dropout=0.2))
     model.add(Dense(Y.shape[1], activation='softmax'))
@@ -140,20 +143,34 @@ def fit_model_by_deeplearn():
     print(model.summary())
     model.fit(X, Y, epochs=5, batch_size=32, validation_split=0.1,
               callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
+    print(model.layers[0].output)
     # accuracy = model.evaluate(X_test, Y_test)
     # print('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accuracy[0], accuracy[1]))
 
 
-def tj(df):
-    sds = df['cut_name'].values
-    print(type(sds))
-    sds.append(df['category3_new'].values)
-    return sds
+class sdas():
+    def __init__(self):
+        pass
+
+    def __iter__(self):
+        na = ['aaa.csv']
+        for i in na:
+            df = pd.read_csv(i)
+            df['cut_name'] = df['cut_name'].apply(literal_eval)
+            for j in df['cut_name'].values:
+                yield j
 
 
 if __name__ == '__main__':
-    # fit_model_by_deeplearn()
-    csv = pd.read_csv('aaa.csv', index_col=0)
-    csv = csv.apply(literal_eval)
-    csv['ad'] = csv.apply(tj, axis=1)
-    print(csv['ad'])
+    fit_model_by_deeplearn()
+    df = pd.read_csv('aaa.csv', index_col=0)
+    token = Tokenizer()
+    word_lists = df['cut_name'].values
+    token.fit_on_texts(word_lists)
+    print(token.word_index)
+    seq = token.texts_to_sequences(word_lists)
+    x = pad_sequences(seq, maxlen=4)
+    y = pd.get_dummies(df['category3_new']).values
+    bls = BorderlineSMOTE(k_neighbors=1, kind='borderline-1')
+    x_n, y_n = bls.fit_resample(x, y)
+    print(x_n)

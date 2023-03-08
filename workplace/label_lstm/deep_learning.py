@@ -220,11 +220,11 @@ def rerun_get_model():
 
 if __name__ == '__main__':
     # 用于重新切分店名，生成标准文件
-    rerun_get_file()
+    # rerun_get_file()
     # 随机抽取带标签训练集
-    random_get_trainset()
+    # random_get_trainset()
     # 用于重新预测打标，生成预测文件
-    # rerun_get_model()
+    rerun_get_model()
     # 绘制收敛次数图像
     # draw_trend(model_fit)
 # nohup python -u main.py > log.log 2>&1 &
