@@ -12,6 +12,7 @@ from keras.utils import pad_sequences
 from multiprocessing import Manager, Pool
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from scipy.sparse import csc_matrix
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_selection import mutual_info_classif
@@ -162,15 +163,21 @@ class sdas():
 
 
 if __name__ == '__main__':
-    fit_model_by_deeplearn()
-    df = pd.read_csv('aaa.csv', index_col=0)
+    # fit_model_by_deeplearn()
+    df = pd.read_csv('../workplace/fewsamples/few_shot.csv', index_col=0)
     token = Tokenizer()
     word_lists = df['cut_name'].values
     token.fit_on_texts(word_lists)
     print(token.word_index)
     seq = token.texts_to_sequences(word_lists)
-    x = pad_sequences(seq, maxlen=4)
+    x = pad_sequences(seq, maxlen=2)
     y = pd.get_dummies(df['category3_new']).values
     bls = BorderlineSMOTE(k_neighbors=1, kind='borderline-1')
     x_n, y_n = bls.fit_resample(x, y)
     print(x_n)
+    xx = [a[0] for a in x_n]
+    yy = [b[1] for b in x_n]
+    # zz = [c[2] for c in x]
+    ax = plt.subplot(1, 1, 1)
+    ax.scatter(xx, yy, c=[np.argmax(y_n, axis=1)], cmap='viridis', alpha=0.2)
+    plt.show()

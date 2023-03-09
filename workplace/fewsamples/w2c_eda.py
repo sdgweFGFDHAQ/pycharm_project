@@ -49,7 +49,7 @@ def data_grow(df):
     vec = KeyedVectors.load_word2vec_format('word2vec.vector')
     eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
     df.apply(random_replace, args=[eda, new_name_list, new_cut_name_list, new_category_list], axis=1)
-    new_id_list = ['990000000000000000' + str(id_i) for id_i in range(len(new_name_list))]
+    new_id_list = ['111110000000000000' + str(id_i) for id_i in range(len(new_name_list))]
     new_df = pd.DataFrame({'id': new_id_list, 'name': new_cut_name_list, 'category3_new': new_category_list, 'cut_name': new_name_list})
     print(new_df.head(3))
     df = pd.concat([df, new_df])
@@ -63,7 +63,10 @@ def random_replace(df, eda_object, name_list, cut_name_list, category_list):
     for_count = 0
     new_name_list = list()
     while (len(new_name_list) < 5) and (for_count < 20):
+        # 相似词替换
         new_cut_name = eda_object.synonym_replacement(cn_lists, n=1)
+        # 随机交换
+        # new_cut_name = eda_object.random_swap(cn_lists, n=1)
         if new_cut_name not in new_name_list:
             new_name_list.append(new_cut_name)
             cut_name_list.append(''.join(new_cut_name))

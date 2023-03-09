@@ -9,6 +9,7 @@ import jieba
 from keras.callbacks import EarlyStopping
 from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
 from keras.models import Sequential
+from sklearn.model_selection import KFold, StratifiedKFold, cross_validate
 from keras.preprocessing.text import Tokenizer
 from keras.utils import pad_sequences
 from sklearn.model_selection import train_test_split
@@ -72,6 +73,7 @@ def pre_matrix():
 
 
 def model_train():
+    # new_data_df = pd.read_csv('few_shot.csv')
     new_data_df = pd.read_csv('input_data.csv')
     # 文本向量化
     tokenizer = Tokenizer()
@@ -91,7 +93,9 @@ def model_train():
     X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size=0.10, random_state=42)
     # 定义模型
     model = Sequential()
+    # 参与学习
     # model.add(Embedding(SP.MAX_WORDS_NUM, output_dim=SP.EMBEDDING_DIM, input_length=X_train.shape[1]))
+    # 迁移word2vec模型
     model.add(Embedding(input_dim=len(weight_matrix), output_dim=SP.EMBEDDING_DIM, input_length=X_train.shape[1],
                         weights=[weight_matrix], trainable=False))
     model.add(SpatialDropout1D(rate=0.2, seed=12))
@@ -99,11 +103,17 @@ def model_train():
     model.add(Dense(Y_train.shape[1], activation='softmax'))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     print(model.summary())
-    history = model.fit(X_train, Y_train, epochs=10, batch_size=64, validation_split=0.1,
-                        callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
-    print('================-------------===============', history.history)
-    accuracy = model.evaluate(X_test, Y_test)
-    print('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accuracy[0], accuracy[1]))
+    # 使用k折交叉验证
+    kfold = KFold(n_splits=10)
+    loss_list, accuracy_list = list(), list()
+    for t_train, t_test in kfold.split(X_train, Y_train):
+        model.fit(np.array(X_train[t_train]), np.array(Y_train[t_train]), epochs=5, batch_size=64, validation_split=0.1,
+                  callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
+        accuracy = model.evaluate(np.array(X_train[t_test]), np.array(Y_train[t_test]))
+        loss_list.append(round(accuracy[0], 3))
+        accuracy_list.append(round(accuracy[1], 3))
+    print('K-Loss: {}\n  K-Accuracy: {}'.format(loss_list, accuracy_list))
+    ic(np.mean(loss_list), np.mean(accuracy_list))
     # model.fit(X, Y, epochs=5, batch_size=64, validation_split=0.1,
     #           callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
     return tokenizer, model
@@ -136,7 +146,7 @@ def predict_result(tokenizer, model):
 if __name__ == '__main__':
     # 获取少样本数据集
     # get_few_shot()
-    get_few_data()
+    # get_few_data()
     # 训练模型预测
     token, mod = model_train()
     # print(mod.layers[0].output[0])
