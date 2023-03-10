@@ -84,7 +84,7 @@ def judge_data(x_df1: pd.DataFrame, x_df2: pd.DataFrame, x_df3: pd.DataFrame):
     # result_df = df_1_2_3[df_1_2_3.percentage >= critical_percentage]
     result_df = df_1_2.sort_values(by='percentage', ascending=False).reset_index()
     print(result_df)
-    result_df.to_csv('result_df.csv')
+    result_df.to_csv('result_df.csv', columns=['index', 'store_id', 'weight', 'percentage'])
 
 
 # Y=a+k(X-Min)
