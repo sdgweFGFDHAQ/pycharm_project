@@ -54,7 +54,6 @@ def data_grow(df):
     print(new_df.head(3))
     df = pd.concat([df, new_df])
     df.drop_duplicates(subset=['cut_name'], keep='first', inplace=True)
-    print(df.head(3))
     return df
 
 
@@ -62,7 +61,7 @@ def random_replace(df, eda_object, name_list, cut_name_list, category_list):
     cn_lists = literal_eval(df['cut_name'])
     for_count = 0
     new_name_list = list()
-    while (len(new_name_list) < 5) and (for_count < 20):
+    while (len(new_name_list) < 5) and (for_count < 10):
         # 相似词替换
         new_cut_name = eda_object.synonym_replacement(cn_lists, n=1)
         # 随机交换
@@ -84,7 +83,7 @@ def cut_word(word):
     word = re.sub(r'(?<=[\u4e00-\u9fa5])([xX])(?=[\u4e00-\u9fa5])|(?<=[A-Z])x(?=[A-Z])', ' ', word)
     l_cut_words = jieba.lcut(word)
     # 人工去除明显无用的词
-    stop_words = [line.strip() for line in open('../stopwords.txt', 'r', encoding='utf-8').readlines()]
+    stop_words = [line.strip() for line in open('../resources/stopwords.txt', 'r', encoding='utf-8').readlines()]
     for lc_word in l_cut_words:
         if lc_word not in stop_words:
             if lc_word != '\t' and not lc_word.isspace():

@@ -38,6 +38,7 @@ def get_few_data():
     # 扩展少于k_neighbors数的类别
     old_df = pd.read_csv('few_shot.csv', index_col=0)
     new_data_df = data_grow(old_df)
+    new_data_df = new_data_df.sample(frac=1).reset_index()
     print("扩展后数据量：", len(new_data_df.index))
     # 生成类别-id字典
     new_data_df['cat_id'] = new_data_df['category3_new'].factorize()[0]
@@ -87,8 +88,8 @@ def model_train():
     # ========================
     y = pd.get_dummies(new_data_df['category3_new']).values
     # smote数据增强
-    # bl_smote = BorderlineSMOTE(k_neighbors=5, kind='borderline-1')  # ADASYN\SVMSMOTE\KMeansSMOTE
-    # x, y = bl_smote.fit_resample(x, y)
+    bl_smote = BorderlineSMOTE(k_neighbors=5, kind='borderline-1')  # ADASYN\SVMSMOTE\KMeansSMOTE
+    x, y = bl_smote.fit_resample(x, y)
     # 拆分训练集和测试集
     X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size=0.10, random_state=42)
     # 定义模型
@@ -106,14 +107,17 @@ def model_train():
     # 使用k折交叉验证
     kfold = KFold(n_splits=10)
     loss_list, accuracy_list = list(), list()
+    k = 0
     for t_train, t_test in kfold.split(X_train, Y_train):
+        print('============第{}折============'.format(k))
+        k += 1
         model.fit(np.array(X_train[t_train]), np.array(Y_train[t_train]), epochs=5, batch_size=64, validation_split=0.1,
                   callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
         accuracy = model.evaluate(np.array(X_train[t_test]), np.array(Y_train[t_test]))
         loss_list.append(round(accuracy[0], 3))
         accuracy_list.append(round(accuracy[1], 3))
     print('K-Loss: {}\n  K-Accuracy: {}'.format(loss_list, accuracy_list))
-    ic(np.mean(loss_list), np.mean(accuracy_list))
+    print('Loss: {}\n  Accuracy: {}'.format(np.mean(loss_list), np.mean(accuracy_list)))
     # model.fit(X, Y, epochs=5, batch_size=64, validation_split=0.1,
     #           callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
     return tokenizer, model
@@ -132,7 +136,7 @@ def predict_result(tokenizer, model):
     # print('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accuracy[0], accuracy[1]))
     print(pred_lists[:10])
     id_lists = pred_lists.argmax(axis=1)
-    cat_id = pd.read_csv('category_to_id.csv')
+    cat_id = pd.read_csv('../category_to_id.csv')
     ic_dict = dict(zip(cat_id['cat_id'], cat_id['category3_new']))
     cat_lists = list()
     for id in id_lists:
