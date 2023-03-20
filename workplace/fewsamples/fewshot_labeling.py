@@ -36,14 +36,14 @@ def get_few_shot():
 
 def get_few_data():
     # 扩展少于k_neighbors数的类别
-    old_df = pd.read_csv('few_shot.csv', index_col=0)
+    old_df = pd.read_csv('data/few_shot.csv', index_col=0)
     new_data_df = data_grow(old_df)
     new_data_df = new_data_df.sample(frac=1).reset_index()
     print("扩展后数据量：", len(new_data_df.index))
     # 生成类别-id字典
     new_data_df['cat_id'] = new_data_df['category3_new'].factorize()[0]
     cat_df = new_data_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
-    cat_df.to_csv('category_to_id.csv')
+    cat_df.to_csv('./data/category_to_id.csv')
     new_data_df.to_csv('input_data.csv')
 
 
@@ -75,7 +75,7 @@ def pre_matrix():
 
 def model_train():
     # new_data_df = pd.read_csv('few_shot.csv')
-    new_data_df = pd.read_csv('input_data.csv')
+    new_data_df = pd.read_csv('data/input_data.csv')
     # 文本向量化
     tokenizer = Tokenizer()
     tokenizer.fit_on_texts(new_data_df['cut_name'].values)
@@ -136,7 +136,7 @@ def predict_result(tokenizer, model):
     # print('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accuracy[0], accuracy[1]))
     print(pred_lists[:10])
     id_lists = pred_lists.argmax(axis=1)
-    cat_id = pd.read_csv('../category_to_id.csv')
+    cat_id = pd.read_csv('./data/category_to_id.csv')
     ic_dict = dict(zip(cat_id['cat_id'], cat_id['category3_new']))
     cat_lists = list()
     for id in id_lists:

@@ -164,7 +164,7 @@ class sdas():
 
 if __name__ == '__main__':
     # fit_model_by_deeplearn()
-    df = pd.read_csv('../workplace/fewsamples/few_shot.csv', index_col=0)
+    df = pd.read_csv('../workplace/fewsamples/data/few_shot.csv', index_col=0)
     token = Tokenizer()
     word_lists = df['cut_name'].values
     token.fit_on_texts(word_lists)

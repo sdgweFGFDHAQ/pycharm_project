@@ -13,7 +13,7 @@ import argparse
 class EDA(object):
     __doc__ = """eda class"""
 
-    _stop_words_path = 'stopwords.txt'
+    _stop_words_path = '../resources/stopwords.txt'
     random.seed(2023)
 
     def __init__(self, num_aug=9, synonyms_model=None):
