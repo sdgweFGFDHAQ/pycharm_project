@@ -33,7 +33,9 @@ def set_file_standard_data(city, part_i):
     path_city = SP.PATH_ZZX_DATA + city + '.csv'
     path_part = SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv'
     if os.path.exists(path_city):
-        csv_data = pd.read_csv(path_city, usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'])
+        csv_data = pd.read_csv(path_city,
+                               usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'],
+                               keep_default_na=False)
         # 用一级标签填充空白(NAN)的二级标签、三级标签
         # csv_data = csv_data[csv_data['category1_new'].notnull() & (csv_data['category1_new'] != "")]
         csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
@@ -43,25 +45,34 @@ def set_file_standard_data(city, part_i):
         csv_data['cut_name'] = csv_data['name'].apply(cut_word)
         if os.path.exists(path_part) and os.path.getsize(path_part):
             csv_data.to_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv',
-                            columns=['id', 'name', 'category3_new', 'cut_name'], mode='a', header=False)
+                            columns=['id', 'name', 'category3_new', 'cut_name'],
+                            mode='a', header=False)
         else:
             csv_data.to_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv',
-                            columns=['id', 'name', 'category3_new', 'cut_name'], mode='w')
+                            columns=['id', 'name', 'category3_new', 'cut_name'],
+                            mode='w')
 
 
-def random_get_trainset():
+def random_get_trainset(is_labeled=True, labeled_is_all=False):
     standard_df = pd.DataFrame(columns=['id', 'name', 'category3_new', 'cut_name'])
+    result_path = 'standard_store_data.csv'
+    all_fix = ''
     for i in range(SP.SEGMENT_NUMBER):
         path = SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(i) + '.csv'
         df_i = pd.read_csv(path, usecols=['id', 'name', 'category3_new', 'cut_name'], keep_default_na=False)
-        df_i = df_i[df_i['category3_new'] != '']
-        # 全量数据
-        # standard_df_i = df_i
-        # 部分数据
-        standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.15, random_state=23)
+        if is_labeled:
+            df_i = df_i[df_i['category3_new'] != '']
+            all_fix = '_labeled'
+        if labeled_is_all:
+            # 全量数据
+            standard_df_i = df_i
+            result_path = 'all' + all_fix + '_data.csv'
+        else:
+            # 部分数据
+            standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.15, random_state=23)
         standard_df = pd.concat([standard_df, standard_df_i])
-        standard_df = standard_df.sample(frac=1).reset_index(drop=True)
-    standard_df.to_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv', index=False)
+    standard_df = standard_df.sample(frac=1).reset_index(drop=True)
+    standard_df.to_csv(SP.PATH_ZZX_STANDARD_DATA + result_path, index=False)
 
 
 def get_dataset():
@@ -222,9 +233,11 @@ if __name__ == '__main__':
     # 用于重新切分店名，生成标准文件
     # rerun_get_file()
     # 随机抽取带标签训练集
+    random_get_trainset(is_labeled=False, labeled_is_all=True)
+    random_get_trainset(is_labeled=True, labeled_is_all=True)
     # random_get_trainset()
     # 用于重新预测打标，生成预测文件
-    rerun_get_model()
+    # rerun_get_model()
     # 绘制收敛次数图像
     # draw_trend(model_fit)
 # nohup python -u main.py > log.log 2>&1 &

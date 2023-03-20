@@ -9,7 +9,7 @@ from workplace.fewsamples.w2c_eda import data_grow
 from workplace.fewsamples.utils.mini_tool import set_jieba, cut_word
 
 # 原始文件路径
-original_file_path = ''
+original_file_path = '../all_labeled_data.csv'
 
 
 # 读取原始文件,将数据格式标准化
@@ -18,7 +18,9 @@ def set_file_standard_data(path, is_label=True):
     :param path:
     :param is_label: 是否清洗无标签数据,默认为 True
     """
-    csv_data = pd.read_csv(path, usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'])
+    csv_data = pd.read_csv(path,
+                           usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'],
+                           keep_default_na=False)
     if is_label:
         csv_data = csv_data[csv_data['category1_new'].notnull() & (csv_data['category1_new'] != "")]
         # 用一级标签填充空白(NAN)的二级标签、三级标签
@@ -127,7 +129,7 @@ class Preprocess:
         return self.embedding_matrix
 
     # 把句子里面的字变成相对应的index
-    def sentence_word2idx(self, sentences):
+    def get_pad_word2idx(self, sentences):
         text_to_sequence = []
         for sentence in sentences:
             sequence = []

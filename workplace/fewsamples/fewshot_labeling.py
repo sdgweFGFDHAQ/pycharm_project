@@ -16,7 +16,8 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import pandas as pd
 
-from workplace.fewsamples.w2c_eda import cut_word, data_grow
+from workplace.fewsamples.utils.mini_tool import cut_word
+from workplace.fewsamples.w2c_eda import data_grow
 from workplace.fewsamples.global_parameter import StaticParameter as SP
 
 
@@ -44,7 +45,7 @@ def get_few_data():
     new_data_df['cat_id'] = new_data_df['category3_new'].factorize()[0]
     cat_df = new_data_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
     cat_df.to_csv('./data/category_to_id.csv')
-    new_data_df.to_csv('input_data.csv')
+    new_data_df.to_csv('./data/input_data.csv')
 
 
 def create_tokenizer(cut_name_list, word_index):

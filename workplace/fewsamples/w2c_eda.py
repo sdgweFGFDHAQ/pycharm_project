@@ -34,7 +34,7 @@ def set_word2vec():
     vec = Word2Vec.load('./models/word2vec.model')
     vec.build_vocab(name_list1, update=True)
     vec.train(name_list1, total_examples=vec.corpus_count, epochs=5)
-    vec.wv.save_word2vec_format('word2vec.vector')
+    vec.wv.save_word2vec_format('./models/word2vec.vector')
 
 
 def data_grow(df):
@@ -74,7 +74,7 @@ def random_replace(df, eda_object, name_list, cut_name_list, category_list):
 if __name__ == '__main__':
     # get_word2vec()
     # set_word2vec()
-    w2c_model = Word2Vec.load('word2vec.model')
+    w2c_model = Word2Vec.load('./models/word2vec.model')
     w = ['文具', '饭', '便利店', '串串香']
     for i in w:
         word = w2c_model.wv.similar_by_word(i)
