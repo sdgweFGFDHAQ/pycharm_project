@@ -26,7 +26,7 @@ w2v_path = os.path.join(path_prefix, 'models/word2vec.vector')
 # 定义句子长度、是否固定 embedding、batch 大小、定义训练次数 epoch、learning rate 的值、model 的保存路径
 model_dir = os.path.join(path_prefix, 'model/')
 batch_size = 32
-epochs = 10
+epochs = 5
 lr = 0.001
 
 
@@ -121,6 +121,7 @@ def load_programs():
     preprocess = Preprocess(data_x, sen_len=6)
     # 设置sen_len
     preprocess.length_distribution(data_x)
+    # 初始化参数
     embedding = preprocess.create_tokenizer()
     data_x = preprocess.get_pad_word2idx(data_x)
     data_y = preprocess.get_lab2idx(data_y)
@@ -142,15 +143,27 @@ def load_programs():
     return data_x, data_y, lstm_model
 
 
+# class ContrastiveLoss(torch.nn.Module):
+#     def __init__(self, margin=2.0):
+#         super(ContrastiveLoss, self).__init__()
+#         self.margin = margin
+#
+#     def forward(self, output1, output2, label):
+#         euclidean_distance = F.pairwise_distance(output1, output2)
+#         # calmp夹断用法
+#         loss_contrastive = torch.mean((1 - label) * torch.pow(euclidean_distance, 2) +
+#                                       (label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
+#         return loss_contrastive
+
+
 def search_best_dataset(data_x, data_y, model):
-    best_x_train, best_y_train = None, None
-    best_x_test, best_y_test = None, None
+    best_x_train, best_y_train, best_x_test, best_y_test = None, None, None, None
     # 使用k折交叉验证
-    kf_10 = KFold(n_splits=10)
+    kf_10 = KFold(n_splits=5)
     k = 0
     best_accuracy = 0.
     for t_train, t_test in kf_10.split(data_x, data_y):
-        print('====================第{}折==================='.format(k))
+        print('====================第{}折==================='.format(k + 1))
         k += 1
         train_ds = DefineDataset(data_x[t_train], data_y[t_train])
         train_ip = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True)
@@ -176,10 +189,10 @@ if __name__ == '__main__':
     d_x, d_y, classify_model = load_programs()
 
     # K折交叉验证
-    # search_best_dataset(d_x, d_y, classify_model)
-
+    x_train, x_test, y_train, y_test = search_best_dataset(d_x, d_y, classify_model)
     # split data
-    x_train, x_test, y_train, y_test = train_test_split(d_x, d_y, test_size=0.3, random_state=5)
+    # x_train, x_test, y_train, y_test = train_test_split(d_x, d_y, test_size=0.3, random_state=5)
+
     # 构造Dataset
     train_dataset = DefineDataset(x_train, y_train)
     val_dataset = DefineDataset(x_test, y_test)
@@ -191,6 +204,7 @@ if __name__ == '__main__':
     print('Validation loader prepared.')
 
     best_acc = 0.
+    epochs = 15
     # run epochs
     for epoch in range(epochs):
         print('[ Epoch{}: batch_size({}) ]'.format(epoch + 1, batch_size))

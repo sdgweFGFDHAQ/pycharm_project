@@ -114,9 +114,6 @@ class Preprocess:
         cat_df = few_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(
             drop=True)
         cat_df.to_csv('./data/category_to_id.csv')
-        # 生成类别字典
-        self.lab2idx = dict(zip(cat_df['category3_new'], cat_df['cat_id']))
-        self.idx2lab = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
 
     # 数据增强
     def grow_few_data(self):
@@ -179,11 +176,14 @@ class Preprocess:
 
     # 获取数据“标签列“的向量形式
     def get_lab2idx(self, labels):
+        cat_df = pd.read_csv('./data/category_to_id.csv')
+        # 生成类别字典
+        self.lab2idx = dict(zip(cat_df['category3_new'], cat_df['cat_id']))
+        self.idx2lab = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
         # 输出1D标签索引
         y = list()
         for lab in labels:
             y.append(self.lab2idx[lab])
-        print('lab2idx:', y)
         return torch.LongTensor(y)
 
     # 店名长度的分布分析
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     # 标准化数据
     # set_file_standard_data(original_file_path)
     # 数据增强
-    data = get_data()
+    # data = get_data()
     preprocess = Preprocess(None, None)
-    preprocess.get_few_shot(data)
+    # preprocess.get_few_shot(data)
     preprocess.grow_few_data()

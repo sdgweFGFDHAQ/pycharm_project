@@ -4,11 +4,10 @@ import jieba
 
 def set_jieba():
     # 设置不可分割的词
-    # jieba.load_userdict("./resources/cityname.txt")
-    # jieba.load_userdict("./resources/statename.txt")
-    # jieba.load_userdict("./resources/distinctname.txt")
-    # jieba.load_userdict("./resources/namenoise.txt")
-    # jieba.load_userdict("./resources/symbol.txt")
+    jieba.load_userdict("./resources/statename.txt")
+    jieba.load_userdict("./resources/cityname.txt")
+    jieba.load_userdict("./resources/distinctname.txt")
+    jieba.load_userdict("./resources/symbol.txt")
     jieba.load_userdict("./resources/stopwords.txt")
     jieba.load_userdict('./resources/indiv_words.txt')
 
@@ -26,7 +25,7 @@ def cut_word(word):
         if lc_word not in stop_words:
             if lc_word != '\t' and not lc_word.isspace():
                 out_word_list.append(lc_word)
-    if l_cut_words and (len(l_cut_words) != 0):
+    if out_word_list and (len(out_word_list) != 0):
         return ' '.join(out_word_list)
     else:
         return ' '.join(l_cut_words)

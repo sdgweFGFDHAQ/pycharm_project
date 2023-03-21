@@ -39,4 +39,12 @@ def dwe():
 
 
 if __name__ == '__main__':
-    dwe()
+    with open('../workplace/fewsamples/resources/symbol.txt', 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    unique_lines = set(lines)
+
+    with open('../workplace/fewsamples/resources/symbol.txt', 'w', encoding='utf-8') as f:
+        for line in unique_lines:
+            f.write(line)
+

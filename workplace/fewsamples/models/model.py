@@ -26,10 +26,14 @@ class LSTMNet(nn.Module):
         inputs = inputs.to(torch.float32)
         # print(inputs)
         x, _ = self.lstm(inputs, None)
-
         # x 的 dimension (batch, seq_len, hidden_size)
         # 取用 LSTM 最后一个的 hidden state
         x = x[:, -1, :]
         # print("x", x)
         x = self.classifier(x)
         return x
+
+    # def forward(self, input1, input2):
+    #     out1 = self.forward_once(input1)
+    #     out2 = self.forward_once(input2)
+    #     return out1, out2

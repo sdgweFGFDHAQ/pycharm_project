@@ -119,7 +119,7 @@ class EDA(object):
             if counter > 3:
                 return new_words
         new_words[random_idx_1], new_words[random_idx_2] = new_words[random_idx_2], new_words[random_idx_1]
-        return ' '.join(new_words)
+        return new_words
 
 
     def eda(self, sentence, alpha_sr=0.1, alpha_ri=0.1, alpha_rs=0.1, p_rd=0.1):

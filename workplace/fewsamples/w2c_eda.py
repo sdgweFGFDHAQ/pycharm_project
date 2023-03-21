@@ -1,8 +1,8 @@
 import pandas as pd
 from gensim.models import Word2Vec, KeyedVectors
 
-# from utils import eda_class
-from workplace.fewsamples.utils import eda_class
+from utils import eda_class
+# from workplace.fewsamples.utils import eda_class
 
 
 class read_file_data:
@@ -46,7 +46,7 @@ def data_grow(df):
     df.apply(random_replace, args=[eda, new_name_list, new_cut_name_list, new_category_list], axis=1)
     new_id_list = ['111110000000000000' + str(id_i) for id_i in range(len(new_name_list))]
     new_df = pd.DataFrame(
-        {'id': new_id_list, 'name': new_cut_name_list, 'category3_new': new_category_list, 'cut_name': new_name_list})
+        {'id': new_id_list, 'name': new_name_list, 'category3_new': new_category_list, 'cut_name': new_cut_name_list})
     print(new_df.head(3))
     df = pd.concat([df, new_df])
     df.drop_duplicates(subset=['cut_name'], keep='first', inplace=True)
@@ -55,7 +55,6 @@ def data_grow(df):
 
 def random_replace(df, eda_object, name_list, cut_name_list, category_list):
     print(df['cut_name'])
-    print(type(df['cut_name']))
     cn_lists = df['cut_name'].split(' ')
     for_count = 0
     new_name_list = list()
@@ -65,8 +64,8 @@ def random_replace(df, eda_object, name_list, cut_name_list, category_list):
         # 随机交换
         new_cut_name = eda_object.random_swap(cn_lists, n=1)
         if new_cut_name not in new_name_list:
-            new_name_list.append(new_cut_name)
-            cut_name_list.append(''.join(new_cut_name))
+            name_list.append(''.join(new_cut_name))
+            cut_name_list.append(' '.join(new_cut_name))
             category_list.append(df['category3_new'])
         for_count += 1
     name_list.extend(new_name_list)
@@ -74,8 +73,8 @@ def random_replace(df, eda_object, name_list, cut_name_list, category_list):
 
 
 if __name__ == '__main__':
-    # get_word2vec()
-    # set_word2vec()
+    get_word2vec()
+    set_word2vec()
     w2c_model = Word2Vec.load('./models/word2vec.model')
     w = ['文具', '饭', '便利店', '串串香']
     for i in w:
