@@ -10,7 +10,7 @@ def set_jieba():
     # jieba.load_userdict("./resources/namenoise.txt")
     # jieba.load_userdict("./resources/symbol.txt")
     jieba.load_userdict("./resources/stopwords.txt")
-    jieba.load_userdict('../resources/indiv_words.txt')
+    jieba.load_userdict('./resources/indiv_words.txt')
 
 
 def cut_word(word):
