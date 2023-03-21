@@ -1,15 +1,20 @@
 # encoding=utf-8
 
 from gensim.models import KeyedVectors
+from multiprocessing import Manager, Pool
 import numpy as np
 import pandas as pd
 import torch
 
 from workplace.fewsamples.w2c_eda import data_grow
-from workplace.fewsamples.utils.mini_tool import set_jieba, cut_word
+from workplace.fewsamples.utils.mini_tool import set_jieba, cut_word, error_callback
 
 # 原始文件路径
 original_file_path = '../all_labeled_data.csv'
+# 标准化的已打标数据集
+labeled_data_path = './data/labeled_data.csv'
+# 标准化的未打标数据集
+unlabeled_data_path = './data/unlabeled_data.csv'
 
 
 # 读取原始文件,将数据格式标准化
@@ -21,6 +26,11 @@ def set_file_standard_data(path, is_label=True):
     csv_data = pd.read_csv(path,
                            usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'],
                            keep_default_na=False)
+    pool = Pool(processes=4)
+    standard_df = Manager().list()
+    # 设置jieba
+    set_jieba()
+    # 选择输出
     if is_label:
         csv_data = csv_data[csv_data['category1_new'].notnull() & (csv_data['category1_new'] != "")]
         # 用一级标签填充空白(NAN)的二级标签、三级标签
@@ -33,22 +43,45 @@ def set_file_standard_data(path, is_label=True):
         category.to_csv('./data/category_dict.csv')
         print("类别个数：", len(category['category3_new']))
         # 得到标准数据
-        set_jieba()
-        csv_data['cut_name'] = csv_data['name'].apply(cut_word)
-        csv_data.to_csv('./data/labeled_data.csv', columns=['id', 'name', 'category3_new', 'cut_name'])
+        csv_data_groups = csv_data.groupby('category3_new')
+        for category3, csv_data_i in csv_data_groups:
+            pool.apply_async(cut_world_async, args=(csv_data_i, standard_df), error_callback=error_callback)
+        result_data = pd.concat(standard_df, ignore_index=True)
+        result_data.to_csv('./data/labeled_data.csv', columns=['id', 'name', 'category3_new', 'cut_name'])
     else:
         csv_data = csv_data[csv_data['category1_new'].null() | (csv_data['category1_new'] == "")]
         # 得到标准数据
-        set_jieba()
-        csv_data['cut_name'] = csv_data['name'].apply(cut_word)
-        csv_data.to_csv('./data/unlabeled_data.csv', columns=['id', 'name', 'category3_new', 'cut_name'])
+        csv_data_groups = csv_data.groupby('category3_new')
+        for category3, csv_data_i in csv_data_groups:
+            pool.apply_async(cut_world_async, args=(csv_data_i, standard_df), error_callback=error_callback)
+        result_data = pd.concat(standard_df, ignore_index=True)
+        result_data.to_csv('./data/unlabeled_data.csv', columns=['id', 'name', 'category3_new', 'cut_name'])
+    pool.close()
+    pool.join()
+
+
+def cut_world_async(df, result_df):
+    df['cut_name'] = df['name'].apply(cut_word)
+    result_df.append(df)
+
+
+# 读取全量数据
+def get_data(is_label=True):
+    """
+    :param is_label: 是否读取有标签数据,默认为 True
+    :return:
+    """
+    if is_label:
+        path = labeled_data_path
+        csv_data = pd.read_csv(path, usecols=['id', 'name', 'category3_new', 'cut_name'])
+        return csv_data
+    else:
+        path = unlabeled_data_path
+        csv_data = pd.read_csv(path, usecols=['id', 'name', 'category3_new', 'cut_name'])
+        return csv_data
 
 
 class Preprocess:
-    # 标准化的已打标数据集
-    labeled_data_path = './data/labeled_data.csv'
-    # 标准化的未打标数据集
-    unlabeled_data_path = './data/unlabeled_data.csv'
     # 取样少样本数据集
     few_shot_path = './data/few_shot.csv'
 
@@ -63,25 +96,13 @@ class Preprocess:
         self.lab2idx = {}
         self.idx2lab = {}
 
-    # 读取全量数据
-    def get_data(self, is_label=True):
+    # 从原始数据获取小样本，统计类别，生成”类别-》id索引“的字典
+    def get_few_shot(self, sample):
         """
-        :param is_label: 是否读取有标签数据,默认为 True
+        :param sample: 获取的全量数据
         :return:
         """
-        if is_label:
-            path = self.labeled_data_path
-            csv_data = pd.read_csv(path, usecols=['id', 'name', 'category3_new', 'cut_name'])
-            return csv_data
-        else:
-            path = self.unlabeled_data_path
-            csv_data = pd.read_csv(path, usecols=['id', 'name', 'category3_new', 'cut_name'])
-            return csv_data
-
-    # 从原始数据获取小样本，统计类别，生成”类别-》id索引“的字典
-    def get_few_shot(self):
-        sample = self.get_data()
-        few_df = sample.groupby(sample['category3_new']).sample(n=50, random_state=11, replace=True).drop_duplicates(
+        few_df = sample.groupby(sample['category3_new']).sample(n=50, random_state=23, replace=True).drop_duplicates(
             keep='first')
         few_df = few_df.sample(frac=1)
         few_df.to_csv(self.few_shot_path)
@@ -175,4 +196,10 @@ class Preprocess:
 
 
 if __name__ == '__main__':
-    set_file_standard_data(original_file_path)
+    # 标准化数据
+    # set_file_standard_data(original_file_path)
+    # 数据增强
+    data = get_data()
+    preprocess = Preprocess(None, None)
+    preprocess.get_few_shot(data)
+    preprocess.grow_few_data()

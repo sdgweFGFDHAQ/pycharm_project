@@ -54,6 +54,8 @@ def data_grow(df):
 
 
 def random_replace(df, eda_object, name_list, cut_name_list, category_list):
+    print(df['cut_name'])
+    print(type(df['cut_name']))
     cn_lists = df['cut_name'].split(' ')
     for_count = 0
     new_name_list = list()

@@ -34,8 +34,7 @@ def set_file_standard_data(city, part_i):
     path_part = SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv'
     if os.path.exists(path_city):
         csv_data = pd.read_csv(path_city,
-                               usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'],
-                               keep_default_na=False)
+                               usecols=['id', 'name', 'category1_new', 'category2_new', 'category3_new'])
         # 用一级标签填充空白(NAN)的二级标签、三级标签
         # csv_data = csv_data[csv_data['category1_new'].notnull() & (csv_data['category1_new'] != "")]
         csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)

@@ -176,7 +176,7 @@ if __name__ == '__main__':
     d_x, d_y, classify_model = load_programs()
 
     # K折交叉验证
-    search_best_dataset(d_x, d_y, classify_model)
+    # search_best_dataset(d_x, d_y, classify_model)
 
     # split data
     x_train, x_test, y_train, y_test = train_test_split(d_x, d_y, test_size=0.3, random_state=5)

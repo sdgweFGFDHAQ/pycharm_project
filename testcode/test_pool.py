@@ -3,6 +3,8 @@ from multiprocessing import Pool, Manager
 import re
 import jieba
 import ast
+
+import pandas as pd
 from sklearn import preprocessing
 
 
@@ -19,7 +21,7 @@ def resub():
 
 
 def evaltest():
-    value = {'烤面包': 8.755, '系列': 9.142, '兰姐': 9.152, '旺城': 9.172,'莱': 9.442, '茂映': 9.342, '百家': 8.736}
+    value = {'烤面包': 8.755, '系列': 9.142, '兰姐': 9.152, '旺城': 9.172, '莱': 9.442, '茂映': 9.342, '百家': 8.736}
     scale = preprocessing.minmax_scale(list(value.values()))
     value = dict(zip(value.keys(), scale))
     print(value)
@@ -44,6 +46,20 @@ def co_num(a, b, c):
     return c
 
 
+def get_df(df, i, al):
+    print(i)
+    al.append(df.head(1))
+
+
 if __name__ == '__main__':
-    evaltest()
+    csv = pd.read_csv('aaa.csv', index_col=0)
+    alist = Manager().list()
+    pool = Pool(4)
+    ddf = pd.DataFrame()
+    for i in range(5):
+        pool.apply_async(func=get_df, args=(csv, i, alist))
+    pool.close()
+    pool.join()
+    concat = pd.concat(alist, ignore_index=True)
+    print(concat)
 

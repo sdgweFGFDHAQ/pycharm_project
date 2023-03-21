@@ -23,21 +23,21 @@ from workplace.fewsamples.global_parameter import StaticParameter as SP
 
 def get_few_shot():
     sample = pd.read_csv('../all_labeled_data.csv', usecols=['id', 'name', 'category3_new', 'cut_name'])
-    few_df = sample.groupby(sample['category3_new']).sample(n=50, random_state=11, replace=True).drop_duplicates(
+    few_df = sample.groupby(sample['category3_new']).sample(n=60, random_state=11, replace=True).drop_duplicates(
         keep='first')
     few_df = few_df.sample(frac=1)
     # 设置不可分割的词
     # jieba.load_userdict('indiv_words.txt')
     # sample['cut_name'] = sample['name'].apply(cut_word)
-    few_df.to_csv('few_shot.csv')
+    few_df.to_csv('./data/few_shot.csv')
     category_list = few_df[['category3_new']].drop_duplicates(keep='first')
     category_num = len(category_list.index)
-    print('原始数据类别个数:', category_num)
+    print('样本数据类别个数:', category_num)
 
 
 def get_few_data():
     # 扩展少于k_neighbors数的类别
-    old_df = pd.read_csv('data/few_shot.csv', index_col=0)
+    old_df = pd.read_csv('./data/few_shot.csv', index_col=0)
     new_data_df = data_grow(old_df)
     new_data_df = new_data_df.sample(frac=1).reset_index()
     print("扩展后数据量：", len(new_data_df.index))
@@ -63,7 +63,7 @@ def create_tokenizer(cut_name_list, word_index):
 
 
 def pre_matrix():
-    embedding_model = KeyedVectors.load_word2vec_format('word2vec.vector')
+    embedding_model = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
     word2idx = {'PAD': 0}
     vocab_list = [k for k in embedding_model.key_to_index.keys()]
     embeddings_matrix = np.zeros((len(vocab_list) + 1, embedding_model.vector_size))
@@ -76,11 +76,12 @@ def pre_matrix():
 
 def model_train():
     # new_data_df = pd.read_csv('few_shot.csv')
-    new_data_df = pd.read_csv('data/input_data.csv')
+    new_data_df = pd.read_csv('./data/input_data.csv')
     # 文本向量化
     tokenizer = Tokenizer()
     tokenizer.fit_on_texts(new_data_df['cut_name'].values)
     print('不同词语个数：', len(tokenizer.word_index))
+    print(tokenizer.word_index)
     # x = tokenizer.texts_to_sequences(new_data_df['cut_name'].values)
     # x = pad_sequences(x, maxlen=SP.MAX_LENGTH)
     # ========================
@@ -128,8 +129,7 @@ def predict_result(tokenizer, model):
     df = pd.read_csv('../all_labeled_data.csv').sample(n=30000, random_state=22)
     test_lists = list()
     for i in df['cut_name']:
-        i = literal_eval(i)
-        test_lists.append(' '.join(i))
+        test_lists.append(i)
     seq = tokenizer.texts_to_sequences(test_lists)
     padded = pad_sequences(seq, maxlen=SP.MAX_LENGTH)
     pred_lists = model.predict(padded)
@@ -145,14 +145,14 @@ def predict_result(tokenizer, model):
     result = pd.DataFrame(
         {'store_id': df['id'], 'name': df['name'], 'category3_new': df['category3_new'],
          'predict_category': cat_lists})
-    result.to_csv('test_predict_category.csv')
+    result.to_csv('./data/test_predict_category.csv')
 
 
 if __name__ == '__main__':
     # 获取少样本数据集
-    # get_few_shot()
-    # get_few_data()
+    get_few_shot()
+    get_few_data()
     # 训练模型预测
     token, mod = model_train()
     # print(mod.layers[0].output[0])
-    # predict_result(token, mod)
+    predict_result(token, mod)
