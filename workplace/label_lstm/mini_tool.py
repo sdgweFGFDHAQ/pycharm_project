@@ -15,13 +15,16 @@ def cut_word(word):
     word = re.sub(r'(?<=[\u4e00-\u9fa5])([xX])(?=[\u4e00-\u9fa5])|(?<=[A-Z])x(?=[A-Z])', ' ', word)
     l_cut_words = jieba.lcut(word)
     # 人工去除明显无用的词
-    # out_word_list = list()
-    # stop_words = [line.strip() for line in open('../resources/stopwords.txt', 'r', encoding='utf-8').readlines()]
-    # for lc_word in l_cut_words:
-    #     if lc_word not in stop_words:
-    #         if lc_word != '\t' and not lc_word.isspace():
-    #             out_word_list.append(lc_word)
-    return ' '.join(l_cut_words)
+    out_word_list = list()
+    stop_words = [line.strip() for line in open('../resources/stopwords.txt', 'r', encoding='utf-8').readlines()]
+    for lc_word in l_cut_words:
+        if lc_word not in stop_words:
+            if lc_word != '\t' and not lc_word.isspace():
+                out_word_list.append(lc_word)
+    if l_cut_words and (len(l_cut_words != 0)):
+        return ' '.join(out_word_list)
+    else:
+        return ' '.join(l_cut_words)
 
 
 def error_callback(error):
