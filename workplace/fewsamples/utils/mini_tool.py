@@ -26,7 +26,7 @@ def cut_word(word):
         if lc_word not in stop_words:
             if lc_word != '\t' and not lc_word.isspace():
                 out_word_list.append(lc_word)
-    if l_cut_words and (len(l_cut_words != 0)):
+    if l_cut_words and (len(l_cut_words) != 0):
         return ' '.join(out_word_list)
     else:
         return ' '.join(l_cut_words)
