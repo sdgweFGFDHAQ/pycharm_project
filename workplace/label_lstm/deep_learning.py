@@ -230,7 +230,7 @@ def rerun_get_model():
 
 if __name__ == '__main__':
     # 用于重新切分店名，生成标准文件
-    # rerun_get_file()
+    rerun_get_file()
     # 随机抽取带标签训练集
     random_get_trainset(is_labeled=False, labeled_is_all=True)
     random_get_trainset(is_labeled=True, labeled_is_all=True)
