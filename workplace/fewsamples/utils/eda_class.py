@@ -47,7 +47,10 @@ class EDA(object):
         :return:
         """
         vec = self.synonyms_model
-        return [str(i[0]) for i in vec.wv.similar_by_word(word=word, topn=10)]
+        try:
+            return [str(i[0]) for i in vec.similar_by_word(word=word, topn=10)]
+        except KeyError:
+            return word
 
     def synonym_replacement(self, words, n):
         """同义词替换

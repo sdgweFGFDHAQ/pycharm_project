@@ -5,6 +5,7 @@ from multiprocessing import Manager, Pool
 import numpy as np
 import pandas as pd
 import torch
+from icecream import ic
 
 from workplace.fewsamples.w2c_eda import data_grow
 from workplace.fewsamples.utils.mini_tool import set_jieba, cut_word, error_callback
@@ -85,10 +86,9 @@ class Preprocess:
     # 取样少样本数据集
     few_shot_path = './data/few_shot.csv'
 
-    def __init__(self, sentences, sen_len):  # 首先定义类的一些属性
+    def __init__(self, sen_len):  # 首先定义类的一些属性
         self.embedding = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
         self.vector_size = self.embedding.vector_size
-        self.sentences = sentences
         self.sen_len = sen_len
         self.word2idx = {}
         self.idx2word = []
@@ -137,8 +137,8 @@ class Preprocess:
                 word = vocab_list[i]
                 embeddings_matrix[i] = self.embedding[word]
             except Exception:
-                vector = torch.empty(1, self.vector_size)
-                torch.nn.init.uniform_(vector)
+                vector = torch.zeros(1, self.vector_size)
+                # torch.nn.init.uniform_(vector)
                 embeddings_matrix[i] = vector
             finally:
                 self.word2idx[vocab_list[i]] = i
@@ -151,7 +151,8 @@ class Preprocess:
         text_to_sequence = []
         for sentence in sentences:
             sequence = []
-            for word in sentence:
+            sen_list = sentence.split()
+            for word in sen_list:
                 if word in self.word2idx.keys():
                     sequence.append(self.word2idx[word])
                 else:
@@ -170,7 +171,9 @@ class Preprocess:
             new_sentence = list()
             for _ in range(pad_len):
                 new_sentence.append(self.word2idx["<PAD>"])
-            new_sentence.extend(sentence)
+            # new_sentence.extend(sentence)
+            sentence.extend(new_sentence)
+            new_sentence = sentence
         assert len(new_sentence) == self.sen_len
         return new_sentence
 
@@ -190,8 +193,9 @@ class Preprocess:
     def length_distribution(self, sentences):
         len_list = []
         for sentence in sentences:
-            len_list.append(len(sentence))
-        self.sen_len = int(np.median(np.array(pd.value_counts(len_list).keys())))
+            len_list.append(len(sentence.split()))
+        set_len = int(np.median(len_list))
+        self.sen_len = set_len if set_len > self.sen_len else self.sen_len
         print('length_distribution:', self.sen_len)
 
 
@@ -200,6 +204,6 @@ if __name__ == '__main__':
     # set_file_standard_data(original_file_path)
     # 数据增强
     # data = get_data()
-    preprocess = Preprocess(None, None)
+    preprocess = Preprocess(None)
     # preprocess.get_few_shot(data)
     preprocess.grow_few_data()

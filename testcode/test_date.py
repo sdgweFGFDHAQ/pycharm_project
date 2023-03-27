@@ -34,17 +34,12 @@ def trans():
 
 
 def dwe():
-    df = pd.DataFrame({'d': [1, 3, 4], 'a': [2, 5, 1]})
-    print(5 in df['a'].values)
+    df = pd.read_csv('aaa.csv')
+    for name in df['cut_name']:
+        print(name.split(' '))
+        print(name)
 
 
 if __name__ == '__main__':
-    with open('../workplace/fewsamples/resources/symbol.txt', 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-
-    unique_lines = set(lines)
-
-    with open('../workplace/fewsamples/resources/symbol.txt', 'w', encoding='utf-8') as f:
-        for line in unique_lines:
-            f.write(line)
+    dwe()
 
