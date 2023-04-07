@@ -1,7 +1,7 @@
 import os
 
 from icecream import ic
-from imblearn.over_sampling import SMOTE, BorderlineSMOTE, ADASYN
+from imblearn.over_sampling import SMOTE, BorderlineSMOTE
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -130,26 +130,13 @@ def load_programs():
     preprocess = Preprocess(sen_len=6)
     # 设置sen_len
     preprocess.length_distribution(data_x)
-    # 初始化参数
+    # 加载model paragram
     embedding = preprocess.create_tokenizer()
+    # 初始化参数
     data_x = preprocess.get_pad_word2idx(data_x)
     data_y = preprocess.get_lab2idx(data_y)
 
-    # 加载model
-    lstm_model = LSTMNet(
-        embedding,
-        embedding_dim=200,
-        hidden_dim=128,
-        num_classes=len(category_classes),
-        num_layers=2,
-        dropout=0.5,
-        requires_grad=False
-    ).to(device)
-    # 返回model中的参数的总数目
-    total = sum(p.numel() for p in lstm_model.parameters())
-    trainable = sum(p.numel() for p in lstm_model.parameters() if p.requires_grad)
-    print('\nstart training, parameter total:{}, trainable:{}\n'.format(total, trainable))
-    return data_x, data_y, lstm_model
+    return data_x, data_y, embedding, len(category_classes)
 
 
 # class ContrastiveLoss(torch.nn.Module):
@@ -165,15 +152,24 @@ def load_programs():
 #         return loss_contrastive
 
 
-def search_best_dataset(data_x, data_y, model):
+def search_best_dataset(data_x, data_y, embedding, category_count):
     # 使用k折交叉验证
     best_x_train, best_y_train, best_x_test, best_y_test = None, None, None, None
-    kf_5 = KFold(n_splits=5)
+    kf_5 = KFold(n_splits=10)
     k = 0
     best_accuracy = 0.
     for t_train, t_test in kf_5.split(data_x, data_y):
         print('==================第{}折================'.format(k + 1))
         k += 1
+        model = LSTMNet(
+            embedding,
+            embedding_dim=200,
+            hidden_dim=128,
+            num_classes=category_count,
+            num_layers=2,
+            dropout=0.5,
+            requires_grad=False
+        ).to(device)
         train_ds = DefineDataset(data_x[t_train], data_y[t_train])
         train_ip = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True, drop_last=True)
         test_ds = DefineDataset(data_x[t_test], data_y[t_test])
@@ -210,16 +206,28 @@ def draw_trend(train_ll, train_al, test_ll, test_al):
 
 
 if __name__ == '__main__':
-    d_x, d_y, classify_model = load_programs()
-    # # 居然是在这里做数据增强 ADASYN\SVMSMOTE\KMeansSMOTE
-    # x_vec = classify_model.embedding(d_x.to(device, dtype=torch.long))
-    # imbalance = BorderlineSMOTE(k_neighbors=5, kind='borderline-1')
-    # x_smote, y_smote = imbalance.fit_resample(x_vec.reshape([x_vec.size()[0], -1]).numpy(), d_y.numpy())
-    # d_x, d_y = torch.from_numpy(x_smote).reshape([x_smote.shape[0], x_vec.size()[1], -1]), torch.from_numpy(y_smote)
+    d_x, d_y, embedding_matrix, category_cou = load_programs()
+    # imbalance = BorderlineSMOTE()
+    # x_smote, y_smote = imbalance.fit_resample(d_x, d_y)
+    # print(len(x_smote))
+    lstm_model = LSTMNet(
+        embedding_matrix,
+        embedding_dim=200,
+        hidden_dim=128,
+        num_classes=category_cou,
+        num_layers=2,
+        dropout=0.5,
+        requires_grad=False
+    ).to(device)
+    # 返回model中的参数的总数目
+    total = sum(p.numel() for p in lstm_model.parameters())
+    trainable = sum(p.numel() for p in lstm_model.parameters() if p.requires_grad)
+    print('\nstart training, parameter total:{}, trainable:{}\n'.format(total, trainable))
+
     # K折交叉验证
-    # x_train, x_test, y_train, y_test = search_best_dataset(d_x, d_y, classify_model)
+    x_train, x_test, y_train, y_test = search_best_dataset(d_x, d_y, embedding_matrix, category_cou)
     # split data
-    x_train, x_test, y_train, y_test = train_test_split(d_x, d_y, test_size=0.3, random_state=5)
+    # x_train, x_test, y_train, y_test = train_test_split(d_x, d_y, test_size=0.3, random_state=5)
 
     # 构造Dataset
     train_dataset = DefineDataset(x_train, y_train)
@@ -232,15 +240,15 @@ if __name__ == '__main__':
     print('Validation loader prepared.')
 
     best_acc = 0.
-    epochs = 10
+    epochs = 25
     train_loss_list, train_acc_list, test_loss_list, test_acc_list = list(), list(), list(), list()
     # run epochs
     for epoch in range(epochs):
         print('[ Epoch{}: batch_size({}) ]'.format(epoch + 1, batch_size))
         # train for one epoch
-        epoch_loss, epoch_accuracy = training(train_input, classify_model)
+        epoch_loss, epoch_accuracy = training(train_input, lstm_model)
         # predict on validation set
-        epoch_distance, epoch_percent = predicting(val_input, classify_model)
+        epoch_distance, epoch_percent = predicting(val_input, lstm_model)
         if epoch_percent > best_acc:
             # 如果 validation 的结果好于之前所有的结果，就把当下的模型保存
             best_acc = epoch_percent

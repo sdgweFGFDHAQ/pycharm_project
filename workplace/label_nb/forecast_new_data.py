@@ -61,7 +61,7 @@ def calculate_accuracy(tset_data):
 
 def bayes_forecast_results(test_data):
     # 训练贝叶斯模型
-    train_data = pd.read_csv('../standard_store_gz.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=80000)
+    train_data = pd.read_csv('../standard_store_data.csv', usecols=['name', 'category3_new', 'cut_name'], nrows=80000)
     train_data['cut_name'] = train_data['cut_name'].apply(literal_eval)
     cut_name_list = list()
     for i in list(train_data['cut_name']):

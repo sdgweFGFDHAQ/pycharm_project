@@ -1,25 +1,25 @@
 import os
+
 import matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np
 import pandas as pd
 from multiprocessing import Pool
 from ast import literal_eval
-from keras.callbacks import EarlyStopping
-from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
-from keras.models import Sequential
-from keras.preprocessing.text import Tokenizer
-from keras.utils import pad_sequences
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import accuracy_score, confusion_matrix
+import torch
+from sklearn.model_selection import KFold
+from torch import nn
+from torch import optim
+from torch.utils.data import Dataset, DataLoader
 import warnings
+
+from model import LSTMNet
+from preprocess_data import Preprocess
 from global_parameter import StaticParameter as SP
 from mini_tool import set_jieba, cut_word, error_callback
-# from workplace.label_lstm.global_parameter import StaticParameter as SP
-# from workplace.label_lstm.mini_tool import set_jieba, cut_word, error_callback
 import gc
 
 warnings.filterwarnings("ignore", category=UserWarning)
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 # 批量标准化
@@ -62,13 +62,18 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
         if is_labeled:
             df_i = df_i[df_i['category3_new'] != '']
             all_fix = '_labeled'
-        if labeled_is_all:
-            # 全量数据
-            standard_df_i = df_i
-            result_path = 'all' + all_fix + '_data.csv'
+            if labeled_is_all:
+                # 全量数据
+                standard_df_i = df_i
+                result_path = 'all' + all_fix + '_data.csv'
+            else:
+                # 部分数据
+                standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.15, random_state=23)
         else:
-            # 部分数据
-            standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.15, random_state=23)
+            df_i = df_i[df_i['category3_new'] == '']
+            standard_df_i = df_i
+            all_fix = '_unlabeled'
+            result_path = 'all' + all_fix + '_data.csv'
         standard_df = pd.concat([standard_df, standard_df_i])
     standard_df = standard_df.sample(frac=1).reset_index(drop=True)
     standard_df.to_csv(SP.PATH_ZZX_STANDARD_DATA + result_path, index=False)
@@ -76,48 +81,140 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
 
 def get_dataset():
     gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv')
-    # gz_df = pd.read_csv('standard_store_data.csv')
     print(len(gz_df.index))
-    gz_df['cat_id'] = gz_df['category3_new'].factorize()[0]
-    cat_df = gz_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
-    print(len(cat_df.index))
-    cat_df.to_csv('category_to_id.csv')
-    ic_dict = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
-    return gz_df, ic_dict
+    data_x, data_y = gz_df['cut_name'].values, gz_df['category3_new'].values
+    category_classes = gz_df['category3_new'].unique()
+    # data pre_processing
+    preprocess = Preprocess(sen_len=7)
+    # 设置sen_len
+    preprocess.length_distribution(data_x)
+    # 加载model paragram
+    embedding = preprocess.create_tokenizer()
+    # 初始化参数
+    data_x = preprocess.get_pad_word2idx(data_x)
+    data_y = preprocess.get_lab2idx(data_y)
+
+    return data_x, data_y, embedding, preprocess, len(category_classes)
 
 
-def fit_model_by_deeplearn(df):
-    tokenizer = Tokenizer(num_words=SP.MAX_WORDS_NUM, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~', lower=True)
-    sample_lists = list()
-    for i in df['cut_name']:
-        i = literal_eval(i)
-        sample_lists.append(' '.join(i))
-    tokenizer.fit_on_texts(sample_lists)
-    word_index = tokenizer.word_index
-    # print(word_index)
-    print('共有 %s 个不相同的词语.' % len(word_index))
-    X = tokenizer.texts_to_sequences(sample_lists)
-    # 填充X,让X的各个列的长度统一
-    X = pad_sequences(X, maxlen=SP.MAX_LENGTH)
-    # # 多类标签的onehot展开
-    Y = pd.get_dummies(df['cat_id']).values
-    # 拆分训练集和测试集
-    # X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.10, random_state=42)
-    # print(X_train.shape, Y_train.shape)
-    # print(X_test.shape, Y_test.shape)
-    # 定义模型
-    model = Sequential()
-    model.add(Embedding(SP.MAX_WORDS_NUM, SP.EMBEDDING_DIM, input_length=X.shape[1]))
-    model.add(SpatialDropout1D(0.2))
-    model.add(LSTM(units=64, dropout=0.3, recurrent_dropout=0.2))
-    model.add(Dense(Y.shape[1], activation='softmax'))
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    print(model.summary())
-    model.fit(X, Y, epochs=5, batch_size=32, validation_split=0.1,
-              callbacks=[EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001)])
-    # accuracy = model.evaluate(X_test, Y_test)
-    # print('Test set\n  Loss: {:0.3f}\n  Accuracy: {:0.3f}'.format(accuracy[0], accuracy[1]))
-    return tokenizer, model
+class DefineDataset(Dataset):
+    def __init__(self, x, y):
+        self.data = x
+        self.label = y
+
+    def __getitem__(self, index):
+        if self.label is None:
+            return self.data[index]
+        return self.data[index], self.label[index]
+
+    def __len__(self):
+        return len(self.data)
+
+
+def accuracy(pred_y, y):
+    pred_list = torch.argmax(pred_y, dim=1)
+    correct = (pred_list == y).float()
+    acc = correct.sum() / len(correct)
+    return acc
+
+
+def training(train_loader, model):
+    # 多分类损失函数
+    criterion = nn.CrossEntropyLoss()
+    # crit = nn.CrossEntropyLoss(reduction='sum')
+    # 使用Adam优化器
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    # 將 model 的模式设定为 train，这样 optimizer 就可以更新 model 的参数
+    model.train()
+    train_len = len(train_loader)
+    epoch_los, epoch_acc = 0, 0
+    for i, (inputs, labels) in enumerate(train_loader):
+        # 1. 放到GPU上
+        inputs = inputs.to(device, dtype=torch.long)
+        labels = labels.to(device, dtype=torch.long)
+        # 2. 清空梯度
+        optimizer.zero_grad()
+        # 3. 计算输出
+        outputs = model(inputs)
+        outputs = outputs.squeeze(1)  # 去掉最外面的 dimension
+        # 4. 计算损失
+        # outputs:batch_size*num_classes labels:1D
+        loss = criterion(outputs, labels)
+        epoch_los += loss.item()
+        # 5.预测结果
+        accu = accuracy(outputs, labels)
+        epoch_acc += accu.item()
+        # 6. 反向传播
+        loss.backward()
+        # 7. 更新梯度
+        optimizer.step()
+    loss_value = epoch_los / train_len
+    acc_value = epoch_acc / train_len * 100
+    print('\nTrain | Loss:{:.5f} Acc: {:.3f}%'.format(loss_value, acc_value))
+    return loss_value, acc_value
+
+
+def predicting(val_loader, model):
+    # 多分类损失函数
+    criterion = nn.CrossEntropyLoss()
+    # 將 model 的模式设定为 eval，固定model的参数
+    model.eval()
+    val_len = len(val_loader)
+    with torch.no_grad():
+        epoch_los, epoch_acc = 0, 0
+        for i, (inputs, labels) in enumerate(val_loader):
+            # 1. 放到GPU上
+            inputs = inputs.to(device, dtype=torch.long)
+            labels = labels.to(device, dtype=torch.long)
+            # 2. 计算输出
+            outputs = model(inputs)
+            outputs = outputs.squeeze(1)
+            # 3. 计算损失
+            loss = criterion(outputs, labels)
+            epoch_los += loss.item()
+            # 4. 预测结果
+            accu = accuracy(outputs, labels)
+            epoch_acc += accu.item()
+        loss_value = epoch_los / val_len
+        acc_value = epoch_acc / val_len * 100
+        print("Valid | Loss:{:.5f} Acc: {:.3f}% ".format(loss_value, acc_value))
+    print('-----------------------------------')
+    return loss_value, acc_value
+
+
+def search_best_model(data_x, data_y, embedding, category_count):
+    # 使用k折交叉验证
+    kf_5 = KFold(n_splits=10)
+    k, epochs = 0, 5
+    best_accuracy = 0.
+    for t_train, t_test in kf_5.split(data_x, data_y):
+        print('==================第{}折================'.format(k + 1))
+        k += 1
+        model = LSTMNet(
+            embedding,
+            embedding_dim=200,
+            hidden_dim=128,
+            num_classes=category_count,
+            num_layers=2,
+            dropout=0.5,
+            requires_grad=False
+        ).to(device)
+        train_ds = DefineDataset(data_x[t_train], data_y[t_train])
+        train_ip = DataLoader(dataset=train_ds, batch_size=32, shuffle=True, drop_last=True)
+        test_ds = DefineDataset(data_x[t_test], data_y[t_test])
+        test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
+        accuracy_list = list()
+        # run epochs
+        for ep in range(epochs):
+            tra_lv, tra_av = training(train_ip, model)
+            pre_lv, pre_av = predicting(test_ip, model)
+            accuracy_list.append(round(pre_av, 3))
+        mean_accuracy = np.mean(accuracy_list)
+        if mean_accuracy > best_accuracy:
+            best_accuracy = mean_accuracy
+            torch.save(model, "best_lstm.model")
+        print('Mean-Accuracy: {:.3f}'.format(mean_accuracy))
+    print('Best model with acc {:.3f}%'.format(best_accuracy))
 
 
 def draw_trend(history):
@@ -135,24 +232,29 @@ def draw_trend(history):
     plt.show()
 
 
-def predict_result(tokenizer, model, id_cat_dict, part_i):
+def predict_result(model, preprocess, part_i):
     try:
         df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv')
-        test_lists = list()
-        for i in df['cut_name']:
-            i = literal_eval(i)
-            test_lists.append(' '.join(i))
-        seq = tokenizer.texts_to_sequences(test_lists)
-        padded = pad_sequences(seq, maxlen=SP.MAX_LENGTH)
-        pred_lists = model.predict(padded)
-        print(pred_lists[:10])
-        id_lists = pred_lists.argmax(axis=1)
-        cat_lists = list()
-        for id in id_lists:
-            cat_lists.append(id_cat_dict[id])
+        pre_x = DefineDataset(df['cut_name'].values, None)
+        pre_ip = DataLoader(dataset=pre_x, batch_size=32, shuffle=True, drop_last=True)
+        pre_lists = list()
+        # 將 model 的模式设定为 eval，固定model的参数
+        model.eval()
+        with torch.no_grad():
+            for i, inputs in enumerate(pre_ip):
+                # 1. 放到GPU上
+                inputs = inputs.to(device, dtype=torch.long)
+                # 2. 计算输出
+                outputs = model(inputs)
+                outputs = outputs.squeeze(1)
+                pre_label = outputs.argmax(axis=1)
+                pre_lists = pre_lists.extend(pre_label)
+        cate_lists = []
+        for ind in pre_lists:
+            cate_lists.append(preprocess.idx2lab[ind])
         result = pd.DataFrame(
             {'store_id': df['id'], 'name': df['name'], 'category3_new': df['category3_new'],
-             'predict_category': cat_lists})
+             'predict_category': cate_lists})
         result.to_csv(SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(part_i) + '.csv')
         # result.to_csv('test_predict_category.csv')
     except Exception as e:
@@ -221,22 +323,26 @@ def rerun_get_model():
             open(path_pre, "r+").truncate()
     # 训练模型,获取训练集
     random_get_trainset()
-    df, id_cat_dict = get_dataset()
-    tokenizer, model = fit_model_by_deeplearn(df)
+    d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
+
+    search_best_model(d_x, d_y, embedding_matrix, class_num)
+    # 获取K折交叉验证得到的模型
+    # model.load_state_dict(torch.load(PATH))
+    lstm_model = torch.load('best_lstm.model')
+
     # 预测数据
     for i in range(SP.SEGMENT_NUMBER):
-        predict_result(tokenizer, model, id_cat_dict, i)
+        predict_result(lstm_model, prepro, i)
 
 
 if __name__ == '__main__':
     # 用于重新切分店名，生成标准文件
-    rerun_get_file()
+    # rerun_get_file()
     # 随机抽取带标签训练集
     # random_get_trainset(is_labeled=False, labeled_is_all=True)
     # random_get_trainset(is_labeled=True, labeled_is_all=True)
-    # random_get_trainset()
     # 用于重新预测打标，生成预测文件
-    # rerun_get_model()
+    rerun_get_model()
     # 绘制收敛次数图像
     # draw_trend(model_fit)
 # nohup python -u main.py > log.log 2>&1 &

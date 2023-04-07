@@ -64,7 +64,7 @@ if __name__ == '__main__':
     # ============切分品类词模型====================
     print("=======开始数据预处理======", time.localtime(time.time()))
     # 获取标准数据
-    data = get_data(path='../standard_store_gz.csv')
+    data = get_data(path='../standard_store_data.csv')
     # 构建一个向量空间
     dummy = feature_vectorization(data)
     # 计算信息增益降维

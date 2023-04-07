@@ -1,4 +1,5 @@
 # encoding=utf-8
+import os
 
 from gensim.models import KeyedVectors
 from multiprocessing import Manager, Pool
@@ -7,8 +8,10 @@ import pandas as pd
 import torch
 from icecream import ic
 
-from workplace.fewsamples.w2c_eda import data_grow
-from workplace.fewsamples.utils.mini_tool import set_jieba, cut_word, error_callback
+# from workplace.fewsamples.w2c_eda import data_grow
+# from workplace.fewsamples.utils.mini_tool import set_jieba, cut_word, error_callback
+from w2c_eda import data_grow, temp_data_grow
+from utils.mini_tool import set_jieba, cut_word, error_callback
 
 # 原始文件路径
 original_file_path = '../all_labeled_data.csv'
@@ -85,6 +88,8 @@ def get_data(is_label=True):
 class Preprocess:
     # 取样少样本数据集
     few_shot_path = './data/few_shot.csv'
+    # 增强后数据集
+    grow_data_path = './data/input_data.csv'
 
     def __init__(self, sen_len):  # 首先定义类的一些属性
         self.embedding = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
@@ -115,14 +120,33 @@ class Preprocess:
             drop=True)
         cat_df.to_csv('./data/category_to_id.csv')
 
-    # 数据增强
-    def grow_few_data(self):
-        # 扩展少于k_neighbors数的类别
-        old_df = pd.read_csv(self.few_shot_path, index_col=0)
-        new_data_df = data_grow(old_df)
-        new_data_df = new_data_df.sample(frac=1).reset_index()
-        print("扩展后数据量：", len(new_data_df.index))
-        new_data_df.to_csv('./data/input_data.csv')
+    # 调用数据增强方法
+    def grow_few_data(self, original_path, growth_path):
+        if original_path is None:
+            original_path = self.few_shot_path
+        if growth_path is None:
+            growth_path = self.grow_data_path
+        if type(original_path) == str:
+            # 如果是对一个文件数据进行增强
+            old_df = pd.read_csv(original_path, index_col=0)
+            old_df = old_df.drop_duplicates('name', keep='first')
+            new_data_df = temp_data_grow(old_df)
+            new_data_df = new_data_df.sample(frac=1).reset_index()
+            print("扩展后数据量：", len(new_data_df.index))
+            new_data_df.to_csv(growth_path)
+        elif type(original_path) == list:
+            # 如果是对多个文件数据进行增强
+            result_df = None
+            for ori_path in original_path:
+                old_df = pd.read_csv(ori_path, index_col=0)
+                old_df = old_df.drop_duplicates('name', keep='first')
+                new_data_df = temp_data_grow(old_df)
+                new_data_df = new_data_df.sample(frac=1).reset_index()
+                print("扩展后数据量：", len(new_data_df.index))
+                result_df = pd.concat([result_df, new_data_df])
+            result_df.to_csv(growth_path)
+        else:
+            print("original_path's type could be str or list, but input is " + type(original_path))
 
     # 构建向量矩阵
     def create_tokenizer(self):
@@ -151,7 +175,11 @@ class Preprocess:
         text_to_sequence = []
         for sentence in sentences:
             sequence = []
-            sen_list = sentence.split()
+            sen_list = []
+            try:
+                sen_list = sentence.split()
+            except Exception:
+                print("")
             for word in sen_list:
                 if word in self.word2idx.keys():
                     sequence.append(self.word2idx[word])
@@ -206,4 +234,13 @@ if __name__ == '__main__':
     # data = get_data()
     preprocess = Preprocess(None)
     # preprocess.get_few_shot(data)
-    preprocess.grow_few_data()
+    # preprocess.grow_few_data()
+    # linux 路径
+    pre_fix_path = '../multi_siamenet_Lstm/data/augmentSampling'
+    positiveSamp_files = pre_fix_path + '/Pos_df.csv'
+    negativeSamp_files = pre_fix_path + '/Neg_df.csv'
+    preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/PositiveSampling/碳酸饮料类_synonym.csv')
+    preprocess.grow_few_data(negativeSamp_files, pre_fix_path + '/NegativeSampling/非碳酸饮料类_synonym.csv')
+    preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/PositiveSampling/碳酸饮料类_random.csv')
+    preprocess.grow_few_data(negativeSamp_files, pre_fix_path + '/NegativeSampling/非碳酸饮料类_random.csv')
+# nohup python -u main.py > log.log 2>&1 &

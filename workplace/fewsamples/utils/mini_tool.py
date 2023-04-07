@@ -4,12 +4,12 @@ import jieba
 
 def set_jieba():
     # 设置不可分割的词
-    jieba.load_userdict("./resources/statename.txt")
-    jieba.load_userdict("./resources/cityname.txt")
-    jieba.load_userdict("./resources/distinctname.txt")
-    jieba.load_userdict("./resources/symbol.txt")
-    jieba.load_userdict("./resources/stopwords.txt")
-    jieba.load_userdict('./resources/indiv_words.txt')
+    jieba.load_userdict("../resources/statename.txt")
+    jieba.load_userdict("../resources/cityname.txt")
+    jieba.load_userdict("../resources/distinctname.txt")
+    jieba.load_userdict("../resources/symbol.txt")
+    jieba.load_userdict("../resources/stopwords.txt")
+    jieba.load_userdict('../resources/indiv_words.txt')
 
 
 def cut_word(word):

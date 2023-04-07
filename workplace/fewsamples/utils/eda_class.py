@@ -50,7 +50,7 @@ class EDA(object):
         try:
             return [str(i[0]) for i in vec.similar_by_word(word=word, topn=10)]
         except KeyError:
-            return word
+            return [word]
 
     def synonym_replacement(self, words, n):
         """同义词替换
@@ -71,10 +71,7 @@ class EDA(object):
                 num_replaced += 1
             if num_replaced >= n:
                 break
-        sentence = ' '.join(new_words)
-        new_words = sentence.split(' ')
         return new_words
-
 
     def add_word(self, new_words):
         """

@@ -39,18 +39,32 @@ def set_word2vec():
 
 
 def data_grow(df):
-    ic('data_grow', df.head(3))
+    ic('data_grow', df.head(2))
     # print(len(df.index))
     new_name_list, new_cut_name_list, new_category_list = list(), list(), list()
     vec = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
     eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
     df.apply(random_replace, args=[eda, new_name_list, new_cut_name_list, new_category_list], axis=1)
-    new_id_list = ['10000000000000000' + str(id_i) for id_i in range(len(new_name_list))]
+    new_id_list = ['9000000000000000' + str(id_i) for id_i in range(len(new_name_list))]
     new_df = pd.DataFrame(
         {'id': new_id_list, 'name': new_name_list, 'category3_new': new_category_list, 'cut_name': new_cut_name_list})
     ic(new_df.head(3))
     df = pd.concat([df, new_df])
     df.drop_duplicates(subset=['cut_name'], keep='first', inplace=True)
+    return df
+
+
+def temp_data_grow(df):
+    new_name_list, new_cut_name_list = list(), list()
+    vec = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
+    eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
+    df.apply(temp_random_replace, args=[eda, new_name_list, new_cut_name_list], axis=1)
+    new_id_list = ['9000000000000000' + str(id_i) for id_i in range(len(new_name_list))]
+    new_df = pd.DataFrame(
+        {'id': new_id_list, 'name': new_name_list, 'name_cut': new_cut_name_list})
+    ic(new_df.head(3))
+    df = pd.concat([df, new_df])
+    df.drop_duplicates(subset=['name_cut'], keep='first', inplace=True)
     return df
 
 
@@ -73,9 +87,26 @@ def random_replace(df, eda_object, name_list, cut_name_list, category_list):
     # print('增加数量:{}, 循环次数:{}'.format(len(new_name_list), for_count))
 
 
+def temp_random_replace(df, eda_object, name_list, cut_name_list):
+    cn_lists = df['name_cut'].split(' ')
+    for_count = 0
+    new_name_list = list()
+    while (len(new_name_list) < 5) and (for_count < 10):
+        # 相似词替换
+        # new_cut_name = eda_object.synonym_replacement(cn_lists, n=1)
+        # 随机交换
+        new_cut_name = eda_object.random_swap(cn_lists, n=1)
+        if new_cut_name not in new_name_list:
+            name_list.append(''.join(new_cut_name))
+            cut_name_list.append(' '.join(new_cut_name))
+        for_count += 1
+    name_list.extend(new_name_list)
+    # print('增加数量:{}, 循环次数:{}'.format(len(new_name_list), for_count))
+
+
 if __name__ == '__main__':
     # get_word2vec()
-    set_word2vec()
+    # set_word2vec()
     w2c_model = Word2Vec.load('./models/word2vec.model')
     w = ['文具', '饭', '便利店', '串串香']
     for i in w:

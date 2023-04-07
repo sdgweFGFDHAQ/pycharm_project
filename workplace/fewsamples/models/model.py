@@ -21,10 +21,14 @@ class LSTMNet(nn.Module):
     def forward(self, inputs):
         # nonzero_idxs = torch.nonzero(inputs)
         # input_lengths = torch.bincount(nonzero_idxs[:, 0])
+        # print(input_lengths)
+
         # (batch_size * len_sen(句子长度) * input_size(单词的向量维度)
         # inputs = self.dropout(self.embedding(inputs))
+
         # rnn.pad_sequence(inputs, batch_first=True, padding_value=0)
         inputs = self.embedding(inputs)
+
         # x:batch_size * len_sen * hidden_size
         inputs = inputs.to(torch.float32)
         # ic(inputs)

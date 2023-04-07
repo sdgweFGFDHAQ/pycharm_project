@@ -34,7 +34,7 @@ def get_feature_prob_part(X, y) -> dict:
 def calculate_feature_prob_part(dummy_i, y, cut_name_dict, result_dict, i):
     c_nb = ComplementNB()
     c_nb.fit(dummy_i, y)
-    # 把取对数的feature_log_prob_值还原成概率
+    # 把取feature_log_prob_值
     feature_prob = pd.DataFrame(np.float32(c_nb.feature_log_prob_), index=c_nb.classes_,
                                 columns=dummy_i.columns)
     # 获取根据贝叶斯计算的权重
