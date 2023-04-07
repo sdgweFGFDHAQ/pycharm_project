@@ -82,6 +82,13 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
 def get_dataset():
     gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv')
     print(len(gz_df.index))
+
+    category_df = gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=True)
+    category_df['cat_id'] = category_df['category3_new'].factorize()[0]
+    cat_df = category_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(
+        drop=True)
+    cat_df.to_csv('../category_to_id.csv')
+
     data_x, data_y = gz_df['cut_name'].values, gz_df['category3_new'].values
     category_classes = gz_df['category3_new'].unique()
     # data pre_processing
