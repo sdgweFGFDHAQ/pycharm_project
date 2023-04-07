@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from multiprocessing import Pool
-from ast import literal_eval
 import torch
 from sklearn.model_selection import KFold
 from torch import nn
@@ -255,8 +254,7 @@ def predict_result(model, preprocess, part_i):
         result = pd.DataFrame(
             {'store_id': df['id'], 'name': df['name'], 'category3_new': df['category3_new'],
              'predict_category': cate_lists})
-        result.to_csv(SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(part_i) + '.csv')
-        # result.to_csv('test_predict_category.csv')
+        # result.to_csv(SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(part_i) + '.csv')
     except Exception as e:
         with open('error_city.txt', 'a') as ef:
             ef.write('出错的city: ' + str(part_i) + '; 异常e:' + str(e))
@@ -317,12 +315,12 @@ def rerun_get_file():
 
 # 用于重新预测打标，生成预测文件
 def rerun_get_model():
-    for csv_i in range(SP.SEGMENT_NUMBER):
-        path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
-        if os.path.exists(path_pre):
-            open(path_pre, "r+").truncate()
+    # for csv_i in range(SP.SEGMENT_NUMBER):
+    #     path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
+    #     if os.path.exists(path_pre):
+    #         open(path_pre, "r+").truncate()
     # 训练模型,获取训练集
-    random_get_trainset()
+    # random_get_trainset()
     d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
 
     search_best_model(d_x, d_y, embedding_matrix, class_num)
