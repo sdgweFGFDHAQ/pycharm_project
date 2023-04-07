@@ -1,4 +1,5 @@
 import os
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -340,7 +341,10 @@ if __name__ == '__main__':
     # random_get_trainset(is_labeled=False, labeled_is_all=True)
     # random_get_trainset(is_labeled=True, labeled_is_all=True)
     # 用于重新预测打标，生成预测文件
+    start = time.time()
     rerun_get_model()
+    end = time.time()
     # 绘制收敛次数图像
     # draw_trend(model_fit)
+    print('Running time: %s minutes' % ((end - start)/60))
 # nohup python -u main.py > log.log 2>&1 &
