@@ -102,4 +102,10 @@ def wdf():
 
 
 if __name__ == '__main__':
-    wdf()
+    gz_df = pd.read_csv('../workplace/all_labeled_data.csv', nrows=10000)
+    print(len(gz_df.index))
+    print(gz_df.head())
+
+    gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=True)
+    print(gz_df)
+

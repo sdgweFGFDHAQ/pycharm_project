@@ -77,6 +77,7 @@ def bayes_forecast_results(test_data):
     #     print(model.predict(X))
     #     print("准确率为:", model.score(X, y))
     c_nb.fit(train_x, train_data['category3_new'])
+    print(sys.getsizeof(train_x) / 1024 / 1024, 'MB')
     # 测试
     cut_name_list = list()
     for i in test_data['cut_name']:

@@ -6,14 +6,12 @@ from multiprocessing import Manager, Pool
 import numpy as np
 import pandas as pd
 import torch
-from icecream import ic
+from ast import literal_eval
 
-# from workplace.fewsamples.w2c_eda import data_grow
-# from workplace.fewsamples.utils.mini_tool import set_jieba, cut_word, error_callback
+from global_parameter import StaticParameter as SP
 from mini_tool import set_jieba, cut_word, error_callback
 
-# 原始文件路径
-original_file_path = '../all_labeled_data.csv'
+
 # 标准化的已打标数据集
 labeled_data_path = './data/labeled_data.csv'
 # 标准化的未打标数据集
@@ -86,7 +84,7 @@ def get_data(is_label=True):
 
 class Preprocess:
     def __init__(self, sen_len):  # 首先定义类的一些属性
-        self.embedding = KeyedVectors.load_word2vec_format('../fewsamples/model/word2vec.vector')
+        self.embedding = KeyedVectors.load_word2vec_format(SP.PATH_ZZX + '/workplace/fewsamples/models/word2vec.vector')
         self.vector_size = self.embedding.vector_size
         self.sen_len = sen_len
         self.word2idx = {}
@@ -121,13 +119,9 @@ class Preprocess:
     def get_pad_word2idx(self, sentences):
         text_to_sequence = []
         for sentence in sentences:
+            sentence = literal_eval(sentence)
             sequence = []
-            sen_list = []
-            try:
-                sen_list = sentence.split()
-            except Exception:
-                print("")
-            for word in sen_list:
+            for word in sentence:
                 if word in self.word2idx.keys():
                     sequence.append(self.word2idx[word])
                 else:

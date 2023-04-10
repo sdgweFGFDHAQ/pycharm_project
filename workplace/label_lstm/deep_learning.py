@@ -83,7 +83,7 @@ def get_dataset():
     gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv')
     print(len(gz_df.index))
 
-    category_df = gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=True)
+    category_df = gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=False)
     category_df['cat_id'] = category_df['category3_new'].factorize()[0]
     cat_df = category_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(
         drop=True)
@@ -93,8 +93,6 @@ def get_dataset():
     category_classes = gz_df['category3_new'].unique()
     # data pre_processing
     preprocess = Preprocess(sen_len=7)
-    # 设置sen_len
-    preprocess.length_distribution(data_x)
     # 加载model paragram
     embedding = preprocess.create_tokenizer()
     # 初始化参数
@@ -191,14 +189,14 @@ def predicting(val_loader, model):
 
 def search_best_model(data_x, data_y, embedding, category_count):
     # 使用k折交叉验证
-    kf_5 = KFold(n_splits=10)
-    k, epochs = 0, 5
+    kf_5 = KFold(n_splits=5)
+    k, epochs = 0, 10
     best_accuracy = 0.
     for t_train, t_test in kf_5.split(data_x, data_y):
         print('==================第{}折================'.format(k + 1))
         k += 1
         model = LSTMNet(
-            embedding,
+            embedding=embedding,
             embedding_dim=200,
             hidden_dim=128,
             num_classes=category_count,
