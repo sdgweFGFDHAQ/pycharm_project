@@ -68,7 +68,7 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
                 result_path = 'all' + all_fix + '_data.csv'
             else:
                 # 部分数据
-                standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.25, random_state=23)
+                standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.15, random_state=23)
         else:
             df_i = df_i[df_i['category3_new'] == '']
             standard_df_i = df_i
@@ -189,8 +189,8 @@ def predicting(val_loader, model):
 
 def search_best_dataset(data_x, data_y, embedding, category_count):
     # 使用k折交叉验证
-    kf_5 = KFold(n_splits=5)
-    k, epochs = 0, 7
+    kf_5 = KFold(n_splits=10)
+    k, epochs = 0, 5
     best_accuracy = 0.
     best_x_train, best_y_train, best_x_test, best_y_test = None, None, None, None
     for t_train, t_test in kf_5.split(data_x, data_y):
@@ -218,7 +218,8 @@ def search_best_dataset(data_x, data_y, embedding, category_count):
         mean_accuracy = np.mean(accuracy_list)
         if mean_accuracy > best_accuracy:
             best_accuracy = mean_accuracy
-            best_x_train, best_y_train, best_x_test, best_y_test = data_x[t_train], data_y[t_train], data_x[t_test], data_y[t_test]
+            best_x_train, best_y_train, best_x_test, best_y_test = data_x[t_train], data_y[t_train], data_x[t_test], \
+            data_y[t_test]
     return best_x_train, best_y_train, best_x_test, best_y_test
 
 
@@ -238,7 +239,7 @@ def search_best_model(x_train, y_train, x_test, y_test, embedding, category_coun
     test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
     # run epochs
     best_accuracy = 0.
-    for ep in range(30):
+    for ep in range(25):
         print('==========train epoch: {}============'.format(ep))
     tra_lv, tra_av = training(train_ip, model)
     pre_lv, pre_av = predicting(test_ip, model)
@@ -403,7 +404,7 @@ if __name__ == '__main__':
     # rerun_get_file()
     # 随机抽取带标签训练集
     # random_get_trainset(is_labeled=False, labeled_is_all=True)
-    # random_get_trainset(is_labeled=True, labeled_is_all=True)
+    # random_get_trainset(is_labeled=True, labeled_is_all=False)
     # 用于重新预测打标，生成预测文件
     start = time.time()
     rerun_get_model()
