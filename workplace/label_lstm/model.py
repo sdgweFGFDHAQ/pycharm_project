@@ -12,10 +12,10 @@ class LSTMNet(nn.Module):
         # embedding layer
         self.embedding = nn.Embedding(embedding.size(0), embedding.size(1))
         # 将一个不可训练的类型为Tensor的参数转化为可训练的类型为parameter的参数，并将这个参数绑定到module里面，成为module中可训练的参数。
-        self.embedding.weight = torch.nn.Parameter(embedding, requires_grad=requires_grad)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers, batch_first=True, bidirectional=False)
+        # self.embedding.weight = torch.nn.Parameter(embedding, requires_grad=requires_grad)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers, batch_first=True, bidirectional=True)
         self.classifier = nn.Sequential(nn.Dropout(dropout),
-                                        nn.Linear(hidden_dim, num_classes),
+                                        nn.Linear(hidden_dim * 2, num_classes),
                                         nn.Sigmoid())
 
     def forward(self, inputs):

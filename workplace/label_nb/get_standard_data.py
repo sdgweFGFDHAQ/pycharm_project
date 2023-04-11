@@ -78,12 +78,15 @@ if __name__ == '__main__':
     # result_model = out_keyword(keywords)
     # print("=======结束分类模型写入文件======", time.localtime(time.time()))
     # ============朴素贝叶斯模型=====================
+    print("=======开始朴素贝叶斯模型======", time.localtime(time.time()))
     data = get_data(path='../standard_store_data.csv')
     # 构建一个向量空间
-    dummy, c_v = feature_vectorization(data)
+    # dummy, c_v = feature_vectorization(data)
+    dummy = feature_vectorization(data)
     # 计算信息增益降维
     new_dummy = reduce_by_mutual(dummy, data['category3_new'])
     print(new_dummy.index)
     train_data, test_data, y_train, y_test = train_test_split(new_dummy, data['category3_new'], test_size=0.2,
                                                               random_state=0)
     bayes_forecast(train_data, test_data, y_train, y_test)
+    print("=======结束朴素贝叶斯模型======", time.localtime(time.time()))

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from multiprocessing import Pool
 import torch
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, train_test_split
 from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
@@ -68,7 +68,7 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
                 result_path = 'all' + all_fix + '_data.csv'
             else:
                 # 部分数据
-                standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.15, random_state=23)
+                standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.25, random_state=23)
         else:
             df_i = df_i[df_i['category3_new'] == '']
             standard_df_i = df_i
@@ -188,14 +188,8 @@ def predicting(val_loader, model):
 
 
 def search_best_model(data_x, data_y, embedding, category_count):
-    # 使用k折交叉验证
-    kf_5 = KFold(n_splits=5)
-    k, epochs = 0, 10
-    best_accuracy = 0.
-    for t_train, t_test in kf_5.split(data_x, data_y):
-        print('==================第{}折================'.format(k + 1))
-        k += 1
-        model = LSTMNet(
+    x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=5)
+    model = LSTMNet(
             embedding=embedding,
             embedding_dim=200,
             hidden_dim=128,
@@ -204,22 +198,51 @@ def search_best_model(data_x, data_y, embedding, category_count):
             dropout=0.5,
             requires_grad=False
         ).to(device)
-        train_ds = DefineDataset(data_x[t_train], data_y[t_train])
-        train_ip = DataLoader(dataset=train_ds, batch_size=32, shuffle=True, drop_last=True)
-        test_ds = DefineDataset(data_x[t_test], data_y[t_test])
-        test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
-        accuracy_list = list()
-        # run epochs
-        for ep in range(epochs):
-            tra_lv, tra_av = training(train_ip, model)
-            pre_lv, pre_av = predicting(test_ip, model)
-            accuracy_list.append(round(pre_av, 3))
-        mean_accuracy = np.mean(accuracy_list)
-        if mean_accuracy > best_accuracy:
-            best_accuracy = mean_accuracy
+    train_ds = DefineDataset(x_train, y_train)
+    train_ip = DataLoader(dataset=train_ds, batch_size=32, shuffle=True, drop_last=True)
+    test_ds = DefineDataset(x_test, y_test)
+    test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
+    # run epochs
+    best_accuracy = 0.
+    for ep in range(25):
+        print('==========epoch: {}============'.format(ep))
+        tra_lv, tra_av = training(train_ip, model)
+        pre_lv, pre_av = predicting(test_ip, model)
+        if pre_av > best_accuracy:
+            best_accuracy = pre_av
             torch.save(model, "best_lstm.model")
-        print('Mean-Accuracy: {:.3f}'.format(mean_accuracy))
-    print('Best model with acc {:.3f}%'.format(best_accuracy))
+    # # 使用k折交叉验证
+    # kf_5 = KFold(n_splits=5)
+    # k, epochs = 0, 15
+    # best_accuracy = 0.
+    # for t_train, t_test in kf_5.split(data_x, data_y):
+    #     print('==================第{}折================'.format(k + 1))
+    #     k += 1
+    #     model = LSTMNet(
+    #         embedding=embedding,
+    #         embedding_dim=200,
+    #         hidden_dim=128,
+    #         num_classes=category_count,
+    #         num_layers=2,
+    #         dropout=0.5,
+    #         requires_grad=False
+    #     ).to(device)
+    #     train_ds = DefineDataset(data_x[t_train], data_y[t_train])
+    #     train_ip = DataLoader(dataset=train_ds, batch_size=32, shuffle=True, drop_last=True)
+    #     test_ds = DefineDataset(data_x[t_test], data_y[t_test])
+    #     test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
+    #     accuracy_list = list()
+    #     # run epochs
+    #     for ep in range(epochs):
+    #         tra_lv, tra_av = training(train_ip, model)
+    #         pre_lv, pre_av = predicting(test_ip, model)
+    #         accuracy_list.append(round(pre_av, 3))
+    #     mean_accuracy = np.mean(accuracy_list)
+    #     if mean_accuracy > best_accuracy:
+    #         best_accuracy = mean_accuracy
+    #         torch.save(model, "best_lstm.model")
+    #     print('Mean-Accuracy: {:.3f}'.format(mean_accuracy))
+    # print('Best model with acc {:.3f}%'.format(best_accuracy))
 
 
 def draw_trend(history):
