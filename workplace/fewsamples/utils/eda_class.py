@@ -48,7 +48,7 @@ class EDA(object):
         """
         vec = self.synonyms_model
         try:
-            return [str(i[0]) for i in vec.similar_by_word(word=word, topn=10)]
+            return [str(i[0]) for i in vec.similar_by_word(word=word, topn=6)]
         except KeyError:
             return [word]
 

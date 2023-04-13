@@ -189,8 +189,8 @@ def predicting(val_loader, model):
 
 def search_best_dataset(data_x, data_y, embedding, category_count):
     # 使用k折交叉验证
-    kf_5 = KFold(n_splits=10)
-    k, epochs = 0, 5
+    kf_5 = KFold(n_splits=5)
+    k, epochs = 0, 3
     best_accuracy = 0.
     best_x_train, best_y_train, best_x_test, best_y_test = None, None, None, None
     for t_train, t_test in kf_5.split(data_x, data_y):
@@ -239,13 +239,13 @@ def search_best_model(x_train, y_train, x_test, y_test, embedding, category_coun
     test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
     # run epochs
     best_accuracy = 0.
-    for ep in range(25):
+    for ep in range(20):
         print('==========train epoch: {}============'.format(ep))
-    tra_lv, tra_av = training(train_ip, model)
-    pre_lv, pre_av = predicting(test_ip, model)
-    if pre_av > best_accuracy:
-        best_accuracy = pre_av
-        torch.save(model, "best_lstm.model")
+        tra_lv, tra_av = training(train_ip, model)
+        pre_lv, pre_av = predicting(test_ip, model)
+        if pre_av > best_accuracy:
+            best_accuracy = pre_av
+            torch.save(model, "best_lstm.model")
 
 
 def draw_trend(history):
