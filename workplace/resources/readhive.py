@@ -23,9 +23,12 @@ def download_data():
         if cityname is None:
             continue
         print("开始执行sql")
+        # cursor.execute(
+        #     "select id,name,cname,namepath,citycode,appcode,channeltype_new,category1_new,category2_new,category3_new "
+        #     "from standard_db.di_store_dedupe where appcode <> '高德' and city=" + "'" + cityname + "'")
         cursor.execute(
             "select id,name,cname,namepath,citycode,appcode,channeltype_new,category1_new,category2_new,category3_new "
-            "from standard_db.di_store_dedupe where appcode <> '高德' and city=" + "'" + cityname + "'")
+            "from standard_db.di_store_dedupe where city=" + "'" + cityname + "'")
         print("已经获取数据")
         data_list = cursor.fetchall()
         df = pd.DataFrame(data_list, columns=["id", "name", "cname", "namepath", "citycode", "appcode", "channeltype_new",
@@ -35,6 +38,7 @@ def download_data():
         # print(df)
         df.to_csv(out_url + cityname + ".csv")
         print("写入完成", cityname)
+    print("数据全部更新完成！")
     cursor.close()
     conn.close()
 

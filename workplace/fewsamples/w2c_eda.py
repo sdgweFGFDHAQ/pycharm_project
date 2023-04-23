@@ -49,30 +49,52 @@ def set_word2vec(column):
     vec.wv.save_word2vec_format('./models/word2vec.vector')
 
 
-def data_grow(df):
+def data_grow(df, column_list):
     ic('data_grow', df.head(2))
     # print(len(df.index))
-    new_name_list, new_cut_name_list, new_category_list, new_id_list = list(), list(), list(), list()
+    columns_dict = dict()
+    for col in column_list:
+        columns_dict[col] = list()
     vec = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
     eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
-    df.apply(random_replace, args=[eda, new_name_list, new_cut_name_list, new_category_list, new_id_list], axis=1)
-    new_df = pd.DataFrame(
-        {'id': new_id_list, 'name': new_name_list, 'category3_new': new_category_list, 'cut_name': new_cut_name_list})
+    df.apply(random_replace, args=[eda, columns_dict], axis=1)
+    new_df = pd.DataFrame(columns_dict)
     ic(new_df.head(3))
     df = pd.concat([df, new_df])
     df.drop_duplicates(subset=['cut_name'], keep='first', inplace=True)
     return df
 
 
-def random_replace(df, eda_object, name_list, cut_name_list, category_list, id_list):
+def temp_data_grow(df):
+    ic('data_grow', df.head(2))
+    # print(len(df.index))
+    new_name_list, new_cut_name_list, new_category_list, new_id_list, new_is_seal_list = list(), list(), list(), list(), list()
+    vec = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
+    eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
+    df.apply(random_replace,
+             args=[eda, new_name_list, new_cut_name_list, new_category_list, new_id_list, new_is_seal_list], axis=1)
+    new_df = pd.DataFrame(
+        {'store_id': new_id_list, 'name': new_name_list, 'drinkTypes': new_category_list, 'is_seal': new_is_seal_list})
+    ic(new_df.head(3))
+    df = pd.concat([df, new_df])
+    df.drop_duplicates(subset=['name'], keep='first', inplace=True)
+    return df
+
+
+def random_replace(df, eda_object, col_dict):
     cn_list = df['cut_name'].split(' ')
     # 相似词替换
-    syn_num = random_replace_syn(cn_list, eda_object, name_list, cut_name_list)
+    syn_num = random_replace_syn(cn_list, eda_object, col_dict['name'], col_dict['cut_name'])
     # 随机交换
-    swap_num = random_replace_swap(cn_list, eda_object, name_list, cut_name_list)
+    swap_num = random_replace_swap(cn_list, eda_object, col_dict['name'], col_dict['cut_name'])
     for i in range(syn_num + swap_num):
-        category_list.append(df['category3_new'])
-        id_list.append(df['id'] + str(i))
+        for col_k, v in col_dict.items():
+            if col_k == 'store_id':
+                col_dict[col_k].append(str(df[col_k]) + str(i))
+            elif col_k == 'name':
+                continue
+            else:
+                col_dict[col_k].append(df[col_k])
 
 
 def random_replace_syn(cn_list, eda_object, name_list, cut_name_list):

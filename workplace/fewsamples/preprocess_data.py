@@ -236,11 +236,15 @@ if __name__ == '__main__':
     # preprocess.get_few_shot(data)
     # preprocess.grow_few_data()
     # linux 路径
-    pre_fix_path = '../multi_siamenet_Lstm/data/augmentSampling'
+    pre_fix_path = '.'
     positiveSamp_files = pre_fix_path + '/Pos_df.csv'
     negativeSamp_files = pre_fix_path + '/Neg_df.csv'
-    preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/PositiveSampling/碳酸饮料类_synonym.csv')
-    preprocess.grow_few_data(negativeSamp_files, pre_fix_path + '/NegativeSampling/非碳酸饮料类_synonym.csv')
-    preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/PositiveSampling/碳酸饮料类_random.csv')
-    preprocess.grow_few_data(negativeSamp_files, pre_fix_path + '/NegativeSampling/非碳酸饮料类_random.csv')
+    df = pd.read_csv(positiveSamp_files)
+    df['cut_name'] = df['name'].apply(cut_word)
+    df1 = pd.read_csv(negativeSamp_files)
+    df1['cut_name'] = df1['name'].apply(cut_word)
+    df.to_csv(positiveSamp_files, index=False)
+    df1.to_csv(negativeSamp_files, index=False)
+    preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/Pos_df_grow.csv')
+    preprocess.grow_few_data(negativeSamp_files, pre_fix_path + '/Neg_df_grow.csv')
 # nohup python -u main.py > log.log 2>&1 &
