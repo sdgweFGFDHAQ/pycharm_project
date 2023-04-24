@@ -90,7 +90,7 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
                 result_path = 'all' + all_fix + '_data.csv'
             else:
                 # 部分数据
-                standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.15, random_state=23)
+                standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.10, random_state=23)
         else:
             df_i = df_i[df_i['category3_new'] == '']
             standard_df_i = df_i
