@@ -125,13 +125,7 @@ def get_dataset():
 
 
 def get_dataset_pred():
-    gz_df1 = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_0.csv')
-    gz_df2 = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_1.csv')
-    gz_df3 = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_2.csv')
-    gz_df4 = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_3.csv')
-    gz_df = pd.concat((gz_df1, gz_df2))
-    gz_df = pd.concat((gz_df, gz_df3))
-    gz_df = pd.concat((gz_df, gz_df4))
+    gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_hb.csv')
     print(gz_df.head())
     print(len(gz_df.index))
 
@@ -340,9 +334,17 @@ def predict_result(model, preprocess, part_i):
             ef.write('出错的city: ' + str(part_i) + '; 异常e:' + str(e))
 
 
-def predict_result_forhb(model, preprocess):
-    df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_hb.csv')
-    pre_x = DefineDataset(df['cut_name'].values, None)
+def predict_result_forhb(model):
+    gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_hb.csv')
+    data_x = gz_df['cut_name'].values
+    # data pre_processing
+    preprocess = Preprocess(sen_len=7)
+    # 加载model paragram
+    embedding = preprocess.create_tokenizer()
+    # 初始化参数
+    data_x = preprocess.get_pad_word2idx(data_x)
+    preprocess.get_lab2idx(None)
+    pre_x = DefineDataset(data_x, None)
     pre_ip = DataLoader(dataset=pre_x, batch_size=32, shuffle=True, drop_last=True)
     pre_lists = list()
     # 將 model 的模式设定为 eval，固定model的参数
@@ -360,7 +362,7 @@ def predict_result_forhb(model, preprocess):
     for ind in pre_lists:
         cate_lists.append(preprocess.idx2lab[ind])
     result = pd.DataFrame(
-        {'store_id': df['id'], 'name': df['name'], 'category3_new': df['category3_new'],
+        {'store_id': gz_df['id'], 'name': gz_df['name'], 'category3_new': gz_df['category3_new'],
          'predict_category': cate_lists})
     result.to_csv(SP.PATH_ZZX_PREDICT_DATA + 'predict_category_hb.csv')
 
@@ -473,8 +475,6 @@ def rerun_get_model():
     x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
     search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
 
-    # 获取K折交叉验证得到的模型
-    # model.load_state_dict(torch.load(PATH))
     lstm_model = torch.load('best_lstm.model')
     # 预测数据
     for i in range(SP.SEGMENT_NUMBER):
@@ -490,12 +490,14 @@ if __name__ == '__main__':
     # random_get_trainset(is_labeled=True, labeled_is_all=False)
     # 用于重新预测打标，生成预测文件
     start = time.time()
-    tokenizer = rerun_get_model()
+    # rerun_get_model()
     end = time.time()
     # pred预测集
     get_file_forhb()
+    # model = Model()
+    # model.load_state_dict(torch.load(PATH))
     lstm_model = torch.load('best_lstm.model')
-    predict_result_forhb(lstm_model, tokenizer)
+    predict_result_forhb(lstm_model)
     # 绘制收敛次数图像
     # draw_trend(model_fit)
     print('Running time: %s minutes' % ((end - start) / 60))

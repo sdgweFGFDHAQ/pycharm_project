@@ -154,9 +154,12 @@ class Preprocess:
         self.idx2lab = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
         # 输出1D标签索引
         y = list()
-        for lab in labels:
-            y.append(self.lab2idx[lab])
-        return torch.LongTensor(y)
+        if labels is not None:
+            for lab in labels:
+                y.append(self.lab2idx[lab])
+            return torch.LongTensor(y)
+        else:
+            return None
 
     # 店名长度的分布分析
     def length_distribution(self, sentences):
