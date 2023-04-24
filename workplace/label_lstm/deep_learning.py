@@ -484,13 +484,13 @@ def rerun_get_model():
 
 if __name__ == '__main__':
     # 用于重新切分店名，生成标准文件
-    rerun_get_file()
+    # rerun_get_file()
     # 随机抽取带标签训练集
     # random_get_trainset(is_labeled=False, labeled_is_all=True)
     # random_get_trainset(is_labeled=True, labeled_is_all=False)
     # 用于重新预测打标，生成预测文件
     start = time.time()
-    # rerun_get_model()
+    rerun_get_model()
     end = time.time()
     # pred预测集
     get_file_forhb()
