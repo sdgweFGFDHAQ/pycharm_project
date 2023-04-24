@@ -6,7 +6,6 @@ from multiprocessing import Manager, Pool
 import numpy as np
 import pandas as pd
 import torch
-from ast import literal_eval
 
 from global_parameter import StaticParameter as SP
 from mini_tool import set_jieba, cut_word, error_callback
@@ -119,7 +118,7 @@ class Preprocess:
     def get_pad_word2idx(self, sentences):
         text_to_sequence = []
         for sentence in sentences:
-            sentence = literal_eval(sentence)
+            sentence = sentence.split()
             sequence = []
             for word in sentence:
                 if word in self.word2idx.keys():
