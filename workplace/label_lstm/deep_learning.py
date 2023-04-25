@@ -105,11 +105,11 @@ def get_dataset():
     gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv')
     print(len(gz_df.index))
 
-    category_df = gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=False)
-    category_df['cat_id'] = category_df['category3_new'].factorize()[0]
-    cat_df = category_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(
-        drop=True)
-    cat_df.to_csv('../category_to_id.csv')
+    # category_df = gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=False)
+    # category_df['cat_id'] = category_df['category3_new'].factorize()[0]
+    # cat_df = category_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(
+    #     drop=True)
+    # cat_df.to_csv('../category_to_id.csv')
 
     data_x, data_y = gz_df['cut_name'].values, gz_df['category3_new'].values
     category_classes = gz_df['category3_new'].unique()
@@ -324,7 +324,7 @@ def predict_result(model, preprocess, part_i):
                 pre_lists = pre_lists.extend(pre_label)
         cate_lists = []
         for ind in pre_lists:
-            cate_lists.append(preprocess.idx2lab[ind])
+            cate_lists.append(preprocess.idx2lab[ind.item()])
         result = pd.DataFrame(
             {'store_id': df['id'], 'name': df['name'], 'category3_new': df['category3_new'],
              'predict_category': cate_lists})
@@ -345,7 +345,7 @@ def predict_result_forhb(model):
     data_x = preprocess.get_pad_word2idx(data_x)
     preprocess.get_lab2idx(None)
     pre_x = DefineDataset(data_x, None)
-    pre_ip = DataLoader(dataset=pre_x, batch_size=32, shuffle=True, drop_last=True)
+    pre_ip = DataLoader(dataset=pre_x, batch_size=32, shuffle=False, drop_last=False)
     pre_lists = list()
     # 將 model 的模式设定为 eval，固定model的参数
     model.eval()
@@ -357,10 +357,10 @@ def predict_result_forhb(model):
             outputs = model(inputs)
             outputs = outputs.squeeze(1)
             pre_label = outputs.argmax(axis=1)
-            pre_lists = pre_lists.extend(pre_label)
+            pre_lists.extend(pre_label)
     cate_lists = []
     for ind in pre_lists:
-        cate_lists.append(preprocess.idx2lab[ind])
+        cate_lists.append(preprocess.idx2lab[ind.item()])
     result = pd.DataFrame(
         {'store_id': gz_df['id'], 'name': gz_df['name'], 'category3_new': gz_df['category3_new'],
          'predict_category': cate_lists})
@@ -465,15 +465,15 @@ def get_file_forhb():
 
 # 用于重新预测打标，生成预测文件
 def rerun_get_model():
-    for csv_i in range(SP.SEGMENT_NUMBER):
-        path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
-        if os.path.exists(path_pre):
-            open(path_pre, "r+").truncate()
-    # 训练模型,获取训练集
-    random_get_trainset()
+    # for csv_i in range(SP.SEGMENT_NUMBER):
+    #     path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
+    #     if os.path.exists(path_pre):
+    #         open(path_pre, "r+").truncate()
+    # # 训练模型,获取训练集
+    # random_get_trainset()
     d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
-    x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
-    search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
+    # x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
+    # search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
 
     lstm_model = torch.load('best_lstm.model')
     # 预测数据
@@ -490,10 +490,10 @@ if __name__ == '__main__':
     # random_get_trainset(is_labeled=True, labeled_is_all=False)
     # 用于重新预测打标，生成预测文件
     start = time.time()
-    rerun_get_model()
+    # prepro = rerun_get_model()
     end = time.time()
     # pred预测集
-    get_file_forhb()
+    # get_file_forhb()
     # model = Model()
     # model.load_state_dict(torch.load(PATH))
     lstm_model = torch.load('best_lstm.model')
