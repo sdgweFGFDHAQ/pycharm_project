@@ -18,7 +18,6 @@ class read_file_data:
         for i in range(self.segment_number):
             path = self.path_zzx_standard_data + 'standard_store_' + str(i) + '.csv'
             df_i = pd.read_csv(path, usecols=self.columns)
-            df_i = df_i[df_i['cut_name'].notna()]
             if df_i['cut_name'].dtype is str:
                 for cut_name in df_i['cut_name'].values:
                     yield cut_name.split()
