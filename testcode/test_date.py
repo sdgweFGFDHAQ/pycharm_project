@@ -37,6 +37,10 @@ def dwe():
     df = pd.read_csv('aaa.csv')
     print(df['cut_name'].values)
     print(df['cut_name'][df['cut_name'].notna()].values)
+    df = df[df['cut_name'].notna()]
+    print(df['cut_name'].dtype)
+    df['cut_name'] = df['cut_name'].astype(str)
+    print(df['cut_name'].dtype)
 
 
 if __name__ == '__main__':

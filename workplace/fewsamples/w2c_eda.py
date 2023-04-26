@@ -15,17 +15,18 @@ class read_file_data:
         self.columns = ['category3_new', 'cut_name']
 
     def __iter__(self):
+        no_standard_value_count = 0
         for i in range(self.segment_number):
             path = self.path_zzx_standard_data + 'standard_store_' + str(i) + '.csv'
             df_i = pd.read_csv(path, usecols=self.columns)
-            if df_i['cut_name'].dtype is str:
-                for cut_name in df_i['cut_name'].values:
+            for cut_name in df_i['cut_name'].values:
+                if type(cut_name) is str:
                     yield cut_name.split()
-            elif df_i['cut_name'].dtype is list:
-                for cut_name in df_i['cut_name'].values:
+                elif type(cut_name) is list:
                     yield ' '.join(cut_name).split()
-            else:
-                print("columns type error: should be str or list")
+                else:
+                    no_standard_value_count += 1
+        print("columns type error: should be str or list! error_count:{}".format(no_standard_value_count))
 
 
 def get_word2vec():

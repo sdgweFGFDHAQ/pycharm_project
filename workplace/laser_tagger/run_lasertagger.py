@@ -41,17 +41,17 @@ num_eval_examples = 1000
 export_path = '/home/data/temp/zzx/lasertagger-chinese/models/cefect/export'
 
 
-def get_standard_data(source_path, target_path):
+def get_standard_data(source_path, target_path, number):
     source_df = pd.read_csv(source_path)
     phrase_list = set()
     csv2txt = target_path.replace('.csv', '.txt')
     for _, df in source_df.groupby('category3_new'):
-        for _ in range(200):
-            text_1 = df['name'].sample(n=1).values
-            text_1 = cut_word(text_1)
-            text_2 = df['name'].sample(n=1).values
-            text_2 = cut_word(text_2)
-            phrase_list.add(''.join(text_1) + '[seq]' + ''.join(text_2))
+        for _ in range(number):
+            sample1 = df.sample(n=1)
+            text_1 = (sample1['cut_name'].values + ' ' + sample1['category3_new'].values)[0]
+            sample2 = df.sample(n=1)
+            text_2 = (sample2['cut_name'].values + ' ' + sample2['category3_new'].values)[0]
+            phrase_list.add(text_1 + '[seq]' + text_2)
     if os.path.exists(csv2txt):
         with open(csv2txt, mode='w', encoding='utf-8') as f:
             f.writelines("%s\n" % p for p in phrase_list)
@@ -111,7 +111,7 @@ def run_main():
 
 
 if __name__ == '__main__':
-    get_standard_data(source_data_path, train_file)
-    get_standard_data(source_data_path, eval_file)
-    get_standard_data(source_data_path, test_file)
+    get_standard_data(source_data_path, train_file, 200)
+    get_standard_data(source_data_path, eval_file, 20)
+    get_standard_data(source_data_path, test_file, 50)
     # run_main()
