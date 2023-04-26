@@ -35,9 +35,8 @@ def trans():
 
 def dwe():
     df = pd.read_csv('aaa.csv')
-    for name in df['cut_name']:
-        print(name.split(' '))
-        print(name)
+    print(df['cut_name'].values)
+    print(df['cut_name'][df['cut_name'].notna()].values)
 
 
 if __name__ == '__main__':

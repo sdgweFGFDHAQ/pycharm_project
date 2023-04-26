@@ -151,7 +151,6 @@ class Preprocess:
         # 生成类别字典
         self.lab2idx = dict(zip(cat_df['category3_new'], cat_df['cat_id']))
         self.idx2lab = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
-        print(self.idx2lab)
         # 输出1D标签索引
         y = list()
         if labels is not None:

@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 from model_operate import ModelFnBuilder
 import process_data
 from workplace.laser_tagger import utils
-
+from workplace.fewsamples.utils.mini_tool import cut_word
 FLAGS = flags.FLAGS
 
 # Required parameters
@@ -48,8 +48,10 @@ def get_standard_data(source_path, target_path):
     for _, df in source_df.groupby('category3_new'):
         for _ in range(200):
             text_1 = df['name'].sample(n=1).values
+            text_1 = cut_word(text_1)
             text_2 = df['name'].sample(n=1).values
-            phrase_list.add(''.join(text_1) + ' ' + ''.join(text_2))
+            text_2 = cut_word(text_2)
+            phrase_list.add(''.join(text_1) + '[seq]' + ''.join(text_2))
     if os.path.exists(csv2txt):
         with open(csv2txt, mode='w', encoding='utf-8') as f:
             f.writelines("%s\n" % p for p in phrase_list)
@@ -59,7 +61,7 @@ def get_standard_data(source_path, target_path):
     source_list = []
     target_list = []
     for i in phrase_list:
-        il = i.split()
+        il = i.split('[seq]')
         source_list.append(il[0])
         target_list.append(il[1])
     pd.DataFrame({'source': source_list, 'target': target_list}).to_csv(target_path)
@@ -80,9 +82,6 @@ class DefineDataset(Dataset):
 
 
 def run_main():
-    # get_standard_data(source_data_path, train_file)
-    # get_standard_data(source_data_path, eval_file)
-    # get_standard_data(source_data_path, test_file)
     
     process_data.phrase_vocabulary()
 
@@ -112,4 +111,7 @@ def run_main():
 
 
 if __name__ == '__main__':
-    run_main()
+    get_standard_data(source_data_path, train_file)
+    get_standard_data(source_data_path, eval_file)
+    get_standard_data(source_data_path, test_file)
+    # run_main()

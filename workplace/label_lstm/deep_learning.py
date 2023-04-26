@@ -42,6 +42,8 @@ def set_file_standard_data(city, part_i):
         # 得到标准数据
         set_jieba()
         csv_data['cut_name'] = csv_data['name'].apply(cut_word)
+        # 过滤非中文店名导致的'cut_name'=nan
+        csv_data = csv_data[csv_data['cut_name'].notna()]
         if os.path.exists(path_part) and os.path.getsize(path_part):
             csv_data.to_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv',
                             columns=['id', 'name', 'category3_new', 'cut_name'],
@@ -305,11 +307,19 @@ def draw_trend(history):
     plt.show()
 
 
-def predict_result(model, preprocess, part_i):
+def predict_result(model, part_i):
     try:
         df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv')
-        pre_x = DefineDataset(df['cut_name'].values, None)
-        pre_ip = DataLoader(dataset=pre_x, batch_size=32, shuffle=True, drop_last=True)
+        data_x = df['cut_name'][df['cut_name'].notna()].values
+        # data pre_processing
+        preprocess = Preprocess(sen_len=7)
+        # 加载model paragram
+        preprocess.create_tokenizer()
+        # 初始化参数
+        data_x = preprocess.get_pad_word2idx(data_x)
+        preprocess.get_lab2idx(None)
+        pre_x = DefineDataset(data_x, None)
+        pre_ip = DataLoader(dataset=pre_x, batch_size=32, shuffle=False, drop_last=False)
         pre_lists = list()
         # 將 model 的模式设定为 eval，固定model的参数
         model.eval()
@@ -321,7 +331,7 @@ def predict_result(model, preprocess, part_i):
                 outputs = model(inputs)
                 outputs = outputs.squeeze(1)
                 pre_label = outputs.argmax(axis=1)
-                pre_lists = pre_lists.extend(pre_label)
+                pre_lists.extend(pre_label)
         cate_lists = []
         for ind in pre_lists:
             cate_lists.append(preprocess.idx2lab[ind.item()])
@@ -471,15 +481,14 @@ def rerun_get_model():
     #         open(path_pre, "r+").truncate()
     # # 训练模型,获取训练集
     # random_get_trainset()
-    d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
+    # d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
     # x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
     # search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
 
     lstm_model = torch.load('best_lstm.model')
     # 预测数据
     for i in range(SP.SEGMENT_NUMBER):
-        predict_result(lstm_model, prepro, i)
-    return prepro
+        predict_result(lstm_model, i)
 
 
 if __name__ == '__main__':
@@ -490,7 +499,7 @@ if __name__ == '__main__':
     # random_get_trainset(is_labeled=True, labeled_is_all=False)
     # 用于重新预测打标，生成预测文件
     start = time.time()
-    # prepro = rerun_get_model()
+    rerun_get_model()
     end = time.time()
     # pred预测集
     # get_file_forhb()

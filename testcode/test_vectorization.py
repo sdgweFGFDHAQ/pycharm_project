@@ -101,11 +101,20 @@ def wdf():
     print(sda_list)
 
 
+def read_train():
+    with open('train.txt', encoding='utf-8', mode='w') as tf:
+        with open('data.train', encoding='utf-8', mode='r') as f:
+            for readline in f:
+                split = readline.rstrip('\n').replace('\ufeff', '').split()
+                if split[1] != '0' and len(split) >= 4:
+                    tf.write(split[2]+' '+split[3]+'\n')
+
+
 if __name__ == '__main__':
-    gz_df = pd.read_csv('../workplace/all_labeled_data.csv', nrows=10000)
-    print(len(gz_df.index))
-    print(gz_df.head())
-
-    gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=True)
-    print(gz_df)
-
+    # gz_df = pd.read_csv('../workplace/all_labeled_data.csv', nrows=10000)
+    # print(len(gz_df.index))
+    # print(gz_df.head())
+    #
+    # gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=True)
+    # print(gz_df)
+    read_train()

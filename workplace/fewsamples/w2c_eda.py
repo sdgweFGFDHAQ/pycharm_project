@@ -12,23 +12,27 @@ class read_file_data:
     def __init__(self):
         self.path_zzx_standard_data = '/home/data/temp/zzx/standard_data/'
         self.segment_number = 12
-        self.columns = ['name', 'category3_new', 'cut_name']
+        self.columns = ['category3_new', 'cut_name']
 
     def __iter__(self):
         for i in range(self.segment_number):
             path = self.path_zzx_standard_data + 'standard_store_' + str(i) + '.csv'
-            df_i = pd.read_csv(path, usecols=self.columns, keep_default_na=False)
+            df_i = pd.read_csv(path, usecols=self.columns)
+            df_i = df_i[df_i['cut_name'].notna()]
             if df_i['cut_name'].dtype is str:
                 for cut_name in df_i['cut_name'].values:
                     yield cut_name.split()
+            elif df_i['cut_name'].dtype is list:
+                for cut_name in df_i['cut_name'].values:
+                    yield ' '.join(cut_name).split()
             else:
-                print("columns type error: should be str")
+                print("columns type error: should be str or list")
 
 
 def get_word2vec():
     # 训练大语料库
     name_iter = read_file_data()
-    vec = Word2Vec(sentences=name_iter, vector_size=200, min_count=3, window=2, workers=4, sg=1, epochs=5)
+    vec = Word2Vec(sentences=name_iter, vector_size=200, min_count=2, window=2, workers=4, sg=1, epochs=5)
     vec.save('./models/word2vec.model')
 
 
@@ -136,8 +140,8 @@ def random_replace_swap(cn_list, eda_object, name_list, cut_name_list):
 
 
 if __name__ == '__main__':
-    # get_word2vec()
-    # set_word2vec('cut_name')
+    get_word2vec()
+    set_word2vec('cut_name')
     w2c_model = Word2Vec.load('./models/word2vec.model')
     w = ['文具', '饭', '便利店', '串串香']
     for i in w:
