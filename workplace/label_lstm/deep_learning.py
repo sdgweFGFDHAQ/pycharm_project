@@ -180,7 +180,7 @@ def training(train_loader, model):
     criterion = nn.CrossEntropyLoss()
     # crit = nn.CrossEntropyLoss(reduction='sum')
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
     # 將 model 的模式设定为 train，这样 optimizer 就可以更新 model 的参数
     model.train()
     train_len = len(train_loader)
