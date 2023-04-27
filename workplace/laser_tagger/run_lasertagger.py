@@ -48,10 +48,10 @@ def get_standard_data(source_path, target_path, number):
     for _, df in source_df.groupby('category3_new'):
         for _ in range(number):
             sample1 = df.sample(n=1)
-            text_1 = (sample1['cut_name'].values + ' ' + sample1['category3_new'].values)[0]
+            text_1 = (sample1['name'].values + sample1['category3_new'].values)[0]
             sample2 = df.sample(n=1)
-            text_2 = (sample2['cut_name'].values + ' ' + sample2['category3_new'].values)[0]
-            phrase_list.add(text_1 + '[seq]' + text_2)
+            text_2 = (sample2['name'].values + sample2['category3_new'].values)[0]
+            phrase_list.add(text_1 + ' ' + text_2)
     if os.path.exists(csv2txt):
         with open(csv2txt, mode='w', encoding='utf-8') as f:
             f.writelines("%s\n" % p for p in phrase_list)
@@ -61,7 +61,7 @@ def get_standard_data(source_path, target_path, number):
     source_list = []
     target_list = []
     for i in phrase_list:
-        il = i.split('[seq]')
+        il = i.split()
         source_list.append(il[0])
         target_list.append(il[1])
     pd.DataFrame({'source': source_list, 'target': target_list}).to_csv(target_path)
