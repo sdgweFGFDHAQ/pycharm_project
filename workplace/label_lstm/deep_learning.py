@@ -100,7 +100,7 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
             else:
                 # 部分数据
                 # standard_df_i = df_i.groupby('category3_new').sample(frac=0.12, random_state=23)
-                standard_df_i = df_i.groupby('category3_new').apply(typicalsamling, 15000)
+                standard_df_i = df_i.groupby('category3_new').apply(typicalsamling, 2000)
         else:
             df_i = df_i[df_i['category3_new'] == '']
             standard_df_i = df_i
@@ -108,6 +108,7 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
             result_path = 'all' + all_fix + '_data.csv'
         standard_df = pd.concat([standard_df, standard_df_i])
     standard_df = standard_df.sample(frac=1).reset_index(drop=True)
+    print(len(standard_df.index))
     standard_df.to_csv(SP.PATH_ZZX_STANDARD_DATA + result_path, index=False)
 
 
