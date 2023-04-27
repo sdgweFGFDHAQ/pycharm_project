@@ -240,9 +240,9 @@ if __name__ == '__main__':
     positiveSamp_files = pre_fix_path + '/Pos_df.csv'
     negativeSamp_files = pre_fix_path + '/Neg_df.csv'
     df = pd.read_csv(positiveSamp_files)
-    df['cut_name'] = df['name'].apply(cut_word)
+    df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
     df1 = pd.read_csv(negativeSamp_files)
-    df1['cut_name'] = df1['name'].apply(cut_word)
+    df1['cut_name'] = (df1['name'] + df1['storeType']).apply(cut_word)
     df.to_csv(positiveSamp_files, index=False)
     df1.to_csv(negativeSamp_files, index=False)
     preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/Pos_df_grow.csv')
