@@ -32,7 +32,7 @@ class read_file_data:
 def get_word2vec():
     # 训练大语料库
     name_iter = read_file_data()
-    vec = Word2Vec(sentences=name_iter, vector_size=200, min_count=2, window=2, workers=4, sg=1, epochs=5)
+    vec = Word2Vec(sentences=name_iter, vector_size=200, min_count=3, window=2, workers=4, sg=1, epochs=5)
     vec.save('./models/word2vec.model')
 
 

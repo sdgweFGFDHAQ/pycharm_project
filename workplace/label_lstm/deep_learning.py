@@ -76,6 +76,13 @@ def get_city_forhb(city_list):
                                 columns=['id', 'name', 'category3_new', 'cut_name'], mode='w')
 
 
+def typicalsamling(group, threshold):
+    if len(group.index) > threshold:
+        return group.sample(n=threshold, random_state=23)
+    else:
+        return group.sample(frac=1)
+
+
 def random_get_trainset(is_labeled=True, labeled_is_all=False):
     standard_df = pd.DataFrame(columns=['id', 'name', 'category3_new', 'cut_name'])
     result_path = 'standard_store_data.csv'
@@ -92,7 +99,8 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
                 result_path = 'all' + all_fix + '_data.csv'
             else:
                 # 部分数据
-                standard_df_i = df_i.groupby(df_i['category3_new']).sample(frac=0.10, random_state=23)
+                # standard_df_i = df_i.groupby('category3_new').sample(frac=0.12, random_state=23)
+                standard_df_i = df_i.groupby('category3_new').apply(typicalsamling, 15000)
         else:
             df_i = df_i[df_i['category3_new'] == '']
             standard_df_i = df_i
@@ -107,11 +115,11 @@ def get_dataset():
     gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_data.csv')
     print(len(gz_df.index))
 
-    # category_df = gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=False)
-    # category_df['cat_id'] = category_df['category3_new'].factorize()[0]
-    # cat_df = category_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(
-    #     drop=True)
-    # cat_df.to_csv('../category_to_id.csv')
+    category_df = gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=False)
+    category_df['cat_id'] = category_df['category3_new'].factorize()[0]
+    cat_df = category_df[['category3_new', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(
+        drop=True)
+    cat_df.to_csv('../category_to_id.csv')
 
     data_x, data_y = gz_df['cut_name'].values, gz_df['category3_new'].values
     category_classes = gz_df['category3_new'].unique()
@@ -475,15 +483,15 @@ def get_file_forhb():
 
 # 用于重新预测打标，生成预测文件
 def rerun_get_model():
-    # for csv_i in range(SP.SEGMENT_NUMBER):
-    #     path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
-    #     if os.path.exists(path_pre):
-    #         open(path_pre, "r+").truncate()
-    # # 训练模型,获取训练集
-    # random_get_trainset()
-    # d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
-    # x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
-    # search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
+    for csv_i in range(SP.SEGMENT_NUMBER):
+        path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
+        if os.path.exists(path_pre):
+            open(path_pre, "r+").truncate()
+    # 训练模型,获取训练集
+    random_get_trainset()
+    d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
+    x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
+    search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
 
     lstm_model = torch.load('best_lstm.model')
     # 预测数据

@@ -32,7 +32,11 @@ def trans():
     print(now - font_6)
     print((now - font_6) / 3600 / 24 / 30)
 
-
+def typicalsamling(group, threshold):
+    if len(group.index) > threshold:
+        return group.sample(n=threshold, random_state=23)
+    else:
+        return group.sample(frac=1)
 def dwe():
     df = pd.read_csv('aaa.csv')
     print(df['cut_name'].values)

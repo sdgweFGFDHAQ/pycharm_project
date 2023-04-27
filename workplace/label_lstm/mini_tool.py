@@ -1,5 +1,6 @@
 import re
 import jieba
+from torch.utils.data import Dataset
 
 
 def set_jieba():
@@ -29,3 +30,17 @@ def cut_word(word):
 
 def error_callback(error):
     print(f"Error info: {error}")
+
+
+class DefineDataset(Dataset):
+    def __init__(self, x, y):
+        self.data = x
+        self.label = y
+
+    def __getitem__(self, index):
+        if self.label is None:
+            return self.data[index]
+        return self.data[index], self.label[index]
+
+    def __len__(self):
+        return len(self.data)
