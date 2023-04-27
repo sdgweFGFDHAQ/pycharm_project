@@ -490,7 +490,7 @@ def rerun_get_model():
         if os.path.exists(path_pre):
             open(path_pre, "r+").truncate()
     # 训练模型,获取训练集
-    random_get_trainset()
+    # random_get_trainset()
     d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
     x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
     search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
