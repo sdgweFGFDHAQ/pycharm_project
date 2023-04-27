@@ -1,5 +1,7 @@
 import os
 import time
+import warnings
+import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,7 +12,6 @@ from sklearn.model_selection import KFold, train_test_split
 from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
-import warnings
 
 from model import LSTMNet
 from preprocess_data import Preprocess
@@ -108,7 +109,7 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
             result_path = 'all' + all_fix + '_data.csv'
         standard_df = pd.concat([standard_df, standard_df_i])
     standard_df = standard_df.sample(frac=1).reset_index(drop=True)
-    print(len(standard_df.index))
+    logging.info(len(standard_df.index))
     standard_df.to_csv(SP.PATH_ZZX_STANDARD_DATA + result_path, index=False)
 
 
