@@ -69,22 +69,6 @@ def data_grow(df, column_list):
     return df
 
 
-def temp_data_grow(df):
-    ic('data_grow', df.head(2))
-    # print(len(df.index))
-    new_name_list, new_cut_name_list, new_category_list, new_id_list, new_is_seal_list = list(), list(), list(), list(), list()
-    vec = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
-    eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
-    df.apply(random_replace,
-             args=[eda, new_name_list, new_cut_name_list, new_category_list, new_id_list, new_is_seal_list], axis=1)
-    new_df = pd.DataFrame(
-        {'store_id': new_id_list, 'name': new_name_list, 'drinkTypes': new_category_list, 'is_seal': new_is_seal_list})
-    ic(new_df.head(3))
-    df = pd.concat([df, new_df])
-    df.drop_duplicates(subset=['name'], keep='first', inplace=True)
-    return df
-
-
 def random_replace(df, eda_object, col_dict):
     cn_list = df['cut_name'].split(' ')
     # 相似词替换
@@ -95,7 +79,7 @@ def random_replace(df, eda_object, col_dict):
         for col_k, v in col_dict.items():
             if col_k == 'store_id':
                 col_dict[col_k].append(str(df[col_k]) + str(i))
-            elif col_k == 'name':
+            elif col_k == 'name' or col_k == 'cut_name':
                 continue
             else:
                 col_dict[col_k].append(df[col_k])

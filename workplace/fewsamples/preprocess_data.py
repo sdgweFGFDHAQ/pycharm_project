@@ -10,7 +10,7 @@ from icecream import ic
 
 # from workplace.fewsamples.w2c_eda import data_grow
 # from workplace.fewsamples.utils.mini_tool import set_jieba, cut_word, error_callback
-from w2c_eda import data_grow, temp_data_grow
+from w2c_eda import data_grow
 from utils.mini_tool import set_jieba, cut_word, error_callback
 
 # 原始文件路径
@@ -121,16 +121,16 @@ class Preprocess:
         cat_df.to_csv('./data/category_to_id.csv')
 
     # 调用数据增强方法
-    def grow_few_data(self, original_path, growth_path):
+    def grow_few_data(self, original_path, growth_path, use_columns):
         if original_path is None:
             original_path = self.few_shot_path
         if growth_path is None:
             growth_path = self.grow_data_path
         if type(original_path) == str:
             # 如果是对一个文件数据进行增强
-            old_df = pd.read_csv(original_path, index_col=0)
+            old_df = pd.read_csv(original_path, usecols=use_columns)
             old_df = old_df.drop_duplicates('name', keep='first')
-            new_data_df = temp_data_grow(old_df)
+            new_data_df = data_grow(old_df, use_columns)
             new_data_df = new_data_df.sample(frac=1).reset_index()
             print("扩展后数据量：", len(new_data_df.index))
             new_data_df.to_csv(growth_path)
@@ -138,9 +138,9 @@ class Preprocess:
             # 如果是对多个文件数据进行增强
             result_df = None
             for ori_path in original_path:
-                old_df = pd.read_csv(ori_path, index_col=0)
+                old_df = pd.read_csv(ori_path, usecols=use_columns)
                 old_df = old_df.drop_duplicates('name', keep='first')
-                new_data_df = temp_data_grow(old_df)
+                new_data_df = data_grow(old_df, use_columns)
                 new_data_df = new_data_df.sample(frac=1).reset_index()
                 print("扩展后数据量：", len(new_data_df.index))
                 result_df = pd.concat([result_df, new_data_df])
@@ -239,12 +239,14 @@ if __name__ == '__main__':
     pre_fix_path = '.'
     positiveSamp_files = pre_fix_path + '/Pos_df.csv'
     negativeSamp_files = pre_fix_path + '/Neg_df.csv'
-    df = pd.read_csv(positiveSamp_files)
+    column_list = ['store_id', 'name', 'storeType', 'cut_name']
+    df = pd.read_csv(positiveSamp_files, usecols=column_list)
+    print(df.head().index)
     df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
-    df1 = pd.read_csv(negativeSamp_files)
+    df1 = pd.read_csv(negativeSamp_files, usecols=column_list)
     df1['cut_name'] = (df1['name'] + df1['storeType']).apply(cut_word)
     df.to_csv(positiveSamp_files, index=False)
     df1.to_csv(negativeSamp_files, index=False)
-    preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/Pos_df_grow.csv')
-    preprocess.grow_few_data(negativeSamp_files, pre_fix_path + '/Neg_df_grow.csv')
+    preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/Pos_df_grow.csv', column_list)
+    preprocess.grow_few_data(negativeSamp_files, pre_fix_path + '/Neg_df_grow.csv', column_list)
 # nohup python -u main.py > log.log 2>&1 &

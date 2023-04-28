@@ -41,30 +41,37 @@ num_eval_examples = 1000
 export_path = '/home/data/temp/zzx/lasertagger-chinese/models/cefect/export'
 
 
-def get_standard_data(source_path, target_path, number):
+def get_standard_data(source_path, target_path, number, is_concat=True):
     source_df = pd.read_csv(source_path)
     phrase_list = set()
+    source_list, target_list = [], []
     csv2txt = target_path.replace('.csv', '.txt')
-    for _, df in source_df.groupby('category3_new'):
-        for _ in range(number):
-            sample1 = df.sample(n=1)
-            text_1 = (sample1['name'].values + sample1['category3_new'].values)[0]
-            sample2 = df.sample(n=1)
-            text_2 = (sample2['name'].values + sample2['category3_new'].values)[0]
-            phrase_list.add(text_1 + '[seq]' + text_2)
-    if os.path.exists(csv2txt):
-        with open(csv2txt, mode='w', encoding='utf-8') as f:
-            f.writelines("%s\n" % p for p in phrase_list)
+    if is_concat:
+        for _, df in source_df.groupby('category3_new'):
+            for _ in range(number):
+                sample1 = df.sample(n=1, random_state=None)
+                text_1 = (sample1['name'].values + sample1['category3_new'].values)[0]
+                sample2 = df.sample(n=1, random_state=None)
+                text_2 = (sample2['name'].values + sample2['category3_new'].values)[0]
+                phrase_list.add(text_1 + '[seq]' + text_2)
+        for i in phrase_list:
+            il = i.split('[seq]')
+            source_list.append(il[0])
+            target_list.append(il[1])
+        pd.DataFrame({'source': source_list, 'target': target_list}).to_csv(target_path)
     else:
-        with open(csv2txt, mode='a', encoding='utf-8') as f:
-            f.writelines("%s\n" % p for p in phrase_list)
-    source_list = []
-    target_list = []
-    for i in phrase_list:
-        il = i.split('[seq]')
-        source_list.append(il[0])
-        target_list.append(il[1])
-    pd.DataFrame({'source': source_list, 'target': target_list}).to_csv(target_path)
+        for _, df in source_df.groupby('category3_new'):
+            for _ in range(number):
+                sample1 = df.sample(n=1, random_state=None)
+                text_1 = (sample1['name'].values + sample1['category3_new'].values)[0]
+                phrase_list.add(text_1)
+        for i in phrase_list:
+            source_list.append(i[0])
+        pd.DataFrame({'source': source_list}).to_csv(target_path)
+    mode = 'w' if os.path.exists(csv2txt) else 'a'
+    with open(csv2txt, mode=mode, encoding='utf-8') as f:
+        f.writelines("%s\n" % p for p in phrase_list)
+
 
 
 class DefineDataset(Dataset):
