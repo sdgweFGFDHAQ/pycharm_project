@@ -121,13 +121,13 @@ def predicting(val_loader, model):
     return loss_value, acc_value
 
 
-def load_programs():
+def load_programs(train_path):
     # 加载 data
-    input_df = pd.read_csv(train_with_label)
+    input_df = pd.read_csv(train_path)
     data_x, data_y = input_df['cut_name'].values, input_df['category3_new'].values
     category_classes = input_df['category3_new'].unique()
     # data pre_processing
-    preprocess = Preprocess(sen_len=6)
+    preprocess = Preprocess(sen_len=7)
     # 设置sen_len
     preprocess.length_distribution(data_x)
     # 加载model paragram
@@ -206,7 +206,8 @@ def draw_trend(train_ll, train_al, test_ll, test_al):
 
 
 if __name__ == '__main__':
-    d_x, d_y, embedding_matrix, category_cou = load_programs()
+    # train_with_label = './data/few_shot.csv'
+    d_x, d_y, embedding_matrix, category_cou = load_programs(train_with_label)
     # imbalance = BorderlineSMOTE()
     # x_smote, y_smote = imbalance.fit_resample(d_x, d_y)
     # print(len(x_smote))
@@ -240,7 +241,7 @@ if __name__ == '__main__':
     print('Validation loader prepared.')
 
     best_acc = 0.
-    epochs = 25
+    epochs = 20
     train_loss_list, train_acc_list, test_loss_list, test_acc_list = list(), list(), list(), list()
     # run epochs
     for epoch in range(epochs):

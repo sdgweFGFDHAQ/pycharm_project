@@ -88,12 +88,14 @@ def generate_dataset(source_path, target_path, few_path):
     name_list = name_csv['prediction'].values
     cate_list = name_csv['category'].values
     result = pd.DataFrame({'id': id_list, 'name': name_list,'category3_new': cate_list})
+    result['cut_name'] = result['name'].apply(cut_word)
     # 小样本数据集和数据增强数据集拼接
-    few_csv = pd.read_csv(few_path, usecols=['id', 'name', 'category3_new'])
+    few_csv = pd.read_csv(few_path, usecols=['id', 'name', 'category3_new', 'cut_name'])
     grow_data = pd.concat((few_csv, result))
     print(grow_data.shape[0])
-    grow_data.drop_duplicates(subset=['name'], keep='first').to_csv(target_path, index=False)
-    print(grow_data.shape[0])
+    gd = grow_data.drop_duplicates(subset=['name'], keep='first')
+    gd.to_csv(target_path, index=False)
+    print(gd.shape[0])
 
 
 class DefineDataset(Dataset):
@@ -147,5 +149,5 @@ if __name__ == '__main__':
     # 获取预测集
     get_predict_dataset(few_data_path, test_file)
     # 小样本集合并预测集
-    # generate_dataset(pred_file, grow_result, few_data_path)
+    generate_dataset(pred_file, grow_result, few_data_path)
 
