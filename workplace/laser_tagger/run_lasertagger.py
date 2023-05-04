@@ -4,6 +4,7 @@
 """BERT-based LaserTagger runner."""
 import logging
 import os
+import random
 
 import pandas as pd
 from absl import flags
@@ -12,14 +13,19 @@ from model_operate import ModelFnBuilder
 import process_data
 from workplace.laser_tagger import utils
 from workplace.fewsamples.utils.mini_tool import cut_word
+
 FLAGS = flags.FLAGS
 
 # Required parameters
 source_data_path = '../all_labeled_data.csv'
-train_file = './dataset/train.csv'
-eval_file = './dataset/eval.csv'
-test_file = './dataset/test.csv'
+few_data_path = '../fewsamples/data/few_shot.csv'
+pred_file = './dataset/pred.csv'
+
+train_file = './dataset/train.txt'
+eval_file = './dataset/eval.txt'
+test_file = './dataset/test.txt'
 label_map_file = '/home/data/temp/zzx/lasertagger-chinese/output/label_map.txt'
+grow_result = './dataset/grow_byLT.csv'
 
 # Other parameters
 # Initial checkpoint, usually from a pre-trained BERT model
@@ -41,37 +47,53 @@ num_eval_examples = 1000
 export_path = '/home/data/temp/zzx/lasertagger-chinese/models/cefect/export'
 
 
-def get_standard_data(source_path, target_path, number, is_concat=True):
+def get_train_dataset(source_path, target_path, number):
     source_df = pd.read_csv(source_path)
     phrase_list = set()
-    source_list, target_list = [], []
-    csv2txt = target_path.replace('.csv', '.txt')
-    if is_concat:
-        for _, df in source_df.groupby('category3_new'):
-            for _ in range(number):
-                sample1 = df.sample(n=1, random_state=None)
-                text_1 = (sample1['name'].values + sample1['category3_new'].values)[0]
-                sample2 = df.sample(n=1, random_state=None)
-                text_2 = (sample2['name'].values + sample2['category3_new'].values)[0]
-                phrase_list.add(text_1 + '[seq]' + text_2)
-        for i in phrase_list:
-            il = i.split('[seq]')
-            source_list.append(il[0])
-            target_list.append(il[1])
-        pd.DataFrame({'source': source_list, 'target': target_list}).to_csv(target_path)
-    else:
-        for _, df in source_df.groupby('category3_new'):
-            for _ in range(number):
-                sample1 = df.sample(n=1, random_state=None)
-                text_1 = (sample1['name'].values + sample1['category3_new'].values)[0]
-                phrase_list.add(text_1)
-        for i in phrase_list:
-            source_list.append(i[0])
-        pd.DataFrame({'source': source_list}).to_csv(target_path)
-    mode = 'w' if os.path.exists(csv2txt) else 'a'
-    with open(csv2txt, mode=mode, encoding='utf-8') as f:
+    for _, df in source_df.groupby('category3_new'):
+        for _ in range(number):
+            sample1 = df.sample(n=1, random_state=None)
+            text_1 = (sample1['name'].values + sample1['category3_new'].values)[0]
+            sample2 = df.sample(n=1, random_state=None)
+            text_2 = (sample2['name'].values + sample2['category3_new'].values)[0]
+            phrase_list.add(text_1 + '[seq]' + text_2)
+    mode = 'w' if os.path.exists(target_path) else 'a'
+    with open(target_path, mode=mode, encoding='utf-8') as f:
+        f.writelines("%s\n" % p for p in phrase_list)
+    # csv2txt = target_path.replace('.csv', '.txt')
+    # source_list, target_list = [], []
+    # for i in phrase_list:
+    #     il = i.split('[seq]')
+    #     source_list.append(il[0])
+    #     target_list.append(il[1])
+    # pd.DataFrame({'source': source_list, 'target': target_list}).to_csv(target_path)
+
+
+def get_predict_dataset(source_path, target_path):
+    # 读取文件并转成LaserTagger模块的文件格式
+    few_csv = pd.read_csv(source_path, usecols=['id', 'name', 'category3_new'])
+    texts = few_csv['name'].values + '[seq]' + few_csv['category3_new'].values
+    phrase_list = set()
+    for t in texts:
+        phrase_list.add(t)
+    mode = 'w' if os.path.exists(target_path) else 'a'
+    with open(target_path, mode=mode, encoding='utf-8') as f:
         f.writelines("%s\n" % p for p in phrase_list)
 
+
+def generate_dataset(source_path, target_path, few_path):
+    # 读取预测文件并转成fewshot格式
+    name_csv = pd.read_csv(source_path, usecols=['prediction', 'category'])
+    id_list = ['0000000000' + str(random.randint(1000, 100000)) for _ in range(name_csv.shape[0])]
+    name_list = name_csv['prediction'].values
+    cate_list = name_csv['category'].values
+    result = pd.DataFrame({'id': id_list, 'name': name_list,'category3_new': cate_list})
+    # 小样本数据集和数据增强数据集拼接
+    few_csv = pd.read_csv(few_path, usecols=['id', 'name', 'category3_new'])
+    grow_data = pd.concat((few_csv, result))
+    print(grow_data.shape[0])
+    grow_data.drop_duplicates(subset=['name'], keep='first').to_csv(target_path, index=False)
+    print(grow_data.shape[0])
 
 
 class DefineDataset(Dataset):
@@ -89,7 +111,6 @@ class DefineDataset(Dataset):
 
 
 def run_main():
-    
     process_data.phrase_vocabulary()
 
     csv_df = pd.read_csv(train_file)
@@ -118,7 +139,13 @@ def run_main():
 
 
 if __name__ == '__main__':
-    get_standard_data(source_data_path, train_file, 200)
-    get_standard_data(source_data_path, eval_file, 20)
-    get_standard_data(source_data_path, test_file, 50)
+    # 获取训练集和验证集
+    # get_standard_data(source_data_path, train_file, 200)
+    # get_standard_data(source_data_path, eval_file, 20)
+    # 模型训练及预测
     # run_main()
+    # 获取预测集
+    get_predict_dataset(few_data_path, test_file)
+    # 小样本集合并预测集
+    # generate_dataset(pred_file, grow_result, few_data_path)
+
