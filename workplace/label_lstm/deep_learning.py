@@ -295,7 +295,7 @@ def search_best_model(x_train, y_train, x_test, y_test, embedding, category_coun
     best_accuracy = 0.
     for ep in range(15):
         print('==========train epoch: {}============'.format(ep))
-        tra_lv, tra_av = training(train_ip, model)
+        training(train_ip, model)
         pre_lv, pre_av = predicting(test_ip, model)
         if pre_av > best_accuracy:
             best_accuracy = pre_av
