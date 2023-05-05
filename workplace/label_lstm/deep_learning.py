@@ -293,7 +293,7 @@ def search_best_model(x_train, y_train, x_test, y_test, embedding, category_coun
     test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
     # run epochs
     best_accuracy = 0.
-    for ep in range(20):
+    for ep in range(15):
         print('==========train epoch: {}============'.format(ep))
         tra_lv, tra_av = training(train_ip, model)
         pre_lv, pre_av = predicting(test_ip, model)
