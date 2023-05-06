@@ -320,7 +320,8 @@ def draw_trend(history):
 def predict_result(model, part_i):
     try:
         df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_' + str(part_i) + '.csv')
-        data_x = df['cut_name'][df['cut_name'].notna()].values
+        df = df[(df['cut_name'].notna() & df['cut_name'].notnull())]
+        data_x = df['cut_name'].values
         # data pre_processing
         preprocess = Preprocess(sen_len=7)
         # 加载model paragram
@@ -352,39 +353,6 @@ def predict_result(model, part_i):
     except Exception as e:
         with open('error_city.txt', 'a') as ef:
             ef.write('出错的city: ' + str(part_i) + '; 异常e:' + str(e))
-
-
-def predict_result_forhb(model):
-    gz_df = pd.read_csv(SP.PATH_ZZX_STANDARD_DATA + 'standard_store_hb.csv')
-    data_x = gz_df['cut_name'].values
-    # data pre_processing
-    preprocess = Preprocess(sen_len=7)
-    # 加载model paragram
-    embedding = preprocess.create_tokenizer()
-    # 初始化参数
-    data_x = preprocess.get_pad_word2idx(data_x)
-    preprocess.get_lab2idx(None)
-    pre_x = DefineDataset(data_x, None)
-    pre_ip = DataLoader(dataset=pre_x, batch_size=32, shuffle=False, drop_last=False)
-    pre_lists = list()
-    # 將 model 的模式设定为 eval，固定model的参数
-    model.eval()
-    with torch.no_grad():
-        for i, inputs in enumerate(pre_ip):
-            # 1. 放到GPU上
-            inputs = inputs.to(device, dtype=torch.long)
-            # 2. 计算输出
-            outputs = model(inputs)
-            outputs = outputs.squeeze(1)
-            pre_label = outputs.argmax(axis=1)
-            pre_lists.extend(pre_label)
-    cate_lists = []
-    for ind in pre_lists:
-        cate_lists.append(preprocess.idx2lab[ind.item()])
-    result = pd.DataFrame(
-        {'store_id': gz_df['id'], 'name': gz_df['name'], 'category3_new': gz_df['category3_new'],
-         'predict_category': cate_lists})
-    result.to_csv(SP.PATH_ZZX_PREDICT_DATA + 'predict_category_hb.csv')
 
 
 # 用于重新切分店名，生成标准文件
@@ -474,29 +442,26 @@ def rerun_get_file():
     pool.join()
 
 
-def get_file_forhb():
-    cities = ['随州市', '恩施土家族苗族自治州', '武汉市', '宜昌市', '黄冈', '咸宁市', '鄂州市', '荆门市', '襄阳市',
-              '神农架林区', '黄石市', '孝感市', '十堰市', '天门市', '荆州市', '仙桃市', '潜江市']
-    path_sta = SP.PATH_ZZX_STANDARD_DATA + 'standard_store_hb.csv'
-    if os.path.exists(path_sta):
-        open(path_sta, "r+").truncate()
-    get_city_forhb(cities)
-
-
 # 用于重新预测打标，生成预测文件
 def rerun_get_model():
+    # 训练模型,获取训练集
+    # random_get_trainset()
+    d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
+    # K折找到最佳训练集、测试集
+    x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
+    # 保存最好的模型
+    search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
+
+
+# 预测数据
+def rerun_predict_result():
     for csv_i in range(SP.SEGMENT_NUMBER):
         path_pre = SP.PATH_ZZX_PREDICT_DATA + 'predict_category_' + str(csv_i) + '.csv'
         if os.path.exists(path_pre):
             open(path_pre, "r+").truncate()
-    # 训练模型,获取训练集
-    # random_get_trainset()
-    d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
-    x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
-    search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
-
+    # model = Model()
+    # model.load_state_dict(torch.load(PATH))
     lstm_model = torch.load('best_lstm.model')
-    # 预测数据
     for i in range(SP.SEGMENT_NUMBER):
         predict_result(lstm_model, i)
 
@@ -508,16 +473,16 @@ if __name__ == '__main__':
     # random_get_trainset(is_labeled=False, labeled_is_all=True)
     # random_get_trainset(is_labeled=True, labeled_is_all=False)
     # 用于重新预测打标，生成预测文件
+    # start = time.time()
+    # rerun_get_model()
+    # end = time.time()
+    # print('Get_model time: %s minutes' % ((end - start) / 60))
+    # 预测数据
     start = time.time()
-    rerun_get_model()
+    rerun_predict_result()
     end = time.time()
-    # pred预测集
-    # get_file_forhb()
-    # model = Model()
-    # model.load_state_dict(torch.load(PATH))
-    lstm_model = torch.load('best_lstm.model')
-    predict_result_forhb(lstm_model)
+    print('Predict time: %s minutes' % ((end - start) / 60))
     # 绘制收敛次数图像
     # draw_trend(model_fit)
-    print('Running time: %s minutes' % ((end - start) / 60))
+
 # nohup python -u main.py > log.log 2>&1 &
