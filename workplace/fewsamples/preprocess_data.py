@@ -239,11 +239,12 @@ if __name__ == '__main__':
     pre_fix_path = '.'
     positiveSamp_files = pre_fix_path + '/Pos_df.csv'
     negativeSamp_files = pre_fix_path + '/Neg_df.csv'
+    use_col_list = ['store_id', 'name', 'storeType']
     column_list = ['store_id', 'name', 'storeType', 'cut_name']
-    df = pd.read_csv(positiveSamp_files, usecols=column_list)
+    df = pd.read_csv(positiveSamp_files, usecols=use_col_list)
     print(df.head().index)
     df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
-    df1 = pd.read_csv(negativeSamp_files, usecols=column_list)
+    df1 = pd.read_csv(negativeSamp_files, usecols=use_col_list)
     df1['cut_name'] = (df1['name'] + df1['storeType']).apply(cut_word)
     df.to_csv(positiveSamp_files, index=False)
     df1.to_csv(negativeSamp_files, index=False)
