@@ -236,24 +236,22 @@ class Preprocess:
 if __name__ == '__main__':
     # 标准化数据
     # set_file_standard_data(original_file_path)
-    # 数据增强
     # data = get_data()
     preprocess = Preprocess(None)
+    # 获取小样本
     # preprocess.get_few_shot(data)
-    # preprocess.grow_few_data()
-    # linux 路径
-    pre_fix_path = '.'
-    positiveSamp_files = pre_fix_path + '/Pos_df.csv'
-    negativeSamp_files = pre_fix_path + '/Neg_df.csv'
-    use_col_list = ['store_id', 'name', 'storeType']
-    column_list = ['store_id', 'name', 'storeType', 'cut_name']
-    df = pd.read_csv(positiveSamp_files, usecols=use_col_list)
-    print(df.head().index)
-    df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
-    df1 = pd.read_csv(negativeSamp_files, usecols=use_col_list)
-    df1['cut_name'] = (df1['name'] + df1['storeType']).apply(cut_word)
-    df.to_csv(positiveSamp_files, index=False)
-    df1.to_csv(negativeSamp_files, index=False)
-    preprocess.grow_few_data(positiveSamp_files, pre_fix_path + '/Pos_df_grow.csv', column_list)
-    preprocess.grow_few_data(negativeSamp_files, pre_fix_path + '/Neg_df_grow.csv', column_list)
-# nohup python -u main.py > log.log 2>&1 &
+    # 数据增强-linux 路径
+    data_prefix_path = '/home/data/temp/lxb/prod/fewshotlearning/data'
+    source_path, target_path = '/noEDA_data', '/EDA_data'
+    file_path_list = ['Neg_df.csv', 'Pos_df.csv']
+    use_column_list = ['store_id', 'name', 'storeType']
+    for file_path in file_path_list:
+        read_path = data_prefix_path + source_path + file_path
+        save_path = data_prefix_path + target_path + file_path.replace('.csv', '') + 'grow.csv'
+        # 进行分词处理
+        df = pd.read_csv(read_path, usecols=use_column_list)
+        df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
+        df.to_csv(read_path, index=False)
+        # 进行数据增强
+        preprocess.grow_few_data(read_path, save_path, use_column_list.append('cut_name'))
+# linux后台运行:nohup python -u main.py > log.log 2>&1 &
