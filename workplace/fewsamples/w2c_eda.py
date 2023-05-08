@@ -53,7 +53,6 @@ def set_word2vec(column):
 
 
 def data_grow(df, column_list, mode):
-    ic('data_grow', df.head(2))
     # print(len(df.index))
     columns_dict = dict()
     for col in column_list:

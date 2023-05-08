@@ -107,7 +107,7 @@ def read_train():
             for readline in f:
                 split = readline.rstrip('\n').replace('\ufeff', '').split()
                 if split[1] != '0' and len(split) >= 4:
-                    tf.write(split[2]+' '+split[3]+'\n')
+                    tf.write(split[2] + ' ' + split[3] + '\n')
 
 
 if __name__ == '__main__':
