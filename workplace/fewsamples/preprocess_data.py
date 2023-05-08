@@ -245,13 +245,14 @@ if __name__ == '__main__':
     source_path, target_path = '/noEDA_data', '/EDA_data'
     file_path_list = ['Neg_df.csv', 'Pos_df.csv']
     use_column_list = ['store_id', 'name', 'storeType']
+    grow_mode = 'eda'# 数据增强模式
     for file_path in file_path_list:
         read_path = data_prefix_path + source_path + file_path
-        save_path = data_prefix_path + target_path + file_path.replace('.csv', '') + 'grow.csv'
+        save_path = data_prefix_path + target_path + file_path.replace('.csv', '') + grow_mode + '.csv'
         # 进行分词处理
         df = pd.read_csv(read_path, usecols=use_column_list)
         df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
         df.to_csv(read_path, index=False)
         # 进行数据增强
-        preprocess.grow_few_data(read_path, save_path, use_column_list.append('cut_name'), mode='eda')
+        preprocess.grow_few_data(read_path, save_path, use_column_list.append('cut_name'), mode=grow_mode)
 # linux后台运行:nohup python -u main.py > log.log 2>&1 &
