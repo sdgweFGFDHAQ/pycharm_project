@@ -4,7 +4,6 @@ from icecream import ic
 
 from utils import eda_class
 
-
 # from workplace.fewsamples.utils import eda_class
 
 
@@ -53,7 +52,7 @@ def set_word2vec(column):
     vec.wv.save_word2vec_format('./models/word2vec.vector')
 
 
-def data_grow(df, column_list):
+def data_grow(df, column_list, mode):
     ic('data_grow', df.head(2))
     # print(len(df.index))
     columns_dict = dict()
@@ -61,7 +60,7 @@ def data_grow(df, column_list):
         columns_dict[col] = list()
     vec = KeyedVectors.load_word2vec_format('./models/word2vec.vector')
     eda = eda_class.EDA(num_aug=5, synonyms_model=vec)
-    df.apply(random_replace, args=[eda, columns_dict], axis=1)
+    df.apply(random_replace, args=[eda, columns_dict, mode], axis=1)
     new_df = pd.DataFrame(columns_dict)
     ic(new_df.head(3))
     df = pd.concat([df, new_df])
@@ -69,12 +68,34 @@ def data_grow(df, column_list):
     return df
 
 
-def random_replace(df, eda_object, col_dict):
+def random_replace(df, eda_object, col_dict, mode='eda'):
+    """
+    :param df: 参与增强函数的dataframe，行遍历
+    :param eda_object: eda类，实现具体增强方法
+    :param col_dict:给每个用到的列初始化一个list()
+    :param mode: 选择数据增强方式
+                {'syn' :相似词替换,
+                 'swap':随机交换,
+                 'eda' :两种都用}
+    :return:
+    """
     cn_list = df['cut_name'].split(' ')
-    # 相似词替换
-    syn_num = random_replace_syn(cn_list, eda_object, col_dict['name'], col_dict['cut_name'])
-    # 随机交换
-    swap_num = random_replace_swap(cn_list, eda_object, col_dict['name'], col_dict['cut_name'])
+    syn_num, swap_num = 0, 0
+    try:
+        # 相似词替换
+        if mode == 'syn':
+            syn_num = random_replace_syn(cn_list, eda_object, col_dict['name'], col_dict['cut_name'])
+        # 随机交换
+        elif mode == 'swap':
+            swap_num = random_replace_swap(cn_list, eda_object, col_dict['name'], col_dict['cut_name'])
+        # 相似词替换+随机交换
+        elif mode == 'eda':
+            syn_num = random_replace_syn(cn_list, eda_object, col_dict['name'], col_dict['cut_name'])
+            swap_num = random_replace_swap(cn_list, eda_object, col_dict['name'], col_dict['cut_name'])
+        else:
+            raise ValueError(f"Invalid mode: {mode}. Allowed mode is 'syn', 'swap' or 'eda'")
+    except Exception as e:
+        print(f"Error during random_replace: {str(e)}")
     for i in range(syn_num + swap_num):
         for col_k, v in col_dict.items():
             if col_k == 'store_id':
