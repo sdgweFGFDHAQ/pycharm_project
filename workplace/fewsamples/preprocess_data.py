@@ -254,6 +254,7 @@ if __name__ == '__main__':
         df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
         df.to_csv(read_path, index=False)
         # 进行数据增强
-        use_col = use_column_list.append('cut_name')
+        use_col = use_column_list.copy()
+        use_col.append('cut_name')
         preprocess.grow_few_data(read_path, save_path, use_col, mode=grow_mode)
 # linux后台运行:nohup python -u main.py > log.log 2>&1 &
