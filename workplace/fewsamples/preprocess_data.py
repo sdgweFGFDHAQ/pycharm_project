@@ -121,7 +121,7 @@ class Preprocess:
         cat_df.to_csv('./data/category_to_id.csv')
 
     # 调用数据增强方法
-    def grow_few_data(self, original_path, growth_path, use_columns):
+    def grow_few_data(self, original_path, growth_path, use_columns, mode):
         """
         :param original_path: 原始数据集路径
         :param growth_path: 增强后保存路径
@@ -136,7 +136,7 @@ class Preprocess:
             # 如果是对一个文件数据进行增强
             old_df = pd.read_csv(original_path, usecols=use_columns)
             old_df = old_df.drop_duplicates('name', keep='first')
-            new_data_df = data_grow(old_df, use_columns, mode='eda')
+            new_data_df = data_grow(old_df, use_columns, mode)
             new_data_df = new_data_df.sample(frac=1).reset_index()
             print("扩展后数据量：", len(new_data_df.index))
             new_data_df.to_csv(growth_path)
@@ -146,7 +146,7 @@ class Preprocess:
             for ori_path in original_path:
                 old_df = pd.read_csv(ori_path, usecols=use_columns)
                 old_df = old_df.drop_duplicates('name', keep='first')
-                new_data_df = data_grow(old_df, use_columns, mode='eda')
+                new_data_df = data_grow(old_df, use_columns, mode)
                 new_data_df = new_data_df.sample(frac=1).reset_index()
                 print("扩展后数据量：", len(new_data_df.index))
                 result_df = pd.concat([result_df, new_data_df])
@@ -253,5 +253,5 @@ if __name__ == '__main__':
         df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
         df.to_csv(read_path, index=False)
         # 进行数据增强
-        preprocess.grow_few_data(read_path, save_path, use_column_list.append('cut_name'))
+        preprocess.grow_few_data(read_path, save_path, use_column_list.append('cut_name'), mode='eda')
 # linux后台运行:nohup python -u main.py > log.log 2>&1 &
