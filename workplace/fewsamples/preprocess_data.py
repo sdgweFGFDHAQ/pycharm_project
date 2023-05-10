@@ -245,7 +245,7 @@ if __name__ == '__main__':
     source_path, target_path = '/noEDA_data', '/EDA_data'
     file_path_list = ['/Neg_df.csv', '/Pos_df.csv']
     use_column_list = ['store_id', 'name', 'storeType']
-    grow_mode = 'eda'  # 数据增强模式
+    grow_mode = 'eda'  # 数据增强模式 'eda'|'syn'|'swap'
     for file_path in file_path_list:
         read_path = data_prefix_path + source_path + file_path
         save_path = data_prefix_path + target_path + file_path.replace('.csv', '_') + grow_mode + '.csv'
