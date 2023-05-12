@@ -8,8 +8,7 @@ import pandas as pd
 import torch
 
 from global_parameter import StaticParameter as SP
-from mini_tool import set_jieba, cut_word, error_callback
-
+from mini_tool import WordSegment, error_callback
 
 # 标准化的已打标数据集
 labeled_data_path = './data/labeled_data.csv'
@@ -29,7 +28,7 @@ def set_file_standard_data(path, is_label=True):
     pool = Pool(processes=4)
     standard_df = Manager().list()
     # 设置jieba
-    set_jieba()
+    segment = WordSegment()
     # 选择输出
     if is_label:
         csv_data = csv_data[csv_data['category1_new'].notnull() & (csv_data['category1_new'] != "")]
@@ -45,7 +44,7 @@ def set_file_standard_data(path, is_label=True):
         # 得到标准数据
         csv_data_groups = csv_data.groupby('category3_new')
         for category3, csv_data_i in csv_data_groups:
-            pool.apply_async(cut_world_async, args=(csv_data_i, standard_df), error_callback=error_callback)
+            pool.apply_async(cut_world_async, args=(segment, csv_data_i, standard_df), error_callback=error_callback)
         result_data = pd.concat(standard_df, ignore_index=True)
         result_data.to_csv('./data/labeled_data.csv', columns=['id', 'name', 'category3_new', 'cut_name'])
     else:
@@ -53,15 +52,15 @@ def set_file_standard_data(path, is_label=True):
         # 得到标准数据
         csv_data_groups = csv_data.groupby('category3_new')
         for category3, csv_data_i in csv_data_groups:
-            pool.apply_async(cut_world_async, args=(csv_data_i, standard_df), error_callback=error_callback)
+            pool.apply_async(cut_world_async, args=(segment, csv_data_i, standard_df), error_callback=error_callback)
         result_data = pd.concat(standard_df, ignore_index=True)
         result_data.to_csv('./data/unlabeled_data.csv', columns=['id', 'name', 'category3_new', 'cut_name'])
     pool.close()
     pool.join()
 
 
-def cut_world_async(df, result_df):
-    df['cut_name'] = df['name'].apply(cut_word)
+def cut_world_async(segmenter, df, result_df):
+    df['cut_name'] = df['name'].apply(segmenter.cut_word)
     result_df.append(df)
 
 

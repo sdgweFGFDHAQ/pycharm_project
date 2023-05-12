@@ -147,7 +147,7 @@ if __name__ == '__main__':
     get_word2vec()
     set_word2vec('cut_name')
     w2c_model = Word2Vec.load('./models/word2vec.model')
-    w = ['文具', '饭', '便利店', '串串香']
+    w = ['文具', '饭', '便利店', '串串香', '超市']
     for i in w:
         word = w2c_model.wv.similar_by_word(i)
         print(word)

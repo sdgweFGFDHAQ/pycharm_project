@@ -16,7 +16,7 @@ from torch.utils.data import Dataset, DataLoader
 from model import LSTMNet
 from preprocess_data import Preprocess
 from global_parameter import StaticParameter as SP
-from mini_tool import set_jieba, cut_word, error_callback
+from mini_tool import WordSegment, error_callback
 import gc
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -41,8 +41,8 @@ def set_file_standard_data(city, part_i):
         csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
         csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
         # 得到标准数据
-        set_jieba()
-        csv_data['cut_name'] = csv_data['name'].apply(cut_word)
+        segment = WordSegment()
+        csv_data['cut_name'] = csv_data['name'].apply(segment.cut_word)
         # 过滤非中文店名导致的'cut_name'=nan
         csv_data = csv_data[csv_data['cut_name'].notna()]
         if os.path.exists(path_part) and os.path.getsize(path_part):
@@ -67,8 +67,8 @@ def get_city_forhb(city_list):
             csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
             csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
             # 得到标准数据
-            set_jieba()
-            csv_data['cut_name'] = csv_data['name'].apply(cut_word)
+            segment = WordSegment()
+            csv_data['cut_name'] = csv_data['name'].apply(segment.cut_word)
             if os.path.exists(path_part) and os.path.getsize(path_part):
                 csv_data.to_csv(path_part,
                                 columns=['id', 'name', 'category3_new', 'cut_name'], mode='a', header=False)

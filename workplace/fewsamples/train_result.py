@@ -91,7 +91,7 @@ def training(train_loader, model):
     return loss_value, acc_value
 
 
-def predicting(val_loader, model):
+def evaluting(val_loader, model):
     # 多分类损失函数
     criterion = nn.CrossEntropyLoss()
     # crit = nn.CrossEntropyLoss(reduction='sum')
@@ -178,7 +178,7 @@ def search_best_dataset(data_x, data_y, embedding, category_count):
         # run epochs
         for ep in range(epochs):
             training(train_ip, model)
-            _, ep_percent = predicting(test_ip, model)
+            _, ep_percent = evaluting(test_ip, model)
             accuracy_list.append(round(ep_percent, 3))
         mean_accuracy = np.mean(accuracy_list)
         if mean_accuracy > best_accuracy:
@@ -249,7 +249,7 @@ if __name__ == '__main__':
         # train for one epoch
         epoch_loss, epoch_accuracy = training(train_input, lstm_model)
         # predict on validation set
-        epoch_distance, epoch_percent = predicting(val_input, lstm_model)
+        epoch_distance, epoch_percent = evaluting(val_input, lstm_model)
         if epoch_percent > best_acc:
             # 如果 validation 的结果好于之前所有的结果，就把当下的模型保存
             best_acc = epoch_percent

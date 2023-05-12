@@ -8,7 +8,7 @@ import warnings
 
 from preprocess_data import Preprocess
 from global_parameter import StaticParameter as SP
-from mini_tool import set_jieba, cut_word
+from mini_tool import WordSegment
 
 warnings.filterwarnings("ignore", category=UserWarning)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -40,8 +40,8 @@ def get_city_forhb(city_list):
             csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
             csv_data['category3_new'].fillna(csv_data['category2_new'], inplace=True)
             # 得到标准数据
-            set_jieba()
-            csv_data['cut_name'] = csv_data['name'].apply(cut_word)
+            segment = WordSegment()
+            csv_data['cut_name'] = csv_data['name'].apply(segment.cut_word)
             if os.path.exists(path_part) and os.path.getsize(path_part):
                 csv_data.to_csv(path_part,
                                 columns=['id', 'name', 'category3_new', 'cut_name'], mode='a', header=False)
