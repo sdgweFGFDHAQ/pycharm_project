@@ -244,12 +244,13 @@ if __name__ == '__main__':
     file_path_list = ['/Neg_df.csv', '/Pos_df.csv']
     use_column_list = ['store_id', 'name', 'storeType']
     grow_mode = 'eda'  # 数据增强模式 'eda'|'syn'|'swap'
+    segment = WordSegment()
     for file_path in file_path_list:
         read_path = data_prefix_path + source_path + file_path
         save_path = data_prefix_path + target_path + file_path.replace('.csv', '_') + grow_mode + '.csv'
         # 进行分词处理
         df = pd.read_csv(read_path, usecols=use_column_list)
-        df['cut_name'] = (df['name'] + df['storeType']).apply(cut_word)
+        df['cut_name'] = (df['name'] + df['storeType']).apply(segment.cut_word)
         df.to_csv(read_path, index=False)
         # 进行数据增强
         use_col = use_column_list.copy()

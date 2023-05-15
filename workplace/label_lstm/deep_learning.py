@@ -442,7 +442,7 @@ def rerun_get_file():
     pool.join()
 
 
-# 用于重新预测打标，生成预测文件
+# 划分合适的训练集测试集，保存训练模型
 def rerun_get_model():
     # 训练模型,获取训练集
     # random_get_trainset()
@@ -467,21 +467,24 @@ def rerun_predict_result():
 
 
 if __name__ == '__main__':
-    # 用于重新切分店名，生成标准文件
-    # rerun_get_file()
-    # 随机抽取带标签训练集
+    start0 = time.time()
+    # 1 用于重新切分店名，生成标准文件
+    rerun_get_file()
+    end0 = time.time()
+    print('rerun_get_file time: %s minutes' % ((end0 - start0) / 60))
+    # 2 随机抽取带标签训练集
     # random_get_trainset(is_labeled=False, labeled_is_all=True)
-    # random_get_trainset(is_labeled=True, labeled_is_all=False)
-    # 用于重新预测打标，生成预测文件
-    # start = time.time()
-    # rerun_get_model()
-    # end = time.time()
-    # print('Get_model time: %s minutes' % ((end - start) / 60))
-    # 预测数据
-    start = time.time()
+    random_get_trainset(is_labeled=True, labeled_is_all=False)
+    # 3 划分合适的训练集测试集，保存训练模型
+    start1 = time.time()
+    rerun_get_model()
+    end1 = time.time()
+    print('rerun_get_model time: %s minutes' % ((end1 - start1) / 60))
+    # 4 用于重新预测打标，生成预测文件
+    start2 = time.time()
     rerun_predict_result()
-    end = time.time()
-    print('Predict time: %s minutes' % ((end - start) / 60))
+    end2 = time.time()
+    print('rerun_predict_result time: %s minutes' % ((end2 - start2) / 60))
     # 绘制收敛次数图像
     # draw_trend(model_fit)
 
