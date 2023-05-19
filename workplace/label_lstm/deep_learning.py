@@ -260,9 +260,9 @@ def search_best_dataset(data_x, data_y, embedding, category_count):
             requires_grad=False
         ).to(device)
         train_ds = DefineDataset(data_x[t_train], data_y[t_train])
-        train_ip = DataLoader(dataset=train_ds, batch_size=32, shuffle=True, drop_last=True)
+        train_ip = DataLoader(dataset=train_ds, batch_size=64, shuffle=True, drop_last=True)
         test_ds = DefineDataset(data_x[t_test], data_y[t_test])
-        test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
+        test_ip = DataLoader(dataset=test_ds, batch_size=64, shuffle=False, drop_last=True)
         accuracy_list = list()
         # run epochs
         for ep in range(epochs):
@@ -288,9 +288,9 @@ def search_best_model(x_train, y_train, x_test, y_test, embedding, category_coun
         requires_grad=False
     ).to(device)
     train_ds = DefineDataset(x_train, y_train)
-    train_ip = DataLoader(dataset=train_ds, batch_size=32, shuffle=True, drop_last=True)
+    train_ip = DataLoader(dataset=train_ds, batch_size=64, shuffle=True, drop_last=True)
     test_ds = DefineDataset(x_test, y_test)
-    test_ip = DataLoader(dataset=test_ds, batch_size=32, shuffle=False, drop_last=True)
+    test_ip = DataLoader(dataset=test_ds, batch_size=64, shuffle=False, drop_last=True)
     # run epochs
     best_accuracy = 0.
     for ep in range(12):
@@ -330,7 +330,7 @@ def predict_result(model, part_i):
         data_x = preprocess.get_pad_word2idx(data_x)
         preprocess.get_lab2idx(None)
         pre_x = DefineDataset(data_x, None)
-        pre_ip = DataLoader(dataset=pre_x, batch_size=32, shuffle=False, drop_last=False)
+        pre_ip = DataLoader(dataset=pre_x, batch_size=64, shuffle=False, drop_last=False)
         pre_lists = list()
         # 將 model 的模式设定为 eval，固定model的参数
         model.eval()
@@ -469,7 +469,7 @@ def rerun_predict_result():
 if __name__ == '__main__':
     start0 = time.time()
     # 1 用于重新切分店名，生成标准文件
-    rerun_get_file()
+    # rerun_get_file()
     end0 = time.time()
     print('rerun_get_file time: %s minutes' % ((end0 - start0) / 60))
     # 2 随机抽取带标签训练集
