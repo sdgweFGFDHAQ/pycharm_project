@@ -62,6 +62,7 @@ def data_grow(df, column_list, mode):
     df.apply(random_replace, args=[eda, columns_dict, mode], axis=1)
     new_df = pd.DataFrame(columns_dict)
     ic(new_df.head(3))
+    # 合并原始数据集和增强数据集
     df = pd.concat([df, new_df])
     df.drop_duplicates(subset=['cut_name'], keep='first', inplace=True)
     return df

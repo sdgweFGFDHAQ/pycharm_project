@@ -4,6 +4,7 @@ import time
 
 from ast import literal_eval
 from gensim.models import Word2Vec, KeyedVectors
+import jieba
 from keras.callbacks import EarlyStopping
 from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
 from keras.models import Sequential, Model

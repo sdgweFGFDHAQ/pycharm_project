@@ -32,11 +32,14 @@ def trans():
     print(now - font_6)
     print((now - font_6) / 3600 / 24 / 30)
 
+
 def typicalsamling(group, threshold):
     if len(group.index) > threshold:
         return group.sample(n=threshold, random_state=23)
     else:
         return group.sample(frac=1)
+
+
 def dwe():
     df = pd.read_csv('aaa.csv')
     print(df['cut_name'].values)
@@ -48,5 +51,7 @@ def dwe():
 
 
 if __name__ == '__main__':
-    dwe()
-
+    # dwe()
+    frame = pd.DataFrame({'a': [14, 15, 13, 11, 12], 'b': [1, 2, 3, 4, 5]})
+    new_data_df = frame.sample(frac=1)
+    new_data_df.to_csv('aaaaa.csv', index=False)

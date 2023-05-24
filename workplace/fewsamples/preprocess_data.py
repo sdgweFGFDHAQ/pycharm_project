@@ -135,9 +135,9 @@ class Preprocess:
             old_df = pd.read_csv(original_path, usecols=use_columns)
             old_df = old_df.drop_duplicates('name', keep='first')
             new_data_df = data_grow(old_df, use_columns, mode)
-            new_data_df = new_data_df.sample(frac=1).reset_index()
+            new_data_df = new_data_df.sample(frac=1)
             print("扩展后数据量：", len(new_data_df.index))
-            new_data_df.to_csv(growth_path)
+            new_data_df.to_csv(growth_path, index=False)
         elif type(original_path) == list:
             # 如果是对多个文件数据进行增强
             result_df = None
@@ -145,10 +145,10 @@ class Preprocess:
                 old_df = pd.read_csv(ori_path, usecols=use_columns)
                 old_df = old_df.drop_duplicates('name', keep='first')
                 new_data_df = data_grow(old_df, use_columns, mode)
-                new_data_df = new_data_df.sample(frac=1).reset_index()
+                new_data_df = new_data_df.sample(frac=1)
                 print("扩展后数据量：", len(new_data_df.index))
                 result_df = pd.concat([result_df, new_data_df])
-            result_df.to_csv(growth_path)
+            result_df.to_csv(growth_path, index=False)
         else:
             print("original_path's type could be str or list, but input is " + type(original_path))
 
@@ -250,7 +250,7 @@ if __name__ == '__main__':
         save_path = data_prefix_path + target_path + file_path.replace('.csv', '_') + grow_mode + '.csv'
         # 进行分词处理
         df = pd.read_csv(read_path, usecols=use_column_list)
-        df['cut_name'] = (df['name'] + df['storeType']).apply(segment.cut_word)
+        df['cut_name'] = (df['name']).apply(segment.cut_word)
         df.to_csv(read_path, index=False)
         # 进行数据增强
         use_col = use_column_list.copy()
