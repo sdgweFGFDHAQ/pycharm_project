@@ -2,58 +2,89 @@ import numpy
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
-
+from torch import optim, nn
+from torch.utils.data import TensorDataset, DataLoader
+from transformers import AutoTokenizer
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 """
 PU-Learning，即P代表的是Positive，U代表的是Unlabel，负样本实际上是泛样本
 """
 noEDA_prefix = '/home/data/temp/lxb/alchemy/data/noEDA_data'
 input_prefix = '/home/data/temp/lxb/alchemy/data/input_dataset'
+labeled_path = '../sv_report_data.csv'
+
+batch_size = 32
 
 
-# 生成数据对
-def generate_data_pair(positive_df, negative_df):
-    positive_df['sign'], negative_df['sign'] = 1, 1
+def get_labeled_dataloader(df, bert_tokenizer, label_list):
+    # 生成类别-id字典
+    df['cat_id'] = df['storeType'].factorize()[0]
+    cat_df = df[['storeType', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
+    cat_df.to_csv('./data/store_type_to_id.csv')
 
-    p_samples = positive_df.merge(positive_df, how='left', on='sign')
-    p_samples.drop(columns='sign')
-    p_samples['label'] = 1
-    print(p_samples.head())
-    n_samples = positive_df.merge(negative_df, how='left', on='sign')
-    n_samples.drop(columns='sign')
-    n_samples['label'] = 0
+    # 创建输入数据的空列表
+    input_ids = []
+    attention_masks = []
 
-    result_df = pd.concat((p_samples, n_samples))
-    result_df = result_df.rename(columns={0: 'name1', 1: 'category1', 2: "name2", 3: "category2", 4: "label"})
-    return result_df
+    # 遍历数据集的每一行
+    for index, row in df.iterrows():
+        # 处理特征
+        encoded_dict = bert_tokenizer.encode_plus(
+            row['name'],
+            row['storeType'],
+            add_special_tokens=True,
+            max_length=16,
+            padding='max_length',
+            truncation=True,
+            return_tensors='pt'
+        )
+        input_ids.append(encoded_dict['input_ids'].squeeze())
+        attention_masks.append(encoded_dict['attention_mask'].squeeze())
+
+        # 处理类别
+        labels_tensor = torch.tensor([row[label] for label in label_list])
+        label_list.append(labels_tensor)
+        print(label_list)
+    dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks), torch.stack(label_list))
+    dataloader = DataLoader(dataset, batch_size=batch_size)
+    return dataloader
 
 
 # (1)使用正样本和泛洋本训练分类器
-def train_by_all_dataset(source_path):
-    # 正样本数据集
-    pos_df = pd.read_csv(source_path + '/Pos_df.csv', usecols=['name', 'storeType'])
-    # 泛样本数据集
-    unl_df = pd.read_csv(source_path + '/Neg_df.csv', usecols=['name', 'storeType'])
-
-    # 欠采样，采用笛卡尔积构成样本对
-    num = min(pos_df.shape[0], unl_df.shape[0])
-    print("设置抽取正样本数据量num:{}".format(num))
-    pos_df, neg_df = pos_df.sample(n=num), unl_df.sample(n=num * 2)
-
-    init_dataset = generate_data_pair(pos_df, neg_df)
-    init_dataset.to_csv(source_path + '/pu_train_df.csv', index=False)
-    # 训练，保存模型
-    model = run_train_model(source_path + '/pu_train_df.csv', is_init=True)
-    torch.save(model, 'bert_attention.model')
-    acc_dict = torch.load("test_acc_history.pth")
-    print(acc_dict)
+def training(input_loader, query_label, model):
+    # 使用Adam优化器
+    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
+    model.train()
+    epoch_los, epoch_acc = 0.0, 0.0
+    for i, (support_input, query_input) in enumerate(input_loader):
+        # 1. 放到GPU上
+        support_input = support_input.to(device, dtype=torch.float32)
+        query_input = query_input.to(device, dtype=torch.float32)
+        # 2. 清空梯度
+        optimizer.zero_grad()
+        # 3. 计算输出
+        output = model(support_input, query_input)
+        # outputs = outputs.squeeze(1)
+        # 4. 计算损失
+        loss = nn.NLLLoss(output, query_label)
+        epoch_los += loss.item()
+        # 5.预测结果
+        accu = score(output, query_label)
+        epoch_acc += accu.item()
+        # 6. 反向传播
+        loss.backward()
+        # 7. 更新梯度
+        optimizer.step()
+    loss_value = epoch_los / len(support_loader)
+    acc_value = epoch_acc / len(support_loader)
+    print("accuracy: {:.2%},loss:{:.4f}".format(acc_value, loss_value))
+    return acc_value, loss_value
 
 
 # (2)对泛样本打分，选取概率最高的作为负样本，重新生成样本集csv文件
 def score(pos_path, pred_path):
     # 构建预测集
-    pos_data = pd.read_csv(pos_path + '/Pos_df.csv', usecols=['name', 'storeType'])
-    pred_path = pd.read_csv(pred_path + '/Neg_df.csv', usecols=['name', 'storeType'])
     positive_df['label'] = 1
     p_samples = positive_df.merge(positive_df, how='left', on='label')
     print(p_samples.head())
@@ -61,13 +92,22 @@ def score(pos_path, pred_path):
     model = torch.load('bert_attention.model')
     predict(model, pred_dataloader, pos_path=positive_path, pred_path=predict_path)
 
+
 def rerun(epoch):
+    features = ['name', 'storeType']
+    labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
+    columns = ['store_id']
+    columns.extend(features)
+    columns.extend(labels)
+
+    labeled_df = pd.read_csv(labeled_path, usecols=columns)
     acc_List = []
     init_model = True
+    tokenizer = AutoTokenizer.from_pretrained('IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese')
     for _ in range(epoch):
-        extract_negative_dataset(noEDA_prefix, input_prefix)
-        get_train_and_test(input_prefix, input_prefix)
-        acc = train_and_test(source_path=input_prefix, is_init=init_model)
+        train_loader = get_labeled_dataloader(noEDA_prefix, input_prefix)
+        training(train_loader, input_prefix)
+        acc = train_by_all_dataset(source_path=input_prefix, is_init=init_model)
         acc_List.append(acc)
 
         init_model = False

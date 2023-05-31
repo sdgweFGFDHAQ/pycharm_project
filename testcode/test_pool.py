@@ -5,6 +5,7 @@ import jieba
 import ast
 
 import pandas as pd
+import torch
 from sklearn import preprocessing
 
 
@@ -52,14 +53,17 @@ def get_df(df, i, al):
 
 
 if __name__ == '__main__':
-    csv = pd.read_csv('aaa.csv', index_col=0)
-    alist = Manager().list()
-    pool = Pool(4)
-    ddf = pd.DataFrame()
-    for i in range(5):
-        pool.apply_async(func=get_df, args=(csv, i, alist))
-    pool.close()
-    pool.join()
-    concat = pd.concat(alist, ignore_index=True)
-    print(concat)
-
+    # csv = pd.read_csv('aaa.csv', index_col=0)
+    # alist = Manager().list()
+    # pool = Pool(4)
+    # ddf = pd.DataFrame()
+    # for i in range(5):
+    #     pool.apply_async(func=get_df, args=(csv, i, alist))
+    # pool.close()
+    # pool.join()
+    # concat = pd.concat(alist, ignore_index=True)
+    # print(concat)
+    a = [1, 2, 3, 4]
+    b = a.copy()
+    query_list = [a.pop(), b.pop()]
+    print(query_list)

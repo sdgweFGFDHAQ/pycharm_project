@@ -110,7 +110,7 @@ def random_replace_syn(cn_list, eda_object, name_list, cut_name_list):
     # min_num最少生成数据条数;max_num最大操作次数
     min_num, max_num = 0, 0
     new_name_list = list()
-    while (min_num < 8) and (max_num < 10):
+    while (min_num < 3) and (max_num < 10):
         # 相似词替换
         new_cut_name = eda_object.synonym_replacement(cn_list, n=1)
         name_str = ''.join(new_cut_name)
@@ -129,9 +129,9 @@ def random_replace_swap(cn_list, eda_object, name_list, cut_name_list):
     # min_num最少生成数据条数;max_num最大操作次数
     min_num, max_num = 0, 0
     new_name_list = list()
-    while (min_num < 6) and (max_num < 10):
+    while (min_num < 3) and (max_num < 10):
         # 随机交换
-        new_cut_name = eda_object.random_swap(cn_list, n=2)
+        new_cut_name = eda_object.random_swap(cn_list, n=1)
         name_str = ''.join(new_cut_name)
         cut_name_str = ' '.join(new_cut_name)
         if new_cut_name not in new_name_list:
@@ -145,10 +145,10 @@ def random_replace_swap(cn_list, eda_object, name_list, cut_name_list):
 
 
 if __name__ == '__main__':
-    get_word2vec()
-    set_word2vec('cut_name')
+    # get_word2vec()
+    # set_word2vec('cut_name')
     w2c_model = Word2Vec.load('./models/word2vec.model')
-    w = ['文具', '饭', '便利店', '串串香', '超市']
+    w = ["喆", "时" ,"东北", "咖啡"]
     for i in w:
         word = w2c_model.wv.similar_by_word(i)
         print(word)
