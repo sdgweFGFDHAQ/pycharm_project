@@ -11,13 +11,13 @@ from models.proto_model import ProtoTypicalNet
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-pretrian_bert_url = "hfl/chinese-roberta-wwm-ext"
+pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 labeled_path = '../sv_report_data.csv'
 unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
 batch_size = 64
-epochs = 3
+epochs = 30
 
 
 def get_Nway_Kshot(df, category_list, way, shot):
@@ -51,14 +51,14 @@ def get_Nway_Kshot(df, category_list, way, shot):
 # 线下跑店(店铺存在且售品) 1399条
 def get_labeled_dataloader(df, bert_tokenizer, label_list):
     # 生成类别-id字典
-    df['cat_id'] = df['storeType'].factorize()[0]
-    cat_df = df[['storeType', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
-    cat_df.to_csv('./data/store_type_to_id.csv')
+    # df['cat_id'] = df['storeType'].factorize()[0]
+    # cat_df = df[['storeType', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
+    # cat_df.to_csv('./data/store_type_to_id.csv')
 
     # 创建输入数据的空列表
     input_ids = []
     attention_masks = []
-
+    label2id_list = []
     # 遍历数据集的每一行
     for index, row in df.iterrows():
         # 处理特征
@@ -76,10 +76,10 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
 
         # 处理类别
         labels_tensor = torch.tensor([row[label] for label in label_list])
-        label_list.append(labels_tensor)
-        print(label_list)
-    dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks), torch.stack(label_list))
-    dataloader = DataLoader(dataset, batch_size=batch_size)
+        label2id_list.append(labels_tensor)
+
+    dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks), torch.stack(label2id_list))
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     return dataloader
 
 
@@ -116,33 +116,58 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
 
 
 def accuracy(pred_y, y):
-    pred_list = torch.argmax(pred_y, dim=1)
-    correct = (pred_list == y).float()
-    acc = correct.sum() / len(correct)
+    predicted_labels = (pred_y > 0.5).float()  # 使用0.5作为阈值，大于阈值的为预测为正类
+    acc = (predicted_labels == y).float().mean()
     return acc
 
 
-def training(support_loader, query_loader, query_label, model):
+def multilabel_categorical_crossentropy(y_pred, y_true):
+    """多标签分类的交叉熵
+    说明：y_true和y_pred的shape一致，y_true的元素非0即1，
+         1表示对应的类为目标类，0表示对应的类为非目标类。
+    警告：请保证y_pred的值域是全体实数，换言之一般情况下y_pred
+         不用加激活函数，尤其是不能加sigmoid或者softmax！预测
+         阶段则输出y_pred大于0的类。如有疑问，请仔细阅读并理解
+         本文。
+    """
+    y_pred = (1 - 2 * y_true) * y_pred
+    y_pred_neg = y_pred - y_true * 1e12
+    y_pred_pos = y_pred - (1 - y_true) * 1e12
+
+    zeros = torch.zeros_like(y_pred[..., :1])
+
+    y_pred_neg = torch.cat([y_pred_neg, zeros], dim=-1)
+    y_pred_pos = torch.cat([y_pred_pos, zeros], dim=-1)
+    neg_loss = torch.logsumexp(y_pred_neg, dim=-1)
+    pos_loss = torch.logsumexp(y_pred_pos, dim=-1)
+    return neg_loss + pos_loss
+
+
+def training(support_loader, query_loader, model):
+    criterion = nn.BCEWithLogitsLoss()
     # 使用Adam优化器
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
     model.train()
     epoch_los, epoch_acc = 0.0, 0.0
-    for i, (support_input, query_input) in enumerate(support_loader, query_loader):
+    for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
         # 1. 放到GPU上
-        support_input = support_input.to(device, dtype=torch.float32)
-        query_input = query_input.to(device, dtype=torch.float32)
+        support_input0 = support_input[0].to(device, dtype=torch.long)
+        query_input0 = query_input[0].to(device, dtype=torch.long)
+        query_input2 = query_input[2].to(device, dtype=torch.long)
         # 2. 清空梯度
         optimizer.zero_grad()
         # 3. 计算输出
-        output = model(support_input, query_input)
+        output = model(support_input0, query_input0)
+        output = torch.sigmoid(output)
         # outputs = outputs.squeeze(1)
         # 4. 计算损失
-        loss = nn.NLLLoss(output, query_label)
+        loss = criterion(output, query_input2.float())
         epoch_los += loss.item()
         # 5.预测结果
-        accu = accuracy(output, query_label)
+        accu = accuracy(output, query_input2)
         epoch_acc += accu.item()
         # 6. 反向传播
+        loss.requires_grad_(True)
         loss.backward()
         # 7. 更新梯度
         optimizer.step()
@@ -175,6 +200,6 @@ if __name__ == '__main__':
         support_df, query_df = get_Nway_Kshot(labeled_df, labels, 3, 64)
         support_dataloader = get_labeled_dataloader(support_df, tokenizer, labels)
         query_dataloader = get_labeled_dataloader(query_df, tokenizer, labels)
-        training(support_dataloader, query_dataloader, labels, proto_model)
+        training(support_dataloader, query_dataloader, proto_model)
 
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)

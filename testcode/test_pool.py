@@ -1,12 +1,15 @@
+import math
 import os
 from multiprocessing import Pool, Manager
 import re
 import jieba
 import ast
 
+import numpy
 import pandas as pd
 import torch
 from sklearn import preprocessing
+from icecream.icecream import ic
 
 
 def resub():
@@ -52,18 +55,33 @@ def get_df(df, i, al):
     al.append(df.head(1))
 
 
+def multilabel_categorical_crossentropy(y_true, y_pred):
+    """多标签分类的交叉熵
+    说明：y_true和y_pred的shape一致，y_true的元素非0即1，
+         1表示对应的类为目标类，0表示对应的类为非目标类。
+    警告：请保证y_pred的值域是全体实数，换言之一般情况下y_pred
+         不用加激活函数，尤其是不能加sigmoid或者softmax！预测
+         阶段则输出y_pred大于0的类。如有疑问，请仔细阅读并理解
+         本文。
+    """
+    y_pred = (1 - 2 * y_true) * y_pred
+    ic(y_pred)
+    y_pred_neg = y_pred - y_true * 1e12
+    ic(y_pred_neg)
+    y_pred_pos = y_pred - (1 - y_true) * 1e12
+    ic(y_pred_pos)
+    zeros = torch.zeros_like(y_pred[..., :1])
+
+    y_pred_neg = torch.cat([y_pred_neg, zeros], dim=-1)
+    y_pred_pos = torch.cat([y_pred_pos, zeros], dim=-1)
+    neg_loss = torch.logsumexp(y_pred_neg, dim=-1)
+    pos_loss = torch.logsumexp(y_pred_pos, dim=-1)
+    return neg_loss + pos_loss
+
+
 if __name__ == '__main__':
-    # csv = pd.read_csv('aaa.csv', index_col=0)
-    # alist = Manager().list()
-    # pool = Pool(4)
-    # ddf = pd.DataFrame()
-    # for i in range(5):
-    #     pool.apply_async(func=get_df, args=(csv, i, alist))
-    # pool.close()
-    # pool.join()
-    # concat = pd.concat(alist, ignore_index=True)
-    # print(concat)
-    a = [1, 2, 3, 4]
-    b = a.copy()
-    query_list = [a.pop(), b.pop()]
-    print(query_list)
+    crossentropy = multilabel_categorical_crossentropy(
+        torch.tensor([[1, 1, 1], [1, 0, 1], [0, 0, 0]]),
+        torch.tensor([[0.8, 0.6, 0.9], [0.7, -0.2, 0.1], [0.2, -0.6, -0.7]])
+    )
+    print(crossentropy)
