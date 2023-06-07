@@ -68,6 +68,7 @@ class Reader:
             chapter_num = self.contents.index(chapter_name) + 1
         chapter_name = self.contents[chapter_num - 1]
 
+        print("当前章节：第{}章".format(chapter_num))
         read_content = "".join(self.book.get(chapter_name, "当前章节不存在"))
         read_content = cut_part(read_content, max_width=40)
         for t in read_content.split('\n'):
@@ -81,7 +82,6 @@ class Reader:
         while forward not in ["n", "b", "q"]:
             forward = input("n:下一章 b:上一章 q:退出\n")
 
-        print("当前章节：第{}章".format(chapter_num))
         if forward in ['q', 'quit']:
             sys.exit(0)
         # 根据命令选择上一章或者下一章，并更新历史记录
@@ -98,6 +98,7 @@ if __name__ == '__main__':
         os.system('clear')
 
     mybook = Reader("fwy_name", "fwy.txt")
-    num, name = 102, None
+    num, name = 108, None
     while True:
         num, name = mybook.start_read(chapter_num=num, chapter_name=name)
+        print("当前章节：第{}章".format(num))
