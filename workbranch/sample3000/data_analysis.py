@@ -69,7 +69,7 @@ if __name__ == '__main__':
     # get_source_data('name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes')
     # 处理 '卖什么商品' 字段
     process_data(['name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes'])
-
+    # extract_data('name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes')
 '''
 存在店铺的数据量：1734条！有所售商品类别的数据量:1399条！
 碳酸饮料:1307

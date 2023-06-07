@@ -23,13 +23,13 @@ class ProtoTypicalNet(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, num_class)
         )
-        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, support_input, query_input):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
         support_embedding = self.bert_embedding(support_input).last_hidden_state[:, 0]
         query_embedding = self.bert_embedding(query_input).last_hidden_state[:, 0]
 
+        # 距离即loss
         support_size0 = support_embedding.shape[0]
         every_class_num = support_size0 // self.num_class
         class_meta_dict = {}
@@ -48,5 +48,6 @@ class ProtoTypicalNet(nn.Module):
             cosine_value = torch.cosine_similarity(class_meta_information, temp_value, dim=1)
             result[i] = cosine_value
 
-        # result = self.softmax(result)
+        # result = self.prototype(support_embedding)
+
         return result

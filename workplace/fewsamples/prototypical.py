@@ -1,6 +1,9 @@
 import random
 
 import pandas as pd
+from icecream.icecream import ic
+from sklearn.metrics import f1_score
+from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 import torch
 from torch import nn
@@ -20,7 +23,7 @@ batch_size = 64
 epochs = 30
 
 
-def get_Nway_Kshot(df, category_list, way, shot):
+def get_Nway_Kshot(df, category_list, way, shot, query):
     # 随机选择3个分类
     selected_categories = random.sample(category_list, way)
 
@@ -41,11 +44,29 @@ def get_Nway_Kshot(df, category_list, way, shot):
         category_data = category_data.drop(support_samples.index)
 
         # 随机选择n个样本作为查询集
-        query_samples = category_data.sample(n=shot)
+        query_samples = category_data.sample(n=query)
         query_set = pd.concat([query_set, query_samples])
 
     print("Support Set and Query Set segmentation completed")
     return support_set, query_set
+
+
+def get_dataset(df, category_list, way):
+    # 创建一个空的DataFrame用于存储支持集和查询集
+    data_set = pd.DataFrame()
+
+    # 遍历选择的分类
+    for category in category_list:
+        # 获取该分类下的数据
+        category_data = df[df[category] == 1]
+
+        # 随机选择n个样本作为支持集
+        samples = category_data.sample(n=way)
+        data_set = pd.concat([data_set, samples])
+
+    train_set, test_set = train_test_split(data_set, random_state=0.2)
+    print("Train Set and Test Set segmentation completed")
+    return train_set, test_set
 
 
 # 线下跑店(店铺存在且售品) 1399条
@@ -79,7 +100,7 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks), torch.stack(label2id_list))
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=df.shape[0], shuffle=False)
     return dataloader
 
 
@@ -140,13 +161,13 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
     y_pred_pos = torch.cat([y_pred_pos, zeros], dim=-1)
     neg_loss = torch.logsumexp(y_pred_neg, dim=-1)
     pos_loss = torch.logsumexp(y_pred_pos, dim=-1)
-    return neg_loss + pos_loss
+    return torch.sum(neg_loss + pos_loss)
 
 
 def training(support_loader, query_loader, model):
     criterion = nn.BCEWithLogitsLoss()
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
+    optimizer = optim.Adam(model.parameters(), lr=0.00001, weight_decay=1e-4)
     model.train()
     epoch_los, epoch_acc = 0.0, 0.0
     for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
@@ -158,10 +179,10 @@ def training(support_loader, query_loader, model):
         optimizer.zero_grad()
         # 3. 计算输出
         output = model(support_input0, query_input0)
-        output = torch.sigmoid(output)
         # outputs = outputs.squeeze(1)
         # 4. 计算损失
-        loss = criterion(output, query_input2.float())
+        loss = multilabel_categorical_crossentropy(output, query_input2.float())
+        # loss = torch.sum(output, dim=0)
         epoch_los += loss.item()
         # 5.预测结果
         accu = accuracy(output, query_input2)
@@ -174,6 +195,32 @@ def training(support_loader, query_loader, model):
     loss_value = epoch_los / len(support_loader)
     acc_value = epoch_acc / len(support_loader)
     print("accuracy: {:.2%},loss:{:.4f}".format(acc_value, loss_value))
+    return acc_value, loss_value
+
+
+def evaluating(support_loader, query_loader, model):
+    criterion = nn.BCEWithLogitsLoss()
+    model.eval()
+    with torch.no_grad():
+        epoch_los, epoch_acc = 0.0, 0.0
+        for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
+            # 1. 放到GPU上
+            support_input0 = support_input[0].to(device, dtype=torch.long)
+            query_input0 = query_input[0].to(device, dtype=torch.long)
+            query_input2 = query_input[2].to(device, dtype=torch.long)
+            # 2. 计算输出
+            output = model(support_input0, query_input0)
+            # outputs = outputs.squeeze(1)
+            # 3. 计算损失
+            loss = multilabel_categorical_crossentropy(output, query_input2.float())
+            # loss = torch.sum(output, dim=0)
+            epoch_los += loss.item()
+            # 4.预测结果
+            accu = accuracy(output, query_input2)
+            epoch_acc += accu.item()
+        loss_value = epoch_los / len(support_loader)
+        acc_value = epoch_acc / len(support_loader)
+        print("accuracy: {:.2%},loss:{:.4f}".format(acc_value, loss_value))
     return acc_value, loss_value
 
 
@@ -196,10 +243,20 @@ if __name__ == '__main__':
         num_class=len(labels)
     ).to(device)
 
+    # 采用NwayKshot采样
     for i in range(epochs):
-        support_df, query_df = get_Nway_Kshot(labeled_df, labels, 3, 64)
+        support_df, query_df = get_Nway_Kshot(labeled_df, labels, 3, 32, 8)
         support_dataloader = get_labeled_dataloader(support_df, tokenizer, labels)
         query_dataloader = get_labeled_dataloader(query_df, tokenizer, labels)
-        training(support_dataloader, query_dataloader, proto_model)
+        for j in range(5):
+            training(support_dataloader, query_dataloader, proto_model)
 
+    # 采用划分训练集测试集
+    # train_df, test_df = get_dataset(labeled_df, labels, 700)
+    # for i in range(epochs):
+    #     train_dataloader = get_labeled_dataloader(train_df, tokenizer, labels)
+    #     test_dataloader = get_labeled_dataloader(test_df, tokenizer, labels)
+    #     for j in range(5):
+    #         training(train_dataloader, proto_model)
+    #         evaluating(test_dataloader, proto_model)
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)
