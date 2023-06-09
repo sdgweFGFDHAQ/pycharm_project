@@ -28,7 +28,7 @@ def get_Support_Query(train_df, labels, k=10):
     def minimize_set(df_i, count_list, excessive_list):
         tally = count_list.copy()
         tally = [i - j for i, j in zip(tally, df_i['multi_label'])]
-        if k - 1 not in count_list:
+        if (min(count_list) >= k) and (k - 1 not in count_list):
             excessive_list.append(df_i['index_col'])
             count_list.clear()
             count_list.extend(tally)
@@ -47,9 +47,11 @@ def get_Support_Query(train_df, labels, k=10):
         # 满足每个标签最少出现K次，如果原始数据集df不足K条则结束
         while count[label_i] < k and label_i_df.shape[0] > 0:
             add_series = label_i_df.sample(n=1)
-            label_i_df.drop(add_series.index, inplace=True)
+            drop = label_i_df.drop(add_series.index, inplace=False)
             add_list.append(add_series)
             count = [i + j for i, j in zip(count, add_series['multi_label'].values[0])]
+            df.drop(add_series.index, inplace=True)
+            label_i_df = drop
     support_df = pd.concat([support_df] + add_list)
 
     # 删除多余的数据
@@ -270,15 +272,15 @@ if __name__ == '__main__':
     labeled_df = pd.read_csv(labeled_path, usecols=columns)
     # # bert_config = AutoConfig.from_pretrained(pretrian_bert_url + '/config.json')
 
-    # tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
-    # bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
-    # proto_model = ProtoTypicalNet(
-    #     bert_layer=bert_layer,
-    #     input_dim=768,
-    #     hidden_dim=768,
-    #     num_class=len(labels)
-    # ).to(device)
-    #
+    tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
+    bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
+    proto_model = ProtoTypicalNet(
+        bert_layer=bert_layer,
+        input_dim=768,
+        hidden_dim=768,
+        num_class=len(labels)
+    ).to(device)
+
     # # 采用NwayKshot采样
     # for i in range(3):
     #     support_df, query_df = get_Nway_Kshot(labeled_df, labels, 7, 32, 8)
@@ -289,7 +291,15 @@ if __name__ == '__main__':
     # 采用最小包含算法采样
     train_set, test_set = train_test_split(labeled_df, test_size=0.2)
     print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    support_set = get_Support_Query(train_set, labels, k=2000)
+    support_set = get_Support_Query(train_set, labels, k=200)
     query_set = train_set.drop(support_set.index)
     print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
+
+    support_dataloader = get_labeled_dataloader(support_set, tokenizer, labels)
+    query_dataloader = get_labeled_dataloader(query_set, tokenizer, labels)
+    test_dataloader = get_labeled_dataloader(test_set, tokenizer, labels)
+    for j in range(epochs):
+        training(support_dataloader, query_dataloader, proto_model)
+        evaluating(support_dataloader, query_dataloader, proto_model)
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)
+
