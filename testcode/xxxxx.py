@@ -94,12 +94,12 @@ class Reader:
 
 
 if __name__ == '__main__':
-    if platform.system().lower() == "windows":
+    if platform.system().lower() == "swindows":
         os.system('cls')
     if platform.system().lower() == "linux":
         os.system('clear')
 
     mybook = Reader("fwy_name", "fwy.txt")
-    num, name = 108, None
+    num, name = 161, None
     while True:
         num, name = mybook.start_read(chapter_num=num, chapter_name=name)

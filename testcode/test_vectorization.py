@@ -3,8 +3,11 @@ import os
 import time
 
 from ast import literal_eval
+
+import torch
 from gensim.models import Word2Vec, KeyedVectors
 import jieba
+from icecream import ic
 from keras.callbacks import EarlyStopping
 from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
 from keras.models import Sequential, Model
@@ -112,10 +115,26 @@ def read_train():
 
 
 if __name__ == '__main__':
-    # gz_df = pd.read_csv('../workplace/all_labeled_data.csv', nrows=10000)
-    # print(len(gz_df.index))
-    # print(gz_df.head())
-    #
-    # gz_df.drop_duplicates(subset=['category3_new'], keep='first', inplace=True)
-    # print(gz_df)
-    read_train()
+    a = torch.randn(3, 5)
+    print(a)
+    b = torch.randn(3, 5)
+    print(b)
+    cosine_value = torch.cosine_similarity(a, b, dim=1)
+    print(cosine_value)
+
+    support_size0 = a.shape[0]
+    class_meta_dict = {}
+    class_meta_dict[0] = torch.sum(a, dim=0) / 3
+
+    class_meta_information = torch.zeros(size=[len(class_meta_dict), a.shape[1]])
+    for key, item in class_meta_dict.items():
+        class_meta_information[key, :] = class_meta_dict[key]
+    ic(class_meta_information)
+    ic(b)
+    N_query = b.shape[0]
+    result = torch.zeros(size=[N_query, 1])
+    for i in range(0, N_query):
+        temp_value = b[i].repeat(1, 1)
+        cosine_value = torch.cosine_similarity(class_meta_information, temp_value, dim=1)
+        result[i] = cosine_value
+    ic(result)

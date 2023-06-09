@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from icecream.icecream import ic
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
@@ -48,6 +49,6 @@ class ProtoTypicalNet(nn.Module):
             cosine_value = torch.cosine_similarity(class_meta_information, temp_value, dim=1)
             result[i] = cosine_value
 
-        # result = self.prototype(support_embedding)
-
+        result = self.prototype(support_embedding)
+        ic(result)
         return result

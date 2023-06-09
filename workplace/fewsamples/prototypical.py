@@ -9,6 +9,7 @@ import torch
 from torch import nn
 from torch import optim
 from torch.utils.data import TensorDataset, DataLoader
+import torch.nn.functional as F
 
 from models.proto_model import ProtoTypicalNet
 
@@ -21,6 +22,41 @@ unlabeled_path = '../unlabeled_data.csv'
 token_max_length = 12
 batch_size = 64
 epochs = 30
+
+
+def get_Support_Query(train_df, labels, k=10):
+    def minimize_set(df_i, count_list, excessive_list):
+        tally = count_list.copy()
+        tally = [i - j for i, j in zip(tally, df_i['multi_label'])]
+        if k - 1 not in count_list:
+            excessive_list.append(df_i['index_col'])
+            count_list.clear()
+            count_list.extend(tally)
+
+    df = train_df.copy()
+    df['multi_label'] = df[labels].values.tolist()
+    df['index_col'] = df.index
+
+    # 随机抽样
+    support_df, add_list = pd.DataFrame(), []
+    label_number = len(labels)
+    count = [0] * label_number
+    for label_i in range(label_number):
+        # 取出当前标签的df
+        label_i_df = df[df[labels[label_i]] == 1]
+        # 满足每个标签最少出现K次，如果原始数据集df不足K条则结束
+        while count[label_i] < k and label_i_df.shape[0] > 0:
+            add_series = label_i_df.sample(n=1)
+            label_i_df.drop(add_series.index, inplace=True)
+            add_list.append(add_series)
+            count = [i + j for i, j in zip(count, add_series['multi_label'].values[0])]
+    support_df = pd.concat([support_df] + add_list)
+
+    # 删除多余的数据
+    delete_list = []
+    support_df.apply(minimize_set, args=(count, delete_list), axis=1)
+    support_df.drop(delete_list, inplace=True)
+    return support_df
 
 
 def get_Nway_Kshot(df, category_list, way, shot, query):
@@ -232,31 +268,28 @@ if __name__ == '__main__':
     columns.extend(labels)
 
     labeled_df = pd.read_csv(labeled_path, usecols=columns)
-    # bert_config = AutoConfig.from_pretrained(pretrian_bert_url + '/config.json')
-    tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
+    # # bert_config = AutoConfig.from_pretrained(pretrian_bert_url + '/config.json')
 
-    bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
-    proto_model = ProtoTypicalNet(
-        bert_layer=bert_layer,
-        input_dim=768,
-        hidden_dim=768,
-        num_class=len(labels)
-    ).to(device)
-
-    # 采用NwayKshot采样
-    for i in range(epochs):
-        support_df, query_df = get_Nway_Kshot(labeled_df, labels, 3, 32, 8)
-        support_dataloader = get_labeled_dataloader(support_df, tokenizer, labels)
-        query_dataloader = get_labeled_dataloader(query_df, tokenizer, labels)
-        for j in range(5):
-            training(support_dataloader, query_dataloader, proto_model)
-
-    # 采用划分训练集测试集
-    # train_df, test_df = get_dataset(labeled_df, labels, 700)
-    # for i in range(epochs):
-    #     train_dataloader = get_labeled_dataloader(train_df, tokenizer, labels)
-    #     test_dataloader = get_labeled_dataloader(test_df, tokenizer, labels)
-    #     for j in range(5):
-    #         training(train_dataloader, proto_model)
-    #         evaluating(test_dataloader, proto_model)
+    # tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
+    # bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
+    # proto_model = ProtoTypicalNet(
+    #     bert_layer=bert_layer,
+    #     input_dim=768,
+    #     hidden_dim=768,
+    #     num_class=len(labels)
+    # ).to(device)
+    #
+    # # 采用NwayKshot采样
+    # for i in range(3):
+    #     support_df, query_df = get_Nway_Kshot(labeled_df, labels, 7, 32, 8)
+    #     support_dataloader = get_labeled_dataloader(support_df, tokenizer, labels)
+    #     query_dataloader = get_labeled_dataloader(query_df, tokenizer, labels)
+    #     for j in range(epochs):
+    #         training(support_dataloader, query_dataloader, proto_model)
+    # 采用最小包含算法采样
+    train_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    support_set = get_Support_Query(train_set, labels, k=2000)
+    query_set = train_set.drop(support_set.index)
+    print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)
