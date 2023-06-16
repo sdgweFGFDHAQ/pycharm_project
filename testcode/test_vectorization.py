@@ -4,44 +4,12 @@ import time
 
 from ast import literal_eval
 
-import torch
-from gensim.models import Word2Vec, KeyedVectors
-import jieba
-from icecream import ic
-from keras.callbacks import EarlyStopping
-from keras.layers import Dense, Embedding, LSTM, SpatialDropout1D
-from keras.models import Sequential, Model
-from keras.preprocessing.text import Tokenizer
-from keras.utils import pad_sequences
 from multiprocessing import Manager, Pool
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
-from scipy.sparse import csc_matrix
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_selection import mutual_info_classif
-from sklearn.metrics import classification_report
-from sklearn.model_selection import train_test_split
-from imblearn.over_sampling import BorderlineSMOTE, ADASYN
-from workplace.label_nb.count_category_num import feature_vectorization
-from keras.utils import pad_sequences
-
-
-def test_dict():
-    dict_list = [{'a1': 1}, {'a2': 2}, {'a3': 3}, {'a4': 4}]
-    series = pd.Series(['a', 'b', 'c'])
-    print(series.values)
-    manager_dict = Manager().dict()
-    for i in series.values:
-        manager_dict[i] = dict()
-    print(manager_dict)
-    pool = Pool(processes=4)
-    for i in range(4):
-        pool.apply_async(use_update, args=(dict_list[i], manager_dict))
-    pool.close()
-    pool.join()
-    print("就此结束", manager_dict)
-    return manager_dict
+import torch
+from icecream import ic
+from torch import nn
 
 
 def use_update(new_dict, manager_dict):
@@ -115,26 +83,49 @@ def read_train():
 
 
 if __name__ == '__main__':
-    a = torch.randn(3, 5)
-    print(a)
-    b = torch.randn(3, 5)
-    print(b)
-    cosine_value = torch.cosine_similarity(a, b, dim=1)
-    print(cosine_value)
+    # read_train()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # 6 * 12
+    label = torch.tensor([[1, 1, 0, 1, 0],
+                          [0, 1, 0, 1, 1],
+                          [1, 0, 1, 1, 0],
+                          [1, 1, 0, 1, 0],
+                          [0, 1, 0, 1, 1],
+                          [1, 0, 1, 0, 0]]).to(device, dtype=torch.float)
+    embedding = torch.tensor([[0.89, 0.66, 0.33, 0.56, 0.23, 0.37, 0.81, 0.66, 0.23, 0.56, 0.33, 0.39],
+                              [0.02, 0.43, 0.91, 0.43, 0.65, 0.21, 0.89, 0.66, 0.33, 0.56, 0.23, 0.37],
+                              [0.77, 0.54, 0.65, 0.16, 0.42, 0.37, 0.87, 0.66, 0.23, 0.56, 0.23, 0.37],
+                              [0.89, 0.66, 0.23, 0.56, 0.23, 0.37, 0.89, 0.66, 0.22, 0.56, 0.23, 0.35],
+                              [0.12, 0.43, 0.99, 0.42, 0.66, 0.31, 0.89, 0.66, 0.23, 0.52, 0.23, 0.37],
+                              [0.71, 0.54, 0.65, 0.16, 0.43, 0.35, 0.89, 0.66, 0.23, 0.51, 0.21, 0.37]])
+    y_label = torch.tensor([[1, 1, 0, 1, 0],
+                          [0, 1, 0, 1, 1],
+                          [1, 0, 1, 1, 0],
+                          [1, 1, 0, 1, 0],
+                          [0, 1, 0, 1, 1],
+                          [1, 0, 1, 0, 0]])
+    embedding_size, hidden_size = 12, 5
+    input_size, output_size = embedding_size, hidden_size
+    # 降维，768用隐层降小一点
+    hidden_layer = nn.Linear(input_size, output_size)
 
-    support_size0 = a.shape[0]
-    class_meta_dict = {}
-    class_meta_dict[0] = torch.sum(a, dim=0) / 3
-
-    class_meta_information = torch.zeros(size=[len(class_meta_dict), a.shape[1]])
-    for key, item in class_meta_dict.items():
-        class_meta_information[key, :] = class_meta_dict[key]
-    ic(class_meta_information)
-    ic(b)
-    N_query = b.shape[0]
-    result = torch.zeros(size=[N_query, 1])
-    for i in range(0, N_query):
-        temp_value = b[i].repeat(1, 1)
-        cosine_value = torch.cosine_similarity(class_meta_information, temp_value, dim=1)
-        result[i] = cosine_value
-    ic(result)
+    # 提取特征
+    g = nn.Linear(input_size, output_size)
+    # 计算e 为标签在该样本下的向量表示,标签是one-hot，不用求和
+    # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
+    dc = g(embedding) * label  # 6*5
+    e = torch.tan(dc)
+    ic(e)
+    # 计算样本权重,将0值所在位置替换为负无穷大
+    e[e == 0] = float('-inf')
+    ic(e)
+    a = torch.softmax(e, dim=0)
+    ic(a)
+    # 计算原型表示
+    b = 0.5
+    # c = b * torch.matmul(a.t(), embedding) + (1 - b) * label.t()
+    c = b * torch.matmul(a.t(), hidden_layer(embedding))
+    print(c)
+    # 计算查询集标签到原型点的距离
+    distances = torch.sqrt(torch.sum((c.unsqueeze(0) - y_label.unsqueeze(1)) ** 2, dim=2))
+    print(distances)

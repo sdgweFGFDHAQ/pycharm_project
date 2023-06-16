@@ -3,52 +3,58 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from icecream.icecream import ic
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class ProtoTypicalNet(nn.Module):
-    def __init__(self, bert_layer, input_dim, hidden_dim, num_class, dropout=0.5, requires_grad=False):
+    def __init__(self, bert_layer, input_dim, hidden_dim, num_class, dropout=0.5, beta=0.5, requires_grad=False):
         super(ProtoTypicalNet, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_class = num_class
+        self.beta = beta
 
         # 线性层进行编码
         self.bert_embedding = bert_layer
         for param in self.bert_embedding.parameters():
             param.requires_grad = requires_grad
+        # 解冻后面3层的参数
+        for param in self.bert_embedding.encoder.layer[-1:].parameters():
+            param.requires_grad = True
 
+        # 原型网络核心
         self.prototype = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, num_class)
+            nn.Linear(input_dim, hidden_dim),
+            # nn.ReLU(),
+            # nn.Sigmoid()
+            # nn.Dropout(dropout),
+            # nn.Linear(hidden_dim, self.num_class)
         )
 
-    def forward(self, support_input, query_input):
+        # 用于改变维度大小
+        self.linear = nn.Linear(hidden_dim, self.num_class)
+
+    def forward(self, support_input, support_label, query_input, query_label):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
         support_embedding = self.bert_embedding(support_input).last_hidden_state[:, 0]
         query_embedding = self.bert_embedding(query_input).last_hidden_state[:, 0]
+        support_point = self.prototype(support_embedding)
+        query_point = self.prototype(query_embedding)
 
-        # 距离即loss
-        support_size0 = support_embedding.shape[0]
-        every_class_num = support_size0 // self.num_class
-        class_meta_dict = {}
-        for i in range(0, self.num_class):
-            class_meta_dict[i] = torch.sum(support_embedding[i * every_class_num:(i + 1) * every_class_num, :],
-                                           dim=0) / every_class_num
+        # 提取特征
+        # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
+        # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
+        e = torch.tan(self.linear(support_point) * support_label)
+        # 将0值所在位置替换为负无穷大
+        e[e == 0] = float('-inf')
+        # a 为计算得到的样本权重
+        a = torch.softmax(e, dim=0)
+        # 计算原型表示
+        # c = b * torch.matmul(a.t(), embedding) + (1 - b) * label.t()
+        c = torch.matmul(a.t(), support_point)
+        # 计算查询集标签到原型点的距离
+        distances = torch.sqrt(torch.sum((c.unsqueeze(0) - query_point.unsqueeze(1)) ** 2, dim=2))
 
-        class_meta_information = torch.zeros(size=[len(class_meta_dict), support_embedding.shape[1]])
-        for key, item in class_meta_dict.items():
-            class_meta_information[key, :] = class_meta_dict[key]
-
-        N_query = query_embedding.shape[0]
-        result = torch.zeros(size=[N_query, self.num_class])
-        for i in range(0, N_query):
-            temp_value = query_embedding[i].repeat(self.num_class, 1)
-            cosine_value = torch.cosine_similarity(class_meta_information, temp_value, dim=1)
-            result[i] = cosine_value
-
-        result = self.prototype(support_embedding)
-        ic(result)
-        return result
+        return distances

@@ -1,5 +1,6 @@
 import random
 
+import numpy as np
 import pandas as pd
 from icecream.icecream import ic
 from sklearn.metrics import f1_score
@@ -20,11 +21,11 @@ labeled_path = '../sv_report_data.csv'
 unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
-batch_size = 64
-epochs = 30
+batch_size = 15
+epochs = 10
 
 
-def get_Support_Query(train_df, labels, k=10):
+def get_Support_Query(train_df, label_list, k=10):
     def minimize_set(df_i, count_list, excessive_list):
         tally = count_list.copy()
         tally = [i - j for i, j in zip(tally, df_i['multi_label'])]
@@ -34,16 +35,16 @@ def get_Support_Query(train_df, labels, k=10):
             count_list.extend(tally)
 
     df = train_df.copy()
-    df['multi_label'] = df[labels].values.tolist()
+    df['multi_label'] = df[label_list].values.tolist()
     df['index_col'] = df.index
 
     # 随机抽样
     support_df, add_list = pd.DataFrame(), []
-    label_number = len(labels)
+    label_number = len(label_list)
     count = [0] * label_number
     for label_i in range(label_number):
         # 取出当前标签的df
-        label_i_df = df[df[labels[label_i]] == 1]
+        label_i_df = df[df[label_list[label_i]] == 1]
         # 满足每个标签最少出现K次，如果原始数据集df不足K条则结束
         while count[label_i] < k and label_i_df.shape[0] > 0:
             add_series = label_i_df.sample(n=1)
@@ -66,8 +67,8 @@ def get_Nway_Kshot(df, category_list, way, shot, query):
     selected_categories = random.sample(category_list, way)
 
     # 创建一个空的DataFrame用于存储支持集和查询集
-    support_set = pd.DataFrame()
-    query_set = pd.DataFrame()
+    support_df = pd.DataFrame()
+    query_df = pd.DataFrame()
 
     # 遍历选择的分类
     for category in selected_categories:
@@ -76,35 +77,17 @@ def get_Nway_Kshot(df, category_list, way, shot, query):
 
         # 随机选择n个样本作为支持集
         support_samples = category_data.sample(n=shot)
-        support_set = pd.concat([support_set, support_samples])
+        support_df = pd.concat([support_df, support_samples])
 
         # 从该分类中移除支持集样本，剩下的样本作为查询集
         category_data = category_data.drop(support_samples.index)
 
         # 随机选择n个样本作为查询集
         query_samples = category_data.sample(n=query)
-        query_set = pd.concat([query_set, query_samples])
+        query_df = pd.concat([query_df, query_samples])
 
     print("Support Set and Query Set segmentation completed")
-    return support_set, query_set
-
-
-def get_dataset(df, category_list, way):
-    # 创建一个空的DataFrame用于存储支持集和查询集
-    data_set = pd.DataFrame()
-
-    # 遍历选择的分类
-    for category in category_list:
-        # 获取该分类下的数据
-        category_data = df[df[category] == 1]
-
-        # 随机选择n个样本作为支持集
-        samples = category_data.sample(n=way)
-        data_set = pd.concat([data_set, samples])
-
-    train_set, test_set = train_test_split(data_set, random_state=0.2)
-    print("Train Set and Test Set segmentation completed")
-    return train_set, test_set
+    return support_df, query_df
 
 
 # 线下跑店(店铺存在且售品) 1399条
@@ -138,7 +121,7 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks), torch.stack(label2id_list))
-    dataloader = DataLoader(dataset, batch_size=df.shape[0], shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     return dataloader
 
 
@@ -174,10 +157,49 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
     return dataloader
 
 
-def accuracy(pred_y, y):
-    predicted_labels = (pred_y > 0.5).float()  # 使用0.5作为阈值，大于阈值的为预测为正类
-    acc = (predicted_labels == y).float().mean()
-    return acc
+def accuracy(y_true, y_pred):
+    # 使用0.5作为阈值，大于阈值的为预测为正类
+    y_pred = (y_pred > 0.5).float()
+    # acc = (predicted_labels == y_true).float().mean()
+    # 真实标签为[0, 1, 0, 1]，预测标签为[0, 1, 1, 0],acc = 1 / 3
+    count = 0
+    for i in range(y_true.shape[0]):
+        p = sum(torch.logical_and(y_true[i], y_pred[i]))
+        q = sum(torch.logical_or(y_true[i], y_pred[i]))
+        count += p / q
+    return count / y_true.shape[0]
+
+
+# 精确率
+def Precision(y_true, y_pred):
+    count = 0
+    for i in range(y_true.shape[0]):
+        if sum(y_pred[i]) == 0:
+            continue
+        count += sum(torch.logical_and(y_true[i], y_pred[i])) / sum(y_pred[i])
+    return count / y_true.shape[0]
+
+
+# 召回率
+def Recall(y_true, y_pred):
+    count = 0
+    for i in range(y_true.shape[0]):
+        if sum(y_true[i]) == 0:
+            continue
+        count += sum(torch.logical_and(y_true[i], y_pred[i])) / sum(y_true[i])
+    return count / y_true.shape[0]
+
+
+# F1
+def F1Measure(y_true, y_pred):
+    count = 0
+    for i in range(y_true.shape[0]):
+        if (sum(y_true[i]) == 0) and (sum(y_pred[i]) == 0):
+            continue
+        p = sum(torch.logical_and(y_true[i], y_pred[i]))
+        q = sum(y_true[i]) + sum(y_pred[i])
+        count += (2 * p) / q
+    return count / y_true.shape[0]
 
 
 def multilabel_categorical_crossentropy(y_pred, y_true):
@@ -203,7 +225,7 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
 
 
 def training(support_loader, query_loader, model):
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.MultiLabelSoftMarginLoss(reduction='sum')
     # 使用Adam优化器
     optimizer = optim.Adam(model.parameters(), lr=0.00001, weight_decay=1e-4)
     model.train()
@@ -211,15 +233,17 @@ def training(support_loader, query_loader, model):
     for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
         # 1. 放到GPU上
         support_input0 = support_input[0].to(device, dtype=torch.long)
+        support_input2 = support_input[2].to(device, dtype=torch.long)
         query_input0 = query_input[0].to(device, dtype=torch.long)
         query_input2 = query_input[2].to(device, dtype=torch.long)
         # 2. 清空梯度
         optimizer.zero_grad()
         # 3. 计算输出
-        output = model(support_input0, query_input0)
+        output = model(support_input0, support_input2, query_input0, query_input2)
         # outputs = outputs.squeeze(1)
         # 4. 计算损失
-        loss = multilabel_categorical_crossentropy(output, query_input2.float())
+        loss = criterion(output, query_input2.float())
+        # loss = multilabel_categorical_crossentropy(output, query_input2.float())
         # loss = torch.sum(output, dim=0)
         epoch_los += loss.item()
         # 5.预测结果
@@ -232,25 +256,24 @@ def training(support_loader, query_loader, model):
         optimizer.step()
     loss_value = epoch_los / len(support_loader)
     acc_value = epoch_acc / len(support_loader)
-    print("accuracy: {:.2%},loss:{:.4f}".format(acc_value, loss_value))
     return acc_value, loss_value
 
 
-def evaluating(support_loader, query_loader, model):
-    criterion = nn.BCEWithLogitsLoss()
+def evaluating(support_loader, test_loader, model):
+    criterion = nn.MultiLabelSoftMarginLoss(reduction='sum')
     model.eval()
     with torch.no_grad():
         epoch_los, epoch_acc = 0.0, 0.0
-        for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
+        for i, (support_input, test_input) in enumerate(zip(support_loader, test_loader)):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
-            query_input0 = query_input[0].to(device, dtype=torch.long)
-            query_input2 = query_input[2].to(device, dtype=torch.long)
+            query_input0 = test_input[0].to(device, dtype=torch.long)
+            query_input2 = test_input[2].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(support_input0, query_input0)
             # outputs = outputs.squeeze(1)
             # 3. 计算损失
-            loss = multilabel_categorical_crossentropy(output, query_input2.float())
+            loss = criterion(output, query_input2.float())
             # loss = torch.sum(output, dim=0)
             epoch_los += loss.item()
             # 4.预测结果
@@ -258,7 +281,6 @@ def evaluating(support_loader, query_loader, model):
             epoch_acc += accu.item()
         loss_value = epoch_los / len(support_loader)
         acc_value = epoch_acc / len(support_loader)
-        print("accuracy: {:.2%},loss:{:.4f}".format(acc_value, loss_value))
     return acc_value, loss_value
 
 
@@ -277,29 +299,29 @@ if __name__ == '__main__':
     proto_model = ProtoTypicalNet(
         bert_layer=bert_layer,
         input_dim=768,
-        hidden_dim=768,
+        hidden_dim=128,
         num_class=len(labels)
     ).to(device)
 
     # # 采用NwayKshot采样
-    # for i in range(3):
-    #     support_df, query_df = get_Nway_Kshot(labeled_df, labels, 7, 32, 8)
-    #     support_dataloader = get_labeled_dataloader(support_df, tokenizer, labels)
-    #     query_dataloader = get_labeled_dataloader(query_df, tokenizer, labels)
-    #     for j in range(epochs):
-    #         training(support_dataloader, query_dataloader, proto_model)
+    # support_df, query_df = get_Nway_Kshot(labeled_df, labels, 7, 32, 8)
+
     # 采用最小包含算法采样
     train_set, test_set = train_test_split(labeled_df, test_size=0.2)
     print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    support_set = get_Support_Query(train_set, labels, k=200)
-    query_set = train_set.drop(support_set.index)
+    # support_set = get_Support_Query(train_set, labels, k=200)
+    # query_set = train_set.drop(support_set.index)
+    support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
     print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
 
     support_dataloader = get_labeled_dataloader(support_set, tokenizer, labels)
     query_dataloader = get_labeled_dataloader(query_set, tokenizer, labels)
     test_dataloader = get_labeled_dataloader(test_set, tokenizer, labels)
     for j in range(epochs):
-        training(support_dataloader, query_dataloader, proto_model)
-        evaluating(support_dataloader, query_dataloader, proto_model)
+        train_acc_value, train_loss_value = training(support_dataloader, query_dataloader, proto_model)
+        test_acc_value, test_loss_value = evaluating(support_dataloader, test_dataloader, proto_model)
+        print("训练集 accuracy: {:.2%},loss:{:.4f} | 验证集 accuracy: {:.2%},loss:{:.4f}".format(train_acc_value,
+                                                                                                 train_loss_value,
+                                                                                                 test_acc_value,
+                                                                                                 test_loss_value))
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)
-

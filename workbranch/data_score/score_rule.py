@@ -16,10 +16,9 @@ def xlsx_to_csv_pd(source, target):
     #             columns=['id', 'name', 'address', 'category1_new', 'category2_new', 'visit_num_6m', 'cost',
     #                      'area', 'is_point', 'is_direct', 'is_freezer'])
     csvv = pd.read_csv(target)
+    print(csvv.head())
+    csvv.columns = ['brand_name', 'series_name', 'sku_name', 'sku_code', 'drink_label']
     csvv.to_csv(target)
-
-    csv2 = pd.read_csv(target)
-    print(csv2)
 
 
 # 处理数据文件格式
@@ -44,4 +43,6 @@ if __name__ == '__main__':
     # report = ProfileReport(csv)
     # report.to_file('洪山区0419.html')
 
-    xls_to_csv_pd('store_visit_report.xls', 'store_visit_report.csv')
+    # xls_to_csv_pd('store_visit_report.xls', 'store_visit_report.csv')
+
+    xlsx_to_csv_pd('商品分类整理0607_zzx.xlsx', 'sku_drink_label.csv')

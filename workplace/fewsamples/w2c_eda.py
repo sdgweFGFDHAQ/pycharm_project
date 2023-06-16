@@ -4,6 +4,7 @@ from icecream import ic
 
 from utils import eda_class
 
+
 # from workplace.fewsamples.utils import eda_class
 
 
@@ -99,7 +100,7 @@ def random_replace(df, eda_object, col_dict, mode='eda'):
     for i in range(syn_num + swap_num):
         for col_k, v in col_dict.items():
             if col_k == 'store_id':
-                col_dict[col_k].append(str(df[col_k]) + str(i))
+                col_dict[col_k].append(str(df[col_k]) + '2023' + str(i))
             elif col_k == 'name' or col_k == 'cut_name':
                 continue
             else:
@@ -148,7 +149,7 @@ if __name__ == '__main__':
     # get_word2vec()
     # set_word2vec('cut_name')
     w2c_model = Word2Vec.load('./models/word2vec.model')
-    w = ["喆", "时" ,"东北", "咖啡"]
+    w = ["喆", "时", "东北", "咖啡"]
     for i in w:
         word = w2c_model.wv.similar_by_word(i)
         print(word)

@@ -31,15 +31,15 @@ def get_source_data(column_list):
     print('线下跑店获取的字段列名：'.format(df.columns))
     df_t = df[df['is_exist'] == 't'].copy()
 
+    # 考虑加入store_id
+    result_dict = {'store_id': list(df_t['store_id'].values)}
     column_dict = {}
     for col in column_list:
         column_dict[col] = list()
     df_t["report_json"].apply(getname, args=(column_dict,))
+    result_dict.update(column_dict)
 
-    # 考虑加入store_id
-    column_dict['store_id'] = list(df_t['store_id'].values)
-
-    result_df = pd.DataFrame(column_dict)
+    result_df = pd.DataFrame(result_dict)
     return result_df
 
 
@@ -66,9 +66,12 @@ def process_data(required_column_list):
 
 if __name__ == '__main__':
     # 用于原型网络的input
-    # get_source_data('name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes')
+    df = get_source_data(
+        ['name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes', 'address', 'productTypes',
+         'cashierCount', 'location'])
+    df.to_csv('temp_sv_report.csv')
     # 处理 '卖什么商品' 字段
-    process_data(['name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes'])
+    # process_data(['name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes'])
     # extract_data('name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes')
 '''
 存在店铺的数据量：1734条！有所售商品类别的数据量:1399条！
