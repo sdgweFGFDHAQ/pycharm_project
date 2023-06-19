@@ -10,11 +10,12 @@ import torch
 from torch import nn
 from torch import optim
 from torch.utils.data import TensorDataset, DataLoader
-import torch.nn.functional as F
+from tensorboardX import SummaryWriter
 
 from models.proto_model import ProtoTypicalNet
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+writer = SummaryWriter('./logs/v1')
 
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 labeled_path = '../sv_report_data.csv'
@@ -22,7 +23,7 @@ unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
 batch_size = 15
-epochs = 10
+epochs = 50
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -121,7 +122,7 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks), torch.stack(label2id_list))
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=batch_size * 2, shuffle=False, drop_last=True)
     return dataloader
 
 
@@ -239,7 +240,7 @@ def training(support_loader, query_loader, model):
         # 2. 清空梯度
         optimizer.zero_grad()
         # 3. 计算输出
-        output = model(support_input0, support_input2, query_input0, query_input2)
+        output = model(support_input0, support_input2, query_input0)
         # outputs = outputs.squeeze(1)
         # 4. 计算损失
         loss = criterion(output, query_input2.float())
@@ -267,10 +268,11 @@ def evaluating(support_loader, test_loader, model):
         for i, (support_input, test_input) in enumerate(zip(support_loader, test_loader)):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
+            support_input2 = support_input[2].to(device, dtype=torch.long)
             query_input0 = test_input[0].to(device, dtype=torch.long)
             query_input2 = test_input[2].to(device, dtype=torch.long)
             # 2. 计算输出
-            output = model(support_input0, query_input0)
+            output = model(support_input0, support_input2, query_input0)
             # outputs = outputs.squeeze(1)
             # 3. 计算损失
             loss = criterion(output, query_input2.float())
@@ -287,6 +289,8 @@ def evaluating(support_loader, test_loader, model):
 if __name__ == '__main__':
     features = ['name', 'storeType']
     labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
+    real_labels_from_log = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
+                            '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
     columns = ['store_id', 'drinkTypes']
     columns.extend(features)
     columns.extend(labels)
@@ -309,19 +313,22 @@ if __name__ == '__main__':
     # 采用最小包含算法采样
     train_set, test_set = train_test_split(labeled_df, test_size=0.2)
     print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    # support_set = get_Support_Query(train_set, labels, k=200)
-    # query_set = train_set.drop(support_set.index)
-    support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
+    support_set = get_Support_Query(train_set, labels, k=500)
+    query_set = train_set.drop(support_set.index)
+    # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
     print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
 
     support_dataloader = get_labeled_dataloader(support_set, tokenizer, labels)
     query_dataloader = get_labeled_dataloader(query_set, tokenizer, labels)
     test_dataloader = get_labeled_dataloader(test_set, tokenizer, labels)
-    for j in range(epochs):
+    for step in range(epochs):
         train_acc_value, train_loss_value = training(support_dataloader, query_dataloader, proto_model)
         test_acc_value, test_loss_value = evaluating(support_dataloader, test_dataloader, proto_model)
-        print("训练集 accuracy: {:.2%},loss:{:.4f} | 验证集 accuracy: {:.2%},loss:{:.4f}".format(train_acc_value,
-                                                                                                 train_loss_value,
-                                                                                                 test_acc_value,
-                                                                                                 test_loss_value))
+        print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
+              "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
+                                                             test_loss_value))
+        writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
+        writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)
+
+# tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123

@@ -117,7 +117,7 @@ if __name__ == '__main__':
     e = torch.tan(dc)
     ic(e)
     # 计算样本权重,将0值所在位置替换为负无穷大
-    e[e == 0] = float('-inf')
+    e[e == 0] = float('-1e-9')
     ic(e)
     a = torch.softmax(e, dim=0)
     ic(a)

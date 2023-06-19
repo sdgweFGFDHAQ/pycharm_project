@@ -28,15 +28,15 @@ class ProtoTypicalNet(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(input_dim, hidden_dim),
             # nn.ReLU(),
-            # nn.Sigmoid()
-            # nn.Dropout(dropout),
-            # nn.Linear(hidden_dim, self.num_class)
+
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, self.num_class),
         )
 
         # 用于改变维度大小
-        self.linear = nn.Linear(hidden_dim, self.num_class)
+        # self.linear = nn.Linear(hidden_dim, self.num_class)
 
-    def forward(self, support_input, support_label, query_input, query_label):
+    def forward(self, support_input, support_label, query_input):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
         support_embedding = self.bert_embedding(support_input).last_hidden_state[:, 0]
         query_embedding = self.bert_embedding(query_input).last_hidden_state[:, 0]
@@ -46,11 +46,13 @@ class ProtoTypicalNet(nn.Module):
         # 提取特征
         # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
         # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
-        e = torch.tan(self.linear(support_point) * support_label)
+        e = torch.tan(support_point * support_label)
         # 将0值所在位置替换为负无穷大
-        e[e == 0] = float('-inf')
+        # e[e == 0] = float('-inf')
+        f = torch.where(e == 0, float('-inf'), e)
+
         # a 为计算得到的样本权重
-        a = torch.softmax(e, dim=0)
+        a = torch.softmax(f, dim=0)
         # 计算原型表示
         # c = b * torch.matmul(a.t(), embedding) + (1 - b) * label.t()
         c = torch.matmul(a.t(), support_point)
