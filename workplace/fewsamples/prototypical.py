@@ -13,12 +13,16 @@ from torch.utils.data import TensorDataset, DataLoader
 from tensorboardX import SummaryWriter
 
 from models.proto_model import ProtoTypicalNet
+from models.proto_model_2 import ProtoTypicalNet2
+from workplace.fewsamples.preprocess_data import Preprocess
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 writer = SummaryWriter('./logs/v1')
 
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
+
 labeled_path = '../sv_report_data.csv'
+labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
 unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
@@ -122,7 +126,7 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks), torch.stack(label2id_list))
-    dataloader = DataLoader(dataset, batch_size=batch_size * 2, shuffle=False, drop_last=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
     return dataloader
 
 
@@ -160,7 +164,7 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
 
 def accuracy(y_true, y_pred):
     # 使用0.5作为阈值，大于阈值的为预测为正类
-    y_pred = (y_pred > 0.5).float()
+    y_pred = (y_pred < 0.5).float()
     # acc = (predicted_labels == y_true).float().mean()
     # 真实标签为[0, 1, 0, 1]，预测标签为[0, 1, 1, 0],acc = 1 / 3
     count = 0
@@ -286,7 +290,8 @@ def evaluating(support_loader, test_loader, model):
     return acc_value, loss_value
 
 
-if __name__ == '__main__':
+# bert模型
+def run_proto_bert():
     features = ['name', 'storeType']
     labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
     real_labels_from_log = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
@@ -295,7 +300,7 @@ if __name__ == '__main__':
     columns.extend(features)
     columns.extend(labels)
 
-    labeled_df = pd.read_csv(labeled_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=['store_id', 'drink_labels'])
     # # bert_config = AutoConfig.from_pretrained(pretrian_bert_url + '/config.json')
 
     tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
@@ -313,14 +318,16 @@ if __name__ == '__main__':
     # 采用最小包含算法采样
     train_set, test_set = train_test_split(labeled_df, test_size=0.2)
     print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    support_set = get_Support_Query(train_set, labels, k=500)
+    support_set = get_Support_Query(train_set, labels, k=200)
     query_set = train_set.drop(support_set.index)
     # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
     print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
 
+    # dataloader
     support_dataloader = get_labeled_dataloader(support_set, tokenizer, labels)
     query_dataloader = get_labeled_dataloader(query_set, tokenizer, labels)
     test_dataloader = get_labeled_dataloader(test_set, tokenizer, labels)
+    # 训练 测试 分析
     for step in range(epochs):
         train_acc_value, train_loss_value = training(support_dataloader, query_dataloader, proto_model)
         test_acc_value, test_loss_value = evaluating(support_dataloader, test_dataloader, proto_model)
@@ -330,5 +337,63 @@ if __name__ == '__main__':
         writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
         writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)
+
+
+# w2v模型
+def run_proto_w2v():
+    features = ['name', 'storeType']
+    labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
+    real_labels_from_log = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
+                            '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
+    columns = ['store_id', 'drinkTypes']
+    columns.extend(features)
+    columns.extend(labels)
+
+    labeled_df = pd.read_csv(labeled_path, usecols=columns)
+
+    data_x, data_y = input_df['cut_name'].values, input_df['category3_new'].values
+    preprocess = Preprocess(sen_len=16)
+    # 设置sen_len
+    preprocess.length_distribution(data_x)
+    # 加载model paragram
+    embedding = preprocess.create_tokenizer()
+    data_x = preprocess.get_pad_word2idx(data_x)
+    data_y = preprocess.get_lab2idx(data_y)
+
+    # 采用最小包含算法采样
+    train_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    support_set = get_Support_Query(train_set, labels, k=200)
+    query_set = train_set.drop(support_set.index)
+    # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
+    print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
+
+    # dataloader
+    support_dataloader = get_labeled_dataloader(support_set, tokenizer, labels)
+    query_dataloader = get_labeled_dataloader(query_set, tokenizer, labels)
+    test_dataloader = get_labeled_dataloader(test_set, tokenizer, labels)
+
+    proto_model_2 = ProtoTypicalNet2(
+        embedding=embedding,
+        embedding_dim=200,
+        hidden_dim=128,
+        num_class=len(labels)
+    ).to(device)
+
+    # 训练 测试 分析
+    for step in range(epochs):
+        train_acc_value, train_loss_value = training(support_dataloader, query_dataloader, proto_model)
+        test_acc_value, test_loss_value = evaluating(support_dataloader, test_dataloader, proto_model)
+        print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
+              "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
+                                                             test_loss_value))
+        writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
+        writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+
+
+if __name__ == '__main__':
+    run_proto_bert()
+
+    # run_proto_w2v()
 
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123

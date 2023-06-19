@@ -7,31 +7,25 @@ from icecream.icecream import ic
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class ProtoTypicalNet(nn.Module):
-    def __init__(self, bert_layer, input_dim, hidden_dim, num_class, dropout=0.5, beta=0.5, requires_grad=False):
-        super(ProtoTypicalNet, self).__init__()
-        self.input_dim = input_dim
+class ProtoTypicalNet2(nn.Module):
+    def __init__(self, embedding, embedding_dim, hidden_dim, num_class, dropout=0.5, beta=0.5, requires_grad=False):
+        super(ProtoTypicalNet2, self).__init__()
+        self.input_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.num_class = num_class
         self.beta = beta
 
         # 线性层进行编码
-        self.bert_embedding = bert_layer
-        for param in self.bert_embedding.parameters():
-            param.requires_grad = requires_grad
-        # 解冻后面3层的参数
-        for param in self.bert_embedding.encoder.layer[-1:].parameters():
-            param.requires_grad = True
+        self.embedding = nn.Embedding(embedding.size(0), embedding.size(1))
+        # 将一个不可训练的类型为Tensor的参数转化为可训练的类型为parameter的参数，并将这个参数绑定到module里面，成为module中可训练的参数。
+        self.embedding.weight = nn.Parameter(embedding, requires_grad=requires_grad)
 
         # 原型网络核心
-        self.prototype = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(input_dim, hidden_dim),
-            # nn.ReLU(),
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, self.num_class),
-        )
+        self.prototype = nn.Sequential(nn.Dropout(dropout),
+                                        nn.Linear(hidden_dim * 2, num_class),
+                                        nn.Sigmoid())
 
         # 用于改变维度大小
         # self.linear = nn.Linear(hidden_dim, self.num_class)
@@ -40,8 +34,16 @@ class ProtoTypicalNet(nn.Module):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
         support_embedding = self.bert_embedding(support_input).last_hidden_state[:, 0]
         query_embedding = self.bert_embedding(query_input).last_hidden_state[:, 0]
-        support_point = self.prototype(support_embedding)
-        query_point = self.prototype(query_embedding)
+
+        s_inputs = support_embedding.to(torch.float32)
+        s_x, _ = self.lstm(s_inputs, None)
+        s_x = s_x[:, -1, :]
+        q_inputs = query_embedding.to(torch.float32)
+        q_x, _ = self.lstm(q_inputs, None)
+        q_x = q_x[:, -1, :]
+
+        support_point = self.prototype(s_x)
+        query_point = self.prototype(q_x)
 
         # 提取特征
         # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
