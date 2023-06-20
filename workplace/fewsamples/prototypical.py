@@ -27,7 +27,7 @@ labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
 unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
-batch_size = 15
+batch_size = 32
 epochs = 50
 
 
@@ -181,9 +181,9 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
     return dataloader
 
 
-def accuracy(y_true, y_pred):
+def accuracy(y_pred, y_true):
     # 使用0.5作为阈值，大于阈值的为预测为正类
-    y_pred = (y_pred < 0.5).float()
+    y_pred = (y_pred > 0.5).int()
     # acc = (predicted_labels == y_true).float().mean()
     # 真实标签为[0, 1, 0, 1]，预测标签为[0, 1, 1, 0],acc = 1 / 3
     count = 0
@@ -191,11 +191,12 @@ def accuracy(y_true, y_pred):
         p = sum(torch.logical_and(y_true[i], y_pred[i]))
         q = sum(torch.logical_or(y_true[i], y_pred[i]))
         count += p / q
+    print(count)
     return count / y_true.shape[0]
 
 
 # 精确率
-def Precision(y_true, y_pred):
+def Precision(y_pred, y_true):
     count = 0
     for i in range(y_true.shape[0]):
         if sum(y_pred[i]) == 0:
@@ -205,7 +206,7 @@ def Precision(y_true, y_pred):
 
 
 # 召回率
-def Recall(y_true, y_pred):
+def Recall(y_pred, y_true):
     count = 0
     for i in range(y_true.shape[0]):
         if sum(y_true[i]) == 0:
@@ -215,7 +216,7 @@ def Recall(y_true, y_pred):
 
 
 # F1
-def F1Measure(y_true, y_pred):
+def F1Measure(y_pred, y_true):
     count = 0
     for i in range(y_true.shape[0]):
         if (sum(y_true[i]) == 0) and (sum(y_pred[i]) == 0):
@@ -251,7 +252,7 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
 def training(support_loader, query_loader, model):
     criterion = nn.MultiLabelSoftMarginLoss(reduction='sum')
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.00001, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)
     model.train()
     epoch_los, epoch_acc = 0.0, 0.0
     for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
@@ -285,6 +286,7 @@ def training(support_loader, query_loader, model):
 
 def evaluating(support_loader, test_loader, model):
     criterion = nn.MultiLabelSoftMarginLoss(reduction='sum')
+
     model.eval()
     with torch.no_grad():
         epoch_los, epoch_acc = 0.0, 0.0
@@ -337,12 +339,20 @@ def run_proto_bert():
     # support_df, query_df = get_Nway_Kshot(labeled_df, labels, 7, 32, 8)
 
     # 采用最小包含算法采样
-    train_set, test_set = train_test_split(labeled_df, test_size=0.2)
-    print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    support_set = get_Support_Query(train_set, labels, k=200)
-    query_set = train_set.drop(support_set.index)
-    # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
-    print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
+    # train_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    # support_set = get_Support_Query(train_set, labels, k=200)
+    # query_set = train_set.drop(support_set.index)
+    # # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
+    # print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
+    #
+    # support_set.to_csv('./data/test_support_set.csv', index=False)
+    # query_set.to_csv('./data/test_query_set.csv', index=False)
+    # test_set.to_csv('./data/test_test_set.csv', index=False)
+
+    support_set = pd.read_csv('./data/test_support_set.csv')
+    query_set = pd.read_csv('./data/test_query_set.csv')
+    test_set = pd.read_csv('./data/test_test_set.csv')
 
     # dataloader
     support_dataloader = get_labeled_dataloader(support_set, tokenizer, labels)
@@ -377,18 +387,24 @@ def run_proto_w2v():
     # 加载 data
     segment = WordSegment()
     labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
-    data_x = labeled_df['cut_word'].values
-    preprocess = Preprocess(sen_len=16)
+    preprocess = Preprocess(sen_len=10)
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
-    train_set, test_set = train_test_split(labeled_df, test_size=0.2)
-    print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    support_set = get_Support_Query(train_set, labels, k=200)
-    query_set = train_set.drop(support_set.index)
-    # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
-    print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
-
+    # train_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    # support_set = get_Support_Query(train_set, labels, k=600)
+    # query_set = train_set.drop(support_set.index)
+    # # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
+    # print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
+    #
+    # # support_set.to_csv('./data/test_support_set2.csv', index=False)
+    # # query_set.to_csv('./data/test_query_set2.csv', index=False)
+    # # test_set.to_csv('./data/test_test_set2.csv', index=False)
+    #
+    support_set = pd.read_csv('./data/test_support_set2.csv')
+    query_set = pd.read_csv('./data/test_query_set2.csv')
+    test_set = pd.read_csv('./data/test_test_set2.csv')
     # dataloader
     support_dataloader = get_dataloader_2(support_set, preprocess, labels)
     query_dataloader = get_dataloader_2(query_set, preprocess, labels)
@@ -397,7 +413,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=128,
+        hidden_dim=400,
         num_class=len(labels)
     ).to(device)
 
@@ -408,8 +424,8 @@ def run_proto_w2v():
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
                                                              test_loss_value))
-        writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
-        writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+        # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
+        # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
 
 
 if __name__ == '__main__':
