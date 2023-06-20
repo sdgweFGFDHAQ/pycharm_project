@@ -15,6 +15,7 @@ from tensorboardX import SummaryWriter
 from models.proto_model import ProtoTypicalNet
 from models.proto_model_2 import ProtoTypicalNet2
 from workplace.fewsamples.preprocess_data import Preprocess
+from workplace.fewsamples.utils.mini_tool import WordSegment
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 writer = SummaryWriter('./logs/v1')
@@ -130,6 +131,24 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
     return dataloader
 
 
+def get_dataloader_2(df, preprocess, label_list):
+    data_x = df['cut_word'].values
+    data_x = preprocess.get_pad_word2idx(data_x)
+    data_x = [torch.tensor(i) for i in data_x.tolist()]
+
+    # 创建输入数据的空列表
+    label2id_list = []
+    # 遍历数据集的每一行
+    for index, row in df.iterrows():
+        # 处理类别
+        labels_tensor = torch.tensor([row[label] for label in label_list])
+        label2id_list.append(labels_tensor)
+
+    dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list), torch.stack(label2id_list))
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+    return dataloader
+
+
 # 泛样本127w
 def get_unlabeled_dataloader(file_path, bert_tokenizer):
     unlabeled_df = pd.read_csv(file_path, usecols=['store_id', 'name', 'category3_new'])
@@ -147,7 +166,7 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
             row['name'],
             row['storeType'],
             add_special_tokens=True,
-            max_length=16,
+            max_length=24,
             padding='max_length',
             truncation=True,
             return_tensors='pt'
@@ -294,13 +313,15 @@ def evaluating(support_loader, test_loader, model):
 def run_proto_bert():
     features = ['name', 'storeType']
     labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
-    real_labels_from_log = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
-                            '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
+    # labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
+    #           '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
     columns = ['store_id', 'drinkTypes']
     columns.extend(features)
     columns.extend(labels)
 
-    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=['store_id', 'drink_labels'])
+    labeled_df = pd.read_csv(labeled_path, usecols=columns)
+    labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
+    labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
     # # bert_config = AutoConfig.from_pretrained(pretrian_bert_url + '/config.json')
 
     tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
@@ -343,22 +364,22 @@ def run_proto_bert():
 def run_proto_w2v():
     features = ['name', 'storeType']
     labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
-    real_labels_from_log = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
-                            '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
+    labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
+              '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
     columns = ['store_id', 'drinkTypes']
     columns.extend(features)
     columns.extend(labels)
 
-    labeled_df = pd.read_csv(labeled_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
+    labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
+    labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
 
-    data_x, data_y = input_df['cut_name'].values, input_df['category3_new'].values
+    # 加载 data
+    segment = WordSegment()
+    labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
+    data_x = labeled_df['cut_word'].values
     preprocess = Preprocess(sen_len=16)
-    # 设置sen_len
-    preprocess.length_distribution(data_x)
-    # 加载model paragram
     embedding = preprocess.create_tokenizer()
-    data_x = preprocess.get_pad_word2idx(data_x)
-    data_y = preprocess.get_lab2idx(data_y)
 
     # 采用最小包含算法采样
     train_set, test_set = train_test_split(labeled_df, test_size=0.2)
@@ -369,9 +390,9 @@ def run_proto_w2v():
     print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
 
     # dataloader
-    support_dataloader = get_labeled_dataloader(support_set, tokenizer, labels)
-    query_dataloader = get_labeled_dataloader(query_set, tokenizer, labels)
-    test_dataloader = get_labeled_dataloader(test_set, tokenizer, labels)
+    support_dataloader = get_dataloader_2(support_set, preprocess, labels)
+    query_dataloader = get_dataloader_2(query_set, preprocess, labels)
+    test_dataloader = get_dataloader_2(test_set, preprocess, labels)
 
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
@@ -382,8 +403,8 @@ def run_proto_w2v():
 
     # 训练 测试 分析
     for step in range(epochs):
-        train_acc_value, train_loss_value = training(support_dataloader, query_dataloader, proto_model)
-        test_acc_value, test_loss_value = evaluating(support_dataloader, test_dataloader, proto_model)
+        train_acc_value, train_loss_value = training(support_dataloader, query_dataloader, proto_model_2)
+        test_acc_value, test_loss_value = evaluating(support_dataloader, test_dataloader, proto_model_2)
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
                                                              test_loss_value))
@@ -392,8 +413,8 @@ def run_proto_w2v():
 
 
 if __name__ == '__main__':
-    run_proto_bert()
-
-    # run_proto_w2v()
+    # run_proto_bert()
+    #
+    run_proto_w2v()
 
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123

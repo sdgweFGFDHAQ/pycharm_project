@@ -24,16 +24,16 @@ class ProtoTypicalNet2(nn.Module):
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
         self.prototype = nn.Sequential(nn.Dropout(dropout),
-                                        nn.Linear(hidden_dim * 2, num_class),
-                                        nn.Sigmoid())
+                                       nn.Linear(hidden_dim * 2, num_class),
+                                       nn.Sigmoid())
 
         # 用于改变维度大小
         # self.linear = nn.Linear(hidden_dim, self.num_class)
 
     def forward(self, support_input, support_label, query_input):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
-        support_embedding = self.bert_embedding(support_input).last_hidden_state[:, 0]
-        query_embedding = self.bert_embedding(query_input).last_hidden_state[:, 0]
+        support_embedding = self.embedding(support_input)
+        query_embedding = self.embedding(query_input)
 
         s_inputs = support_embedding.to(torch.float32)
         s_x, _ = self.lstm(s_inputs, None)
