@@ -23,14 +23,12 @@ class ProtoTypicalNet2(nn.Module):
         # 原型网络核心
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
-        self.prototype = nn.Sequential(
-                                       nn.Dropout(dropout),
-                                       nn.Linear(hidden_dim * 2, num_class),
-                                       )
+        self.prototype = nn.Sequential(nn.Dropout(dropout),
+                                       nn.Linear(hidden_dim * 2, num_class))
 
         self.last = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(num_class * 3, num_class),
+            nn.Linear(num_class, num_class),
             nn.Sigmoid())
 
         # 用于改变维度大小
@@ -52,21 +50,21 @@ class ProtoTypicalNet2(nn.Module):
         query_point = self.prototype(q_x)
 
         # # 提取特征
-        # # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
-        # # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
-        # e = torch.tan(support_point * support_label)
-        # # 将0值所在位置替换为负无穷大
-        # # f = torch.where(e == 0, float('-inf'), e)
-        #
-        # # a 为计算得到的样本权重
-        # a = torch.softmax(e, dim=0)
-        # # 计算原型表示
-        # # c = b * torch.matmul(a.t(), embedding) + (1 - b) * label.t()
-        # c = torch.matmul(a.t(), support_point)
-        # 计算查询集标签到原型点的距离
-        distances = torch.sqrt(torch.sum((support_point.unsqueeze(1) - query_point.unsqueeze(1)) ** 2, dim=2))
-        sqs = torch.concat((support_point, query_point, support_point - query_point), dim=1)
-        result = self.last(sqs)
-        # distances = torch.arctan(distances)
+        # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
+        # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
+        e = torch.tan(support_point * support_label)
+        # 将0值所在位置替换为负无穷大
+        # f = torch.where(e == 0, float('-inf'), e)
 
+        # a 为计算得到的样本权重
+        a = torch.softmax(e, dim=0)
+        # 计算原型表示
+        # c = b * torch.matmul(a.t(), embedding) + (1 - b) * label.t()
+        c = torch.matmul(a.t(), support_point)
+        # 计算查询集标签到原型点的距离
+        distances = torch.sqrt(torch.sum((c.unsqueeze(0) - query_point.unsqueeze(1)) ** 2, dim=2))
+        # sqs = torch.concat((support_point, query_point, support_point - query_point), dim=1)
+
+        # distances = torch.arctan(distances)
+        result = self.last(distances)
         return result

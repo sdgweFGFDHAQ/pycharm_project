@@ -145,8 +145,7 @@ def get_dataloader_2(df, preprocess, label_list):
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list), torch.stack(label2id_list))
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
-    return dataloader
+    return dataset
 
 
 # 泛样本127w
@@ -243,10 +242,14 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
     return torch.sum(neg_loss + pos_loss)
 
 
-def training(support_loader, query_loader, model):
+def training(support_set, query_set, model):
+    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
+    query_loader = DataLoader(query_set, batch_size=batch_size, shuffle=False, drop_last=True)
+
     criterion = nn.MultiLabelSoftMarginLoss(reduction='sum')
     # 使用Adam优化器
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)
+
     model.train()
     epoch_los, epoch_acc = 0.0, 0.0
     for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
@@ -259,6 +262,7 @@ def training(support_loader, query_loader, model):
         optimizer.zero_grad()
         # 3. 计算输出
         output = model(support_input0, support_input2, query_input0)
+        ic(output)
         # outputs = outputs.squeeze(1)
         # 4. 计算损失
         loss = criterion(output, query_input2.float())
@@ -278,7 +282,10 @@ def training(support_loader, query_loader, model):
     return acc_value, loss_value
 
 
-def evaluating(support_loader, test_loader, model):
+def evaluating(support_set, test_set, model):
+    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
+    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, drop_last=True)
+
     criterion = nn.MultiLabelSoftMarginLoss(reduction='sum')
 
     model.eval()
@@ -303,6 +310,28 @@ def evaluating(support_loader, test_loader, model):
         loss_value = epoch_los / len(support_loader)
         acc_value = epoch_acc / len(support_loader)
     return acc_value, loss_value
+
+
+def predicting(support_set, predict_set, model, labels):
+    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
+    predict_loader = DataLoader(predict_set, batch_size=batch_size, shuffle=True, drop_last=False)
+
+    model.eval()
+    with torch.no_grad():
+        label_list = []
+        for i, (support_input, test_input) in enumerate(zip(support_loader, predict_loader)):
+            # 1. 放到GPU上
+            support_input0 = support_input[0].to(device, dtype=torch.long)
+            support_input2 = support_input[2].to(device, dtype=torch.long)
+            query_input0 = test_input[0].to(device, dtype=torch.long)
+            # 2. 计算输出
+            output = model(support_input0, support_input2, query_input0)
+            output = (output > 0.5).int()
+            label_list.extend([tensor.numpy() for tensor in output])
+
+    drink_df = pd.DataFrame(label_list, columns=labels)
+    predict_result = pd.concat([predict_set[['name', 'storeType']], drink_df], axis=1)
+    predict_result.to_csv('./data/predict_result.csv')
 
 
 # bert模型
@@ -400,9 +429,9 @@ def run_proto_w2v():
     query_set = pd.read_csv('./data/test_query_set2.csv')
     test_set = pd.read_csv('./data/test_test_set2.csv')
     # dataloader
-    support_dataloader = get_dataloader_2(support_set, preprocess, labels)
-    query_dataloader = get_dataloader_2(query_set, preprocess, labels)
-    test_dataloader = get_dataloader_2(test_set, preprocess, labels)
+    support_dataset = get_dataloader_2(support_set, preprocess, labels)
+    query_dataset = get_dataloader_2(query_set, preprocess, labels)
+    test_dataset = get_dataloader_2(test_set, preprocess, labels)
 
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
@@ -412,14 +441,27 @@ def run_proto_w2v():
     ).to(device)
 
     # 训练 测试 分析
+    max_accuracy = 0.0
     for step in range(epochs):
-        train_acc_value, train_loss_value = training(support_dataloader, query_dataloader, proto_model_2)
-        test_acc_value, test_loss_value = evaluating(support_dataloader, test_dataloader, proto_model_2)
+        train_acc_value, train_loss_value = training(support_dataset, query_dataset, proto_model_2)
+        test_acc_value, test_loss_value = evaluating(support_dataset, test_dataset, proto_model_2)
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
                                                              test_loss_value))
         # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
         # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+        if test_acc_value > max_accuracy:
+            max_accuracy = test_acc_value
+            torch.save(proto_model_2.state_dict(), './models/proto_model_2.pth')
+
+    proto_model_2 = ProtoTypicalNet2(
+        embedding=embedding,
+        embedding_dim=200,
+        hidden_dim=400,
+        num_class=len(labels)
+    ).to(device)
+    proto_model_2.load_state_dict(torch.load('./models/proto_model_2.pth'))
+    predicting(support_set, test_set, proto_model_2, labels)
 
 
 if __name__ == '__main__':
