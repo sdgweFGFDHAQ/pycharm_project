@@ -28,7 +28,7 @@ unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
 batch_size = 32
-epochs = 50
+epochs = 20
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -444,8 +444,8 @@ def run_proto_w2v():
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
                                                              test_loss_value))
-        writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
-        writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+        # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
+        # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
 
         # 保存最佳模型
         if test_acc_value > max_accuracy:
