@@ -444,12 +444,15 @@ def run_proto_w2v():
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
                                                              test_loss_value))
-        # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
-        # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+        writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
+        writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+
+        # 保存最佳模型
         if test_acc_value > max_accuracy:
             max_accuracy = test_acc_value
             torch.save(proto_model_2.state_dict(), './models/proto_model_2.pth')
 
+    # 加载模型做预测
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
