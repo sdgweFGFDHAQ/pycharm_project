@@ -23,11 +23,10 @@ class ProtoTypicalNet2(nn.Module):
         # 原型网络核心
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
-        self.prototype = nn.Sequential(nn.LayerNorm(hidden_dim * 2),
+        self.prototype = nn.Sequential(
                                        nn.Dropout(dropout),
                                        nn.Linear(hidden_dim * 2, num_class),
-                                       nn.LayerNorm(num_class),
-                                       nn.Sigmoid())
+                                       )
 
         self.last = nn.Sequential(
             nn.Dropout(dropout),

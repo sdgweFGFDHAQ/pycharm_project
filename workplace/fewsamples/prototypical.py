@@ -184,15 +184,9 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
 def accuracy(y_pred, y_true):
     # 使用0.5作为阈值，大于阈值的为预测为正类
     y_pred = (y_pred > 0.5).int()
-    # acc = (predicted_labels == y_true).float().mean()
-    # 真实标签为[0, 1, 0, 1]，预测标签为[0, 1, 1, 0],acc = 1 / 3
-    count = 0
-    for i in range(y_true.shape[0]):
-        p = sum(torch.logical_and(y_true[i], y_pred[i]))
-        q = sum(torch.logical_or(y_true[i], y_pred[i]))
-        count += p / q
-    print(count)
-    return count / y_true.shape[0]
+    correct = (y_pred == y_true).int()
+    acc = correct.sum() / (correct.shape[0] * correct.shape[1])
+    return acc
 
 
 # 精确率
