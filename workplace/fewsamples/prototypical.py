@@ -262,7 +262,6 @@ def training(support_set, query_set, model):
         optimizer.zero_grad()
         # 3. 计算输出
         output = model(support_input0, support_input2, query_input0)
-        ic(output)
         # outputs = outputs.squeeze(1)
         # 4. 计算损失
         loss = criterion(output, query_input2.float())
@@ -312,9 +311,9 @@ def evaluating(support_set, test_set, model):
     return acc_value, loss_value
 
 
-def predicting(support_set, predict_set, model, labels):
+def predicting(support_set, predict_set, model):
     support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
-    predict_loader = DataLoader(predict_set, batch_size=batch_size, shuffle=True, drop_last=False)
+    predict_loader = DataLoader(predict_set, batch_size=batch_size, shuffle=False, drop_last=True)
 
     model.eval()
     with torch.no_grad():
@@ -328,10 +327,7 @@ def predicting(support_set, predict_set, model, labels):
             output = model(support_input0, support_input2, query_input0)
             output = (output > 0.5).int()
             label_list.extend([tensor.numpy() for tensor in output])
-
-    drink_df = pd.DataFrame(label_list, columns=labels)
-    predict_result = pd.concat([predict_set[['name', 'storeType']], drink_df], axis=1)
-    predict_result.to_csv('./data/predict_result.csv')
+    return label_list
 
 
 # bert模型
@@ -461,7 +457,11 @@ def run_proto_w2v():
         num_class=len(labels)
     ).to(device)
     proto_model_2.load_state_dict(torch.load('./models/proto_model_2.pth'))
-    predicting(support_set, test_set, proto_model_2, labels)
+    lable_result = predicting(support_dataset, test_dataset, proto_model_2)
+
+    drink_df = pd.DataFrame(lable_result, columns=labels)
+    predict_result = pd.concat([test_set[['name', 'storeType']], drink_df], axis=1)
+    predict_result.to_csv('./data/sku_predict_result.csv')
 
 
 if __name__ == '__main__':
