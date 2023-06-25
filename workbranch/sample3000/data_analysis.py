@@ -77,13 +77,13 @@ def process_data1(path, required_column_list):
     new_columns = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
                    '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
 
-    extracted_columns = exist_df['drink_labels'].apply(lambda x: [1 if item in x else 0 for item in new_columns])
-    extracted_df = pd.DataFrame(extracted_columns.tolist(), columns=new_columns)
+    extracted_columns = exist_df['drink_labels'].apply(lambda x: [1 if item in x else 0 for item in new_columns]).tolist()
+    extracted_df = pd.DataFrame(extracted_columns, columns=new_columns)
     ic(extracted_df.head())
     # 将提取的列添加到原始DataFrame中
     for c in new_columns:
         exist_df[c] = extracted_df[c]
-
+    exist_df['labels_token'] = extracted_columns
     ic(exist_df.head())
 
     exist_df.to_csv('../../workplace/fewsamples/data/di_sku_log_drink_labels.csv', index=False, encoding='utf-8')

@@ -39,10 +39,13 @@ if __name__ == '__main__':
     #                            'is_point', 'cost_count', 'display_payamount', 'display_cost', 'purchase_pay_count',
     #                            'purchase_pay_number', 'purchase_pay_cash', 'registersnumber', 'area', 'cname',
     #                            'data_source'])
-    # report = ProfileReport(csv)
-    # report.to_file('洪山区0419.html')
+    report = ProfileReport(pd.read_csv('../../workplace/fewsamples/data/di_sku_log_drink_labels.csv'))
+    report.to_file('di_sku_log_drink_labels.html')
 
     # xls_to_csv_pd('store_visit_report.xls', 'store_visit_report.csv')
-    columns = ['store_id', 'category1_new', 'category2_new', 'category3_new', 'name', 'predict_category', 'drink_label']
-    xlsx_to_csv_pd('sku_labels_fromlog.xlsx', 'sku_labels_fromlog.csv', columns)
-    set_file_standard_data('sku_labels_fromlog.csv', columns)
+    # columns = ['store_id', 'category1_new', 'category2_new', 'category3_new', 'name', 'predict_category', 'drink_label']
+    # xlsx_to_csv_pd('sku_labels_fromlog.xlsx', 'sku_labels_fromlog.csv', columns)
+    # set_file_standard_data('sku_labels_fromlog.csv', columns)
+
+    # data = pd.read_csv('../../workplace/fewsamples/data/di_sku_log_drink_labels.csv', dtype={'store_id': str})
+    # data.to_excel('C:\\Users\\86158\\Desktop\\di_sku_log_drink_labels2.xlsx')

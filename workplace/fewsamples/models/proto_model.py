@@ -35,6 +35,10 @@ class ProtoTypicalNet(nn.Module):
 
         # 用于改变维度大小
         # self.linear = nn.Linear(hidden_dim, self.num_class)
+        self.last = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(num_class, num_class),
+            nn.Sigmoid())
 
     def forward(self, support_input, support_label, query_input):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
@@ -59,5 +63,5 @@ class ProtoTypicalNet(nn.Module):
         # 计算查询集标签到原型点的距离
         distances = torch.sqrt(torch.sum((c.unsqueeze(0) - query_point.unsqueeze(1)) ** 2, dim=2))
 
-        distances = torch.sigmoid(distances)
-        return distances
+        d_output = self.last(distances)
+        return d_output

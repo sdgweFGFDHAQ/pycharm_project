@@ -17,9 +17,9 @@ class ProtoTypicalNet2(nn.Module):
 
         # 线性层进行编码
         self.embedding = nn.Embedding(embedding.size(0), embedding.size(1))
-        # 将一个不可训练的类型为Tensor的参数转化为可训练的类型为parameter的参数，并将这个参数绑定到module里面，成为module中可训练的参数。
         self.embedding.weight = nn.Parameter(embedding, requires_grad=requires_grad)
-
+        # 对多标签编码
+        self.label_embedding = nn.Embedding(num_class, embedding_dim)
         # 原型网络核心
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
@@ -32,7 +32,7 @@ class ProtoTypicalNet2(nn.Module):
             nn.Sigmoid())
 
         # 用于改变维度大小
-        # self.linear = nn.Linear(hidden_dim, self.num_class)
+        self.linear = nn.Linear(num_class, num_class)
 
     def forward(self, support_input, support_label, query_input):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
@@ -55,7 +55,6 @@ class ProtoTypicalNet2(nn.Module):
         e = torch.tan(support_point * support_label)
         # 将0值所在位置替换为负无穷大
         # f = torch.where(e == 0, float('-inf'), e)
-
         # a 为计算得到的样本权重
         a = torch.softmax(e, dim=0)
         # 计算原型表示
