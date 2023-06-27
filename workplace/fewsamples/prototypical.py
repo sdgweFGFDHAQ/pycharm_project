@@ -193,9 +193,9 @@ def threshold_EVA(y_pred, y_true, rs):
         acc = correct.sum() / (correct.shape[0] * correct.shape[1])
         # acc = accuracy_score(y_pred, y_true)
         # 精确率
-        # pre = precision_score(y_pred, y_true, average='weighted')
+        pre = precision_score(y_pred, y_true, average='weighted')
         # 召回率
-        # rec = recall_score(y_pred, y_true, average='weighted')
+        rec = recall_score(y_pred, y_true, average='weighted')
         # F1
         f1 = f1_score(y_pred, y_true, average='weighted')
     except Exception as e:
@@ -234,7 +234,7 @@ def training(support_set, query_set, model, r_list):
     optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-4)
 
     model.train()
-    epoch_los, epoch_acc, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0
+    epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
     for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
         # 1. 放到GPU上
         support_input0 = support_input[0].to(device, dtype=torch.long)
@@ -254,6 +254,7 @@ def training(support_set, query_set, model, r_list):
         # 5.预测结果
         accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
         epoch_acc += accu.item()
+        epoch_prec += precision.item()
         epoch_recall += recall.item()
         epoch_f1s += f1s.item()
         # 6. 反向传播
@@ -263,9 +264,10 @@ def training(support_set, query_set, model, r_list):
         optimizer.step()
     loss_value = epoch_los / len(support_loader)
     acc_value = epoch_acc / len(support_loader)
+    prec_value = epoch_prec / len(support_loader)
     rec_value = epoch_recall / len(support_loader)
     f1_value = epoch_f1s / len(support_loader)
-    return acc_value, loss_value, rec_value, f1_value
+    return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
 def evaluating(support_set, test_set, model, r_list):
@@ -276,7 +278,7 @@ def evaluating(support_set, test_set, model, r_list):
 
     model.eval()
     with torch.no_grad():
-        epoch_los, epoch_acc, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0
+        epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
         for i, (support_input, test_input) in enumerate(zip(support_loader, test_loader)):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
@@ -293,13 +295,15 @@ def evaluating(support_set, test_set, model, r_list):
             # 4.预测结果
             accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
             epoch_acc += accu.item()
+            epoch_prec += recall.item()
             epoch_recall += recall.item()
             epoch_f1s += f1s.item()
         loss_value = epoch_los / len(support_loader)
         acc_value = epoch_acc / len(support_loader)
+        prec_value = epoch_prec / len(support_loader)
         rec_value = epoch_recall / len(support_loader)
         f1_value = epoch_f1s / len(support_loader)
-    return acc_value, loss_value, rec_value, f1_value
+    return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
 def predicting(support_set, predict_set, model, r_list):
