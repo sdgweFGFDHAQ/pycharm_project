@@ -8,7 +8,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class ProtoTypicalNet2(nn.Module):
-    def __init__(self, embedding, embedding_dim, hidden_dim, num_class, dropout=0.5, beta=0.5, requires_grad=False):
+    def __init__(self, embedding, embedding_dim, hidden_dim, num_class, dropout=0.3, beta=0.5, requires_grad=False):
         super(ProtoTypicalNet2, self).__init__()
         self.input_dim = embedding_dim
         self.hidden_dim = hidden_dim
@@ -19,40 +19,36 @@ class ProtoTypicalNet2(nn.Module):
         self.embedding = nn.Embedding(embedding.size(0), embedding.size(1))
         self.embedding.weight = nn.Parameter(embedding, requires_grad=requires_grad)
         # 对多标签编码
-        self.label_embedding = nn.Embedding(num_class, embedding_dim)
+        self.label_embedding = torch.normal(0, 1, size=(num_class, hidden_dim * 2))
         # 原型网络核心
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
         self.prototype = nn.Sequential(nn.Dropout(dropout),
-                                       nn.Linear(hidden_dim * 2, num_class))
-
-        self.last = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(num_class, num_class),
-            nn.Sigmoid())
-
-        # 用于改变维度大小
-        self.linear = nn.Linear(num_class, num_class)
+                                       nn.Linear(hidden_dim * 2, num_class),
+                                       nn.Sigmoid()
+                                       )
 
     def forward(self, support_input, support_label, query_input):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
         support_embedding = self.embedding(support_input)
         query_embedding = self.embedding(query_input)
+        label_embedding = support_label.unsqueeze(2) * self.label_embedding.unsqueeze(0)
 
         s_inputs = support_embedding.to(torch.float32)
-        s_x, _ = self.lstm(s_inputs, None)
-        s_x = s_x[:, -1, :]
-        q_inputs = query_embedding.to(torch.float32)
-        q_x, _ = self.lstm(q_inputs, None)
-        q_x = q_x[:, -1, :]
+        s_x, _ = self.lstm(s_inputs)
+        support_point = s_x[:, -1, :]
 
-        support_point = self.prototype(s_x)
-        query_point = self.prototype(q_x)
+        q_inputs = query_embedding.to(torch.float32)
+        q_x, _ = self.lstm(q_inputs)
+        query_point = q_x[:, -1, :]
+
+        # support_point = self.prototype(s_x)
+        # query_point = self.prototype(q_x)
 
         # # 提取特征
         # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
         # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
-        e = torch.tan(support_point * support_label)
+        e = torch.sum(torch.sin(support_point.unsqueeze(1).repeat(1, self.num_class, 1) * label_embedding), dim=1)
         # 将0值所在位置替换为负无穷大
         # f = torch.where(e == 0, float('-inf'), e)
         # a 为计算得到的样本权重
@@ -65,5 +61,6 @@ class ProtoTypicalNet2(nn.Module):
         # sqs = torch.concat((support_point, query_point, support_point - query_point), dim=1)
 
         # distances = torch.arctan(distances)
-        result = self.last(distances)
+        result = self.prototype(distances)
+        # result = self.last(distances)
         return result

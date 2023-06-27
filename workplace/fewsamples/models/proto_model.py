@@ -23,6 +23,9 @@ class ProtoTypicalNet(nn.Module):
         for param in self.bert_embedding.encoder.layer[-1:].parameters():
             param.requires_grad = True
 
+        # 对多标签编码
+        self.label_embedding = torch.normal(0, 1, size=(num_class, input_dim))
+
         # 原型网络核心
         self.prototype = nn.Sequential(
             nn.Dropout(dropout),
@@ -37,31 +40,32 @@ class ProtoTypicalNet(nn.Module):
         # self.linear = nn.Linear(hidden_dim, self.num_class)
         self.last = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(num_class, num_class),
+            nn.Linear(input_dim, num_class),
             nn.Sigmoid())
 
     def forward(self, support_input, support_label, query_input):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
         support_embedding = self.bert_embedding(support_input).last_hidden_state[:, 0]
         query_embedding = self.bert_embedding(query_input).last_hidden_state[:, 0]
-        support_point = self.prototype(support_embedding)
-        query_point = self.prototype(query_embedding)
+        label_embedding = support_label.unsqueeze(2) * self.label_embedding.unsqueeze(0)
 
-        # 提取特征
+        # support_point = self.prototype(support_embedding)
+        # query_point = self.prototype(query_embedding)
+        # # 提取特征
         # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
         # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
-        e = torch.tan(support_point * support_label)
+        e = torch.sum(torch.tan(support_embedding.unsqueeze(1).repeat(1, self.num_class, 1) * label_embedding), dim=1)
         # 将0值所在位置替换为负无穷大
-        # e[e == 0] = float('-inf')
-        f = torch.where(e == 0, float('-inf'), e)
-
+        # f = torch.where(e == 0, float('-inf'), e)
         # a 为计算得到的样本权重
-        a = torch.softmax(f, dim=0)
+        a = torch.softmax(e, dim=0)
         # 计算原型表示
         # c = b * torch.matmul(a.t(), embedding) + (1 - b) * label.t()
-        c = torch.matmul(a.t(), support_point)
+        c = torch.matmul(a.t(), support_embedding)
         # 计算查询集标签到原型点的距离
-        distances = torch.sqrt(torch.sum((c.unsqueeze(0) - query_point.unsqueeze(1)) ** 2, dim=2))
+        distances = torch.sqrt(torch.sum((c.unsqueeze(0) - query_embedding.unsqueeze(1)) ** 2, dim=2))
+        # sqs = torch.concat((support_point, query_point, support_point - query_point), dim=1)
 
-        d_output = self.last(distances)
-        return d_output
+        # distances = torch.arctan(distances)
+        result = self.last(distances)
+        return result

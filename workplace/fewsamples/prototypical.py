@@ -247,7 +247,7 @@ def training(support_set, query_set, model, r_list):
 
     criterion = nn.MultiLabelSoftMarginLoss(reduction='sum')
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=0.0002, weight_decay=1e-4)
 
     model.train()
     epoch_los, epoch_acc = 0.0, 0.0
@@ -281,7 +281,7 @@ def training(support_set, query_set, model, r_list):
 
 
 def evaluating(support_set, test_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
+    support_loader = DataLoader(support_set, batch_size=batch_size * 5, shuffle=False, drop_last=True)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, drop_last=True)
 
     criterion = nn.MultiLabelSoftMarginLoss(reduction='sum')
@@ -324,8 +324,10 @@ def predicting(support_set, predict_set, model, r_list):
             query_input0 = test_input[0].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(support_input0, support_input2, query_input0)
-            output = (output > r_list).int()
             label_list.extend([tensor.numpy() for tensor in output])
+        label_list = np.where(label_list > r_list.numpy()
+                              , 1, 0)
+        # output = (output > r_list).int()
     return label_list
 
 
@@ -353,9 +355,6 @@ def run_proto_bert():
         num_class=len(labels)
     ).to(device)
 
-    # 采用NwayKshot采样
-    support_df, query_df = get_Nway_Kshot(labeled_df, labels, 7, 32, 8)
-
     # # 采用最小包含算法采样
     # train_set, test_set = train_test_split(labeled_df, test_size=0.2)
     # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
@@ -373,19 +372,30 @@ def run_proto_bert():
     query_set = pd.read_csv('./data/test_query_set.csv')
     test_set = pd.read_csv('./data/test_test_set.csv')
 
+    # 计算标签为0的占比,作为阈值
+    num_zeros = torch.tensor((support_set[labels] == 0).sum(axis=0))
+    ratio = num_zeros / support_set.shape[0]
+
     # dataloader
     support_dataset = get_labeled_dataloader(support_set, tokenizer, labels)
     query_dataset = get_labeled_dataloader(query_set, tokenizer, labels)
     test_dataset = get_labeled_dataloader(test_set, tokenizer, labels)
+
     # 训练 测试 分析
+    max_accuracy = 0.0
     for step in range(epochs):
-        train_acc_value, train_loss_value = training(support_dataset, query_dataset, proto_model)
-        test_acc_value, test_loss_value = evaluating(support_dataset, test_dataset, proto_model)
+        train_acc_value, train_loss_value = training(support_dataset, query_dataset, proto_model, ratio)
+        test_acc_value, test_loss_value = evaluating(support_dataset, test_dataset, proto_model, ratio)
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
                                                              test_loss_value))
         # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
         # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+
+        # 保存最佳模型
+        if test_acc_value > max_accuracy:
+            max_accuracy = test_acc_value
+            torch.save(proto_model.state_dict(), './models/proto_model.pth')
 
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)
     # 加载模型做预测
@@ -397,11 +407,12 @@ def run_proto_bert():
     ).to(device)
 
     proto_model.load_state_dict(torch.load('./models/proto_model.pth'))
-    lable_result = predicting(support_dataset, test_dataset, proto_model)
+    lable_result = predicting(support_dataset, test_dataset, proto_model, ratio)
 
     drink_df = pd.DataFrame(lable_result, columns=labels)
     predict_result = pd.concat([test_set[['name', 'storeType']], drink_df], axis=1)
-    predict_result.to_csv('./data/sku_predict_result.csv')
+    predict_result.to_csv('./data/sku_predict_result0.csv')
+
 
 # w2v模型
 def run_proto_w2v():
@@ -409,7 +420,7 @@ def run_proto_w2v():
     labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
               '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
-    columns = ['store_id', 'drinkTypes', 'labels_token']
+    columns = ['store_id', 'drinkTypes']
     columns.extend(features)
     columns.extend(labels)
 
@@ -420,7 +431,7 @@ def run_proto_w2v():
     # 加载 data
     segment = WordSegment()
     labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
-    preprocess = Preprocess(sen_len=10)
+    preprocess = Preprocess(sen_len=8)
     embedding = preprocess.create_tokenizer()
 
     # # 采用最小包含算法采样
@@ -480,15 +491,94 @@ def run_proto_w2v():
     ).to(device)
     proto_model_2.load_state_dict(torch.load('./models/proto_model_2.pth'))
     lable_result = predicting(support_dataset, test_dataset, proto_model_2, ratio)
-
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([test_set[['name', 'storeType']], drink_df], axis=1)
-    predict_result.to_csv('./data/sku_predict_result.csv')
+    predict_result = pd.concat([test_set[['name', 'storeType','drinkTypes']], drink_df], axis=1)
+    predict_result.to_csv('./data/sku_predict_result2.csv')
+
+
+def run_single_w2v():
+    features = ['name', 'storeType']
+    labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
+    columns = ['drinkTypes']
+    columns.extend(features)
+    columns.extend(labels)
+
+    labeled_df = pd.read_csv(labeled_path, usecols=columns)
+    labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
+    labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
+
+    # 加载 data
+    segment = WordSegment()
+    labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
+    preprocess = Preprocess(sen_len=6)
+    embedding = preprocess.create_tokenizer()
+
+    # # 采用最小包含算法采样
+    # train_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    # support_set = get_Support_Query(train_set, labels, k=600)
+    # train_set = train_set.drop(support_set.index)
+    # query_set = get_Support_Query(train_set, labels, k=200)
+    # # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
+    # print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
+    #
+    # support_set.to_csv('./data/test_support_set3.csv', index=False)
+    # query_set.to_csv('./data/test_query_set3.csv', index=False)
+    # test_set.to_csv('./data/test_test_set3.csv', index=False)
+    #
+    support_set = pd.read_csv('./data/test_support_set3.csv')
+    query_set = pd.read_csv('./data/test_query_set3.csv')
+    test_set = pd.read_csv('./data/test_test_set3.csv')
+    # dataloader
+    support_dataset = get_dataloader_2(support_set, preprocess, labels)
+    query_dataset = get_dataloader_2(query_set, preprocess, labels)
+    test_dataset = get_dataloader_2(test_set, preprocess, labels)
+
+    # 计算标签为0的占比,作为阈值
+    num_zeros = torch.tensor((support_set[labels] == 0).sum(axis=0))
+    ratio = num_zeros / support_set.shape[0]
+
+    proto_model_2 = ProtoTypicalNet2(
+        embedding=embedding,
+        embedding_dim=200,
+        hidden_dim=128,
+        num_class=len(labels)
+    ).to(device)
+
+    # 训练 测试 分析
+    max_accuracy = 0.0
+    for step in range(epochs):
+        train_acc_value, train_loss_value = training(support_dataset, query_dataset, proto_model_2, ratio)
+        test_acc_value, test_loss_value = evaluating(support_dataset, test_dataset, proto_model_2, ratio)
+        print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
+              "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
+                                                             test_loss_value))
+        # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
+        # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+
+        # 保存最佳模型
+        if test_acc_value > max_accuracy:
+            max_accuracy = test_acc_value
+            torch.save(proto_model_2.state_dict(), './models/proto_model_3.pth')
+
+    # 加载模型做预测
+    proto_model_2 = ProtoTypicalNet2(
+        embedding=embedding,
+        embedding_dim=200,
+        hidden_dim=128,
+        num_class=len(labels)
+    ).to(device)
+    proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
+    lable_result = predicting(support_dataset, test_dataset, proto_model_2, ratio)
+    drink_df = pd.DataFrame(lable_result, columns=labels)
+    predict_result = pd.concat([test_set[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
+    predict_result.to_csv('./data/sku_predict_result3.csv')
 
 
 if __name__ == '__main__':
     # run_proto_bert()
     #
-    run_proto_w2v()
-
+    # run_proto_w2v()
+    #
+    run_single_w2v()
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123

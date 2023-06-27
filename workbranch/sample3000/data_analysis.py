@@ -65,7 +65,7 @@ def process_data(required_column_list):
 
 
 def process_data1(path, required_column_list):
-    exist_df = pd.read_excel(path, usecols=required_column_list, keep_default_na=False)
+    exist_df = pd.read_csv(path, usecols=required_column_list, keep_default_na=False)
 
     print('csv文件数据量:', exist_df.shape[0])
     exist_df = exist_df.fillna('')
@@ -86,7 +86,7 @@ def process_data1(path, required_column_list):
     exist_df['labels_token'] = extracted_columns
     ic(exist_df.head())
 
-    exist_df.to_csv('../../workplace/fewsamples/data/di_sku_log_drink_labels.csv', index=False, encoding='utf-8')
+    exist_df.to_csv('../../workplace/fewsamples/data/di_sku_log_single_drink_labels.csv', index=False, encoding='utf-8')
     # 统计新增列中值为1的数量
     column_counts = exist_df[new_columns].sum()
     print(column_counts)
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     #              ['name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes'])
     # extract_data('name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes')
 
-    df = process_data1('../data_score/di_sku_log_drink_labels.xlsx', ['store_id', 'name', 'store_category', 'drink_labels'])
+    df = process_data1('../data_score/di_sku_log_single_drink_labels.csv', ['name', 'store_category', 'drink_labels'])
 '''
 存在店铺的数据量：1734条！有所售商品类别的数据量:1399条！
 碳酸饮料:1307

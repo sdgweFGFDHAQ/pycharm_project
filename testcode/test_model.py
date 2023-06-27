@@ -310,17 +310,20 @@ if __name__ == '__main__':
     # B = torch.randn(4, 2)
     # print(B)
     # # 将矩阵A和矩阵B相乘，并将结果重塑为形状为[16,7,128]的张量
-    # C = torch.matmul(A.unsqueeze(2), B.unsqueeze(0)).squeeze()
+
     # print(C)
-    a = torch.tensor([[1, 1, 0], [0, 1, 0]]).unsqueeze(2)
-    b = torch.tensor([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3]]).unsqueeze(0)
+    a = torch.tensor([[1, 1, 0], [0, 1, 0]])
+    b = torch.tensor([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3]])
     c = torch.tensor([[[1, 1, 1, 1], [2, 2, 2, 2], [0, 0, 0, 0]], [[0, 0, 0, 0], [2, 2, 2, 2], [0, 0, 0, 0]]])
+    d = a.unsqueeze(2) * b.unsqueeze(0)
+    print(d)
 
-    # 创建示例矩阵a和矩阵b
-    a = torch.tensor([[1, 2, 3], [4, 5, 6]])
-    b = torch.tensor([[7, 8], [9, 10], [11, 12]])
+    A = torch.tensor([[1, 2], [3, 4]])
+    # 在第二维复制7次，并转换为三维张量
+    B = A.unsqueeze(1).repeat(1, 7, 1)
+    print(B)
+    print(B.shape)
+    C = torch.sum(B, dim=1)
+    print(C)
+    print(C.shape)
 
-    # 将矩阵a和矩阵b的元素相乘，并将结果重塑为形状为[2,3,2]的张量
-    c = torch.matmul(a.unsqueeze(1), b.unsqueeze(-1)).squeeze()
-
-    print(c)
