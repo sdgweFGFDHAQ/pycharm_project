@@ -31,17 +31,10 @@ class ProtoTypicalNet(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(input_dim, hidden_dim),
             # nn.ReLU(),
-
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, self.num_class),
+            nn.Sigmoid()
         )
-
-        # 用于改变维度大小
-        # self.linear = nn.Linear(hidden_dim, self.num_class)
-        self.last = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(input_dim, num_class),
-            nn.Sigmoid())
 
     def forward(self, support_input, support_label, query_input):
         # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
@@ -49,12 +42,10 @@ class ProtoTypicalNet(nn.Module):
         query_embedding = self.bert_embedding(query_input).last_hidden_state[:, 0]
         label_embedding = support_label.unsqueeze(2) * self.label_embedding.unsqueeze(0)
 
-        # support_point = self.prototype(support_embedding)
-        # query_point = self.prototype(query_embedding)
         # # 提取特征
         # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
         # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
-        e = torch.sum(torch.tan(support_embedding.unsqueeze(1).repeat(1, self.num_class, 1) * label_embedding), dim=1)
+        e = torch.sum(torch.sin(support_embedding.unsqueeze(1).repeat(1, self.num_class, 1) * label_embedding), dim=1)
         # 将0值所在位置替换为负无穷大
         # f = torch.where(e == 0, float('-inf'), e)
         # a 为计算得到的样本权重
@@ -67,5 +58,5 @@ class ProtoTypicalNet(nn.Module):
         # sqs = torch.concat((support_point, query_point, support_point - query_point), dim=1)
 
         # distances = torch.arctan(distances)
-        result = self.last(distances)
+        result = self.prototype(distances)
         return result

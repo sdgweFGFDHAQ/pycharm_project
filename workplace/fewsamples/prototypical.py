@@ -28,7 +28,7 @@ unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
 batch_size = 32
-epochs = 20
+epochs = 10
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -320,6 +320,44 @@ def predicting(support_set, predict_set, model, r_list):
         # output = (output > r_list).int()
     return label_list
 
+# 获取数据集
+def get_dataset(labeled_df, labels):
+    # 采用最小包含算法采样
+    train_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    support_set = get_Support_Query(train_set, labels, k=600)
+    train_set = train_set.drop(support_set.index)
+    query_set = get_Support_Query(train_set, labels, k=200)
+    # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
+    print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
+
+    support_set.to_csv('./data/test_support_set3.csv', index=False)
+    query_set.to_csv('./data/test_query_set3.csv', index=False)
+    test_set.to_csv('./data/test_test_set3.csv', index=False)
+
+
+# 训练 测试 分析
+def use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio):
+    max_accuracy = 0.0
+    for step in range(epochs):
+        train_acc_value, train_loss_value, train_rec_value, train_f1_value = training(support_dataset, query_dataset,
+                                                                                      proto_model_2, ratio)
+        test_acc_value, test_loss_value, test_rec_value, test_f1_value = evaluating(support_dataset, test_dataset,
+                                                                                    proto_model_2, ratio)
+        print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
+              "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
+                                                             test_loss_value))
+        print("         -- 训练集 recall: {:.2%},F1:{:.2%} "
+              "| 验证集 recall: {:.2%},F1:{:.2%}".format(train_rec_value, train_f1_value, test_rec_value, test_f1_value)
+              )
+        # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
+        # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+
+        # 保存最佳模型
+        if test_acc_value > max_accuracy:
+            max_accuracy = test_acc_value
+            torch.save(proto_model_2.state_dict(), './models/proto_model_3.pth')
+
 
 # bert模型
 def run_proto_bert():
@@ -334,7 +372,17 @@ def run_proto_bert():
     labeled_df = pd.read_csv(labeled_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
-    # # bert_config = AutoConfig.from_pretrained(pretrian_bert_url + '/config.json')
+
+    # # 采用最小包含算法采样
+    # get_dataset(labeled_df, labels)
+
+    support_set = pd.read_csv('./data/test_support_set.csv')
+    query_set = pd.read_csv('./data/test_query_set.csv')
+    test_set = pd.read_csv('./data/test_test_set.csv')
+
+    # 计算标签为0的占比,作为阈值
+    num_ones = torch.tensor((support_set[labels] == 1).sum(axis=0))
+    ratio = num_ones / support_set.shape[0]
 
     tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
     bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
@@ -345,50 +393,16 @@ def run_proto_bert():
         num_class=len(labels)
     ).to(device)
 
-    # # 采用最小包含算法采样
-    # train_set, test_set = train_test_split(labeled_df, test_size=0.2)
-    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    # support_set = get_Support_Query(train_set, labels, k=600)
-    # train_set = train_set.drop(support_set.index)
-    # query_set = get_Support_Query(train_set, labels, k=100)
-    # # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
-    # print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
-    #
-    # support_set.to_csv('./data/test_support_set.csv', index=False)
-    # query_set.to_csv('./data/test_query_set.csv', index=False)
-    # test_set.to_csv('./data/test_test_set.csv', index=False)
-
-    support_set = pd.read_csv('./data/test_support_set.csv')
-    query_set = pd.read_csv('./data/test_query_set.csv')
-    test_set = pd.read_csv('./data/test_test_set.csv')
-
-    # 计算标签为0的占比,作为阈值
-    num_zeros = torch.tensor((support_set[labels] == 0).sum(axis=0))
-    ratio = num_zeros / support_set.shape[0]
-
     # dataloader
     support_dataset = get_labeled_dataloader(support_set, tokenizer, labels)
     query_dataset = get_labeled_dataloader(query_set, tokenizer, labels)
     test_dataset = get_labeled_dataloader(test_set, tokenizer, labels)
 
     # 训练 测试 分析
-    max_accuracy = 0.0
-    for step in range(epochs):
-        train_acc_value, train_loss_value = training(support_dataset, query_dataset, proto_model, ratio)
-        test_acc_value, test_loss_value = evaluating(support_dataset, test_dataset, proto_model, ratio)
-        print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
-              "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
-                                                             test_loss_value))
-        # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
-        # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+    use_model(support_dataset, query_dataset, test_dataset, proto_model, ratio)
 
-        # 保存最佳模型
-        if test_acc_value > max_accuracy:
-            max_accuracy = test_acc_value
-            torch.save(proto_model.state_dict(), './models/proto_model.pth')
-
-    # get_unlabeled_dataloader(unlabeled_path, tokenizer)
     # 加载模型做预测
+    # get_unlabeled_dataloader(unlabeled_path, tokenizer)
     proto_model = ProtoTypicalNet(
         bert_layer=bert_layer,
         input_dim=768,
@@ -401,7 +415,7 @@ def run_proto_bert():
 
     drink_df = pd.DataFrame(lable_result, columns=labels)
     predict_result = pd.concat([test_set[['name', 'storeType']], drink_df], axis=1)
-    predict_result.to_csv('./data/sku_predict_result0.csv')
+    predict_result.to_csv('./data/sku_predict_result.csv')
 
 
 # w2v模型
@@ -423,18 +437,8 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # # 采用最小包含算法采样
-    # train_set, test_set = train_test_split(labeled_df, test_size=0.2)
-    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    # support_set = get_Support_Query(train_set, labels, k=600)
-    # train_set = train_set.drop(support_set.index)
-    # query_set = get_Support_Query(train_set, labels, k=200)
-    # # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
-    # print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
-    #
-    # support_set.to_csv('./data/test_support_set3.csv', index=False)
-    # query_set.to_csv('./data/test_query_set3.csv', index=False)
-    # test_set.to_csv('./data/test_test_set3.csv', index=False)
-    #
+    # get_dataset(labeled_df, labels)
+
     support_set = pd.read_csv('./data/test_support_set3.csv')
     query_set = pd.read_csv('./data/test_query_set3.csv')
     test_set = pd.read_csv('./data/test_test_set3.csv')
@@ -455,25 +459,7 @@ def run_proto_w2v():
     ).to(device)
 
     # 训练 测试 分析
-    max_accuracy = 0.0
-    for step in range(epochs):
-        train_acc_value, train_loss_value, train_rec_value, train_f1_value = training(support_dataset, query_dataset,
-                                                                                      proto_model_2, ratio)
-        test_acc_value, test_loss_value, test_rec_value, test_f1_value = evaluating(support_dataset, test_dataset,
-                                                                                    proto_model_2, ratio)
-        print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
-              "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
-                                                             test_loss_value))
-        print("    ----- 训练集 recall: {:.2%},F1:{:.2%} "
-              "| 验证集 recall: {:.2%},F1:{:.2%}".format(train_rec_value, train_f1_value, test_rec_value, test_f1_value)
-              )
-        # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
-        # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
-
-        # 保存最佳模型
-        if test_acc_value > max_accuracy:
-            max_accuracy = test_acc_value
-            torch.save(proto_model_2.state_dict(), './models/proto_model_3.pth')
+    use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio)
 
     # 加载模型做预测
     proto_model_2 = ProtoTypicalNet2(
@@ -490,7 +476,7 @@ def run_proto_w2v():
 
 
 if __name__ == '__main__':
-    # run_proto_bert()
-    #
-    run_proto_w2v()
+    run_proto_bert()
+
+    # run_proto_w2v()
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123
