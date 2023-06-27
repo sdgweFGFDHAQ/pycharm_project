@@ -182,11 +182,11 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
 def threshold_EVA(y_pred, y_true, rs):
     acc, pre, rec, f1 = torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0])
     # 设置阈值
-    # rs = torch.mean(y_true.float(), dim=0)
-    # max_values, min_values = torch.max(y_pred, dim=0).values, torch.min(y_pred, dim=0).values
-    # thresholds = (max_values - min_values) * rs + min_values
-    # y_pred = torch.where(y_pred >= thresholds, torch.ones_like(y_pred), torch.zeros_like(y_pred))
-    y_pred = (y_pred > 0.5).int()  # 使用0.5作为阈值，大于阈值的为预测为正类
+    rs = torch.mean(y_true.float(), dim=0)
+    max_values, min_values = torch.max(y_pred, dim=0).values, torch.min(y_pred, dim=0).values
+    thresholds = (max_values - min_values) * rs + min_values
+    y_pred = torch.where(y_pred >= thresholds, torch.ones_like(y_pred), torch.zeros_like(y_pred))
+    # y_pred = (y_pred > 0.5).int()  # 使用0.5作为阈值，大于阈值的为预测为正类
     try:
         # 准确率
         correct = (y_pred == y_true).int()
