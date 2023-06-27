@@ -3,7 +3,7 @@ import random
 import numpy as np
 import pandas as pd
 from icecream.icecream import ic
-from sklearn.metrics import f1_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 import torch
@@ -179,44 +179,25 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
     return dataloader
 
 
-def accuracy(y_pred, y_true, rs):
-    # 使用0.5作为阈值，大于阈值的为预测为正类
-    y_pred = (y_pred > rs).int()
+def threshold_EVA(y_pred, y_true, rs):
+    # 设置阈值
+    rs = torch.mean(y_true.float(), dim=0)
+    max_values, min_values = torch.max(y_pred, dim=0).values, torch.min(y_pred, dim=0).values
+    thresholds = (max_values - min_values) * rs + min_values
+    y_pred = torch.where(y_pred >= thresholds, torch.ones_like(y_pred), torch.zeros_like(y_pred))
+    # y_pred = (y_pred > rs).int() # 使用0.5作为阈值，大于阈值的为预测为正类
+    # 准确率
     correct = (y_pred == y_true).int()
     acc = correct.sum() / (correct.shape[0] * correct.shape[1])
-    return acc
-
-
-# 精确率
-def Precision(y_pred, y_true):
-    count = 0
-    for i in range(y_true.shape[0]):
-        if sum(y_pred[i]) == 0:
-            continue
-        count += sum(torch.logical_and(y_true[i], y_pred[i])) / sum(y_pred[i])
-    return count / y_true.shape[0]
-
-
-# 召回率
-def Recall(y_pred, y_true):
-    count = 0
-    for i in range(y_true.shape[0]):
-        if sum(y_true[i]) == 0:
-            continue
-        count += sum(torch.logical_and(y_true[i], y_pred[i])) / sum(y_true[i])
-    return count / y_true.shape[0]
-
-
-# F1
-def F1Measure(y_pred, y_true):
-    count = 0
-    for i in range(y_true.shape[0]):
-        if (sum(y_true[i]) == 0) and (sum(y_pred[i]) == 0):
-            continue
-        p = sum(torch.logical_and(y_true[i], y_pred[i]))
-        q = sum(y_true[i]) + sum(y_pred[i])
-        count += (2 * p) / q
-    return count / y_true.shape[0]
+    # acc = accuracy_score(y_pred, y_true)
+    # 精确率
+    pre = 0.0
+    # pre = precision_score(y_pred, y_true, average='weighted')
+    # 召回率
+    rec = recall_score(y_pred, y_true, average='weighted')
+    # F1
+    f1 = f1_score(y_pred, y_true, average='weighted')
+    return acc, pre, rec, f1
 
 
 def multilabel_categorical_crossentropy(y_pred, y_true):
@@ -250,7 +231,7 @@ def training(support_set, query_set, model, r_list):
     optimizer = optim.Adam(model.parameters(), lr=0.0002, weight_decay=1e-4)
 
     model.train()
-    epoch_los, epoch_acc = 0.0, 0.0
+    epoch_los, epoch_acc, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0
     for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
         # 1. 放到GPU上
         support_input0 = support_input[0].to(device, dtype=torch.long)
@@ -268,8 +249,10 @@ def training(support_set, query_set, model, r_list):
         # loss = torch.sum(output, dim=0)
         epoch_los += loss.item()
         # 5.预测结果
-        accu = accuracy(output, query_input2, r_list)
+        accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
         epoch_acc += accu.item()
+        epoch_recall += recall.item()
+        epoch_f1s += f1s.item()
         # 6. 反向传播
         loss.requires_grad_(True)
         loss.backward()
@@ -277,7 +260,9 @@ def training(support_set, query_set, model, r_list):
         optimizer.step()
     loss_value = epoch_los / len(support_loader)
     acc_value = epoch_acc / len(support_loader)
-    return acc_value, loss_value
+    rec_value = epoch_recall / len(support_loader)
+    f1_value = epoch_f1s / len(support_loader)
+    return acc_value, loss_value, rec_value, f1_value
 
 
 def evaluating(support_set, test_set, model, r_list):
@@ -288,7 +273,7 @@ def evaluating(support_set, test_set, model, r_list):
 
     model.eval()
     with torch.no_grad():
-        epoch_los, epoch_acc = 0.0, 0.0
+        epoch_los, epoch_acc, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0
         for i, (support_input, test_input) in enumerate(zip(support_loader, test_loader)):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
@@ -303,11 +288,15 @@ def evaluating(support_set, test_set, model, r_list):
             # loss = torch.sum(output, dim=0)
             epoch_los += loss.item()
             # 4.预测结果
-            accu = accuracy(output, query_input2, r_list)
+            accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
             epoch_acc += accu.item()
+            epoch_recall += recall.item()
+            epoch_f1s += f1s.item()
         loss_value = epoch_los / len(support_loader)
         acc_value = epoch_acc / len(support_loader)
-    return acc_value, loss_value
+        rec_value = epoch_recall / len(support_loader)
+        f1_value = epoch_f1s / len(support_loader)
+    return acc_value, loss_value, rec_value, f1_value
 
 
 def predicting(support_set, predict_set, model, r_list):
@@ -325,8 +314,9 @@ def predicting(support_set, predict_set, model, r_list):
             # 2. 计算输出
             output = model(support_input0, support_input2, query_input0)
             label_list.extend([tensor.numpy() for tensor in output])
-        label_list = np.where(label_list > r_list.numpy()
-                              , 1, 0)
+        max_values, min_values = np.max(label_list, axis=0), np.min(label_list, axis=0)
+        thresholds = (max_values - min_values) * r_list.numpy() + min_values
+        label_list = np.where(label_list > thresholds, 1, 0)
         # output = (output > r_list).int()
     return label_list
 
@@ -492,7 +482,7 @@ def run_proto_w2v():
     proto_model_2.load_state_dict(torch.load('./models/proto_model_2.pth'))
     lable_result = predicting(support_dataset, test_dataset, proto_model_2, ratio)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([test_set[['name', 'storeType','drinkTypes']], drink_df], axis=1)
+    predict_result = pd.concat([test_set[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result2.csv')
 
 
@@ -535,8 +525,8 @@ def run_single_w2v():
     test_dataset = get_dataloader_2(test_set, preprocess, labels)
 
     # 计算标签为0的占比,作为阈值
-    num_zeros = torch.tensor((support_set[labels] == 0).sum(axis=0))
-    ratio = num_zeros / support_set.shape[0]
+    num_ones = torch.tensor((support_set[labels] == 1).sum(axis=0))
+    ratio = num_ones / support_set.shape[0]
 
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
@@ -548,11 +538,16 @@ def run_single_w2v():
     # 训练 测试 分析
     max_accuracy = 0.0
     for step in range(epochs):
-        train_acc_value, train_loss_value = training(support_dataset, query_dataset, proto_model_2, ratio)
-        test_acc_value, test_loss_value = evaluating(support_dataset, test_dataset, proto_model_2, ratio)
+        train_acc_value, train_loss_value, train_rec_value, train_f1_value = training(support_dataset, query_dataset,
+                                                                                      proto_model_2, ratio)
+        test_acc_value, test_loss_value, test_rec_value, test_f1_value = evaluating(support_dataset, test_dataset,
+                                                                                    proto_model_2, ratio)
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
                                                              test_loss_value))
+        print("    ----- 训练集 recall: {:.2%},F1:{:.2%} "
+              "| 验证集 recall: {:.2%},F1:{:.2%}".format(train_rec_value, train_f1_value, test_rec_value, test_f1_value)
+              )
         # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
         # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
 
