@@ -27,8 +27,8 @@ labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
 unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
-batch_size = 32
-epochs = 10
+batch_size = 16
+epochs = 20
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -180,23 +180,26 @@ def get_unlabeled_dataloader(file_path, bert_tokenizer):
 
 
 def threshold_EVA(y_pred, y_true, rs):
+    acc, pre, rec, f1 = torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0])
     # 设置阈值
-    rs = torch.mean(y_true.float(), dim=0)
-    max_values, min_values = torch.max(y_pred, dim=0).values, torch.min(y_pred, dim=0).values
-    thresholds = (max_values - min_values) * rs + min_values
-    y_pred = torch.where(y_pred >= thresholds, torch.ones_like(y_pred), torch.zeros_like(y_pred))
-    # y_pred = (y_pred > rs).int() # 使用0.5作为阈值，大于阈值的为预测为正类
-    # 准确率
-    correct = (y_pred == y_true).int()
-    acc = correct.sum() / (correct.shape[0] * correct.shape[1])
-    # acc = accuracy_score(y_pred, y_true)
-    # 精确率
-    pre = 0.0
-    # pre = precision_score(y_pred, y_true, average='weighted')
-    # 召回率
-    rec = recall_score(y_pred, y_true, average='weighted')
-    # F1
-    f1 = f1_score(y_pred, y_true, average='weighted')
+    # rs = torch.mean(y_true.float(), dim=0)
+    # max_values, min_values = torch.max(y_pred, dim=0).values, torch.min(y_pred, dim=0).values
+    # thresholds = (max_values - min_values) * rs + min_values
+    # y_pred = torch.where(y_pred >= thresholds, torch.ones_like(y_pred), torch.zeros_like(y_pred))
+    y_pred = (y_pred > 0.5).int()  # 使用0.5作为阈值，大于阈值的为预测为正类
+    try:
+        # 准确率
+        correct = (y_pred == y_true).int()
+        acc = correct.sum() / (correct.shape[0] * correct.shape[1])
+        # acc = accuracy_score(y_pred, y_true)
+        # 精确率
+        # pre = precision_score(y_pred, y_true, average='weighted')
+        # 召回率
+        # rec = recall_score(y_pred, y_true, average='weighted')
+        # F1
+        f1 = f1_score(y_pred, y_true, average='weighted')
+    except Exception as e:
+        print(str(e))
     return acc, pre, rec, f1
 
 
@@ -223,7 +226,7 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
 
 
 def training(support_set, query_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=batch_size * 5, shuffle=False, drop_last=True)
+    support_loader = DataLoader(support_set, batch_size=batch_size * 6, shuffle=False, drop_last=True)
     query_loader = DataLoader(query_set, batch_size=batch_size, shuffle=False, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(reduction='sum')
@@ -320,6 +323,7 @@ def predicting(support_set, predict_set, model, r_list):
         # output = (output > r_list).int()
     return label_list
 
+
 # 获取数据集
 def get_dataset(labeled_df, labels):
     # 采用最小包含算法采样
@@ -337,7 +341,7 @@ def get_dataset(labeled_df, labels):
 
 
 # 训练 测试 分析
-def use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio):
+def use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, save_path):
     max_accuracy = 0.0
     for step in range(epochs):
         train_acc_value, train_loss_value, train_rec_value, train_f1_value = training(support_dataset, query_dataset,
@@ -356,7 +360,7 @@ def use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio
         # 保存最佳模型
         if test_acc_value > max_accuracy:
             max_accuracy = test_acc_value
-            torch.save(proto_model_2.state_dict(), './models/proto_model_3.pth')
+            torch.save(proto_model_2.state_dict(), save_path)
 
 
 # bert模型
@@ -399,7 +403,7 @@ def run_proto_bert():
     test_dataset = get_labeled_dataloader(test_set, tokenizer, labels)
 
     # 训练 测试 分析
-    use_model(support_dataset, query_dataset, test_dataset, proto_model, ratio)
+    use_model(support_dataset, query_dataset, test_dataset, proto_model, ratio, './models/proto_model.pth')
 
     # 加载模型做预测
     # get_unlabeled_dataloader(unlabeled_path, tokenizer)
@@ -459,7 +463,7 @@ def run_proto_w2v():
     ).to(device)
 
     # 训练 测试 分析
-    use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio)
+    use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
 
     # 加载模型做预测
     proto_model_2 = ProtoTypicalNet2(
@@ -476,7 +480,7 @@ def run_proto_w2v():
 
 
 if __name__ == '__main__':
-    run_proto_bert()
-
-    # run_proto_w2v()
+    # run_proto_bert()
+    #
+    run_proto_w2v()
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123

@@ -19,7 +19,7 @@ class ProtoTypicalNet(nn.Module):
         self.bert_embedding = bert_layer
         for param in self.bert_embedding.parameters():
             param.requires_grad = requires_grad
-        # 解冻后面3层的参数
+        # 解冻后面1层的参数
         for param in self.bert_embedding.encoder.layer[-1:].parameters():
             param.requires_grad = True
 
