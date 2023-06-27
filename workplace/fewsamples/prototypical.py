@@ -348,15 +348,21 @@ def get_dataset(labeled_df, labels):
 def use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, save_path):
     max_accuracy = 0.0
     for step in range(epochs):
-        train_acc_value, train_loss_value, train_rec_value, train_f1_value = training(support_dataset, query_dataset,
-                                                                                      proto_model_2, ratio)
-        test_acc_value, test_loss_value, test_rec_value, test_f1_value = evaluating(support_dataset, test_dataset,
-                                                                                    proto_model_2, ratio)
+        train_acc_value, train_loss_value, train_prec_value, train_rec_value, train_f1_value = training(support_dataset,
+                                                                                                        query_dataset,
+                                                                                                        proto_model_2,
+                                                                                                        ratio)
+        test_acc_value, test_loss_value, test_prec_value, test_rec_value, test_f1_value = evaluating(support_dataset,
+                                                                                                     test_dataset,
+                                                                                                     proto_model_2,
+                                                                                                     ratio)
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
                                                              test_loss_value))
-        print("         -- 训练集 recall: {:.2%},F1:{:.2%} "
-              "| 验证集 recall: {:.2%},F1:{:.2%}".format(train_rec_value, train_f1_value, test_rec_value, test_f1_value)
+        print("         -- 训练集 precision: {:.2%},recall: {:.2%},F1:{:.2%} "
+              "| 验证集 precision: {:.2%},recall: {:.2%},F1:{:.2%}".format(train_prec_value, train_rec_value,
+                                                                           train_f1_value, test_prec_value,
+                                                                           test_rec_value, test_f1_value)
               )
         # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
         # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
