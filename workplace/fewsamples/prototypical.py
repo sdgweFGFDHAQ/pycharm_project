@@ -1,4 +1,5 @@
 import random
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,7 @@ from models.proto_model_2 import ProtoTypicalNet2
 from workplace.fewsamples.preprocess_data import Preprocess
 from workplace.fewsamples.utils.mini_tool import WordSegment
 
+warnings.filterwarnings("ignore")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 writer = SummaryWriter('./logs/v1')
 
@@ -28,7 +30,7 @@ unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
 batch_size = 16
-epochs = 20
+epochs = 25
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -231,7 +233,7 @@ def training(support_set, query_set, model, r_list):
 
     criterion = nn.BCEWithLogitsLoss(reduction='sum')
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=0.0002)
 
     model.train()
     epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
@@ -490,7 +492,7 @@ def run_proto_w2v():
 
 
 if __name__ == '__main__':
-    # run_proto_bert()
-    #
-    run_proto_w2v()
+    run_proto_bert()
+
+    # run_proto_w2v()
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123
