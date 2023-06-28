@@ -290,7 +290,7 @@ def search_best_model(x_train, y_train, x_test, y_test, embedding, category_coun
         pre_lv, pre_av = predicting(test_ip, model)
         if pre_av > best_accuracy:
             best_accuracy = pre_av
-            torch.save(model, "best_lstm.model")
+            torch.save(model, "best_lstm_bert.model")
 
 
 def draw_trend(history):
