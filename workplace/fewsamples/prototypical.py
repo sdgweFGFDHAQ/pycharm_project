@@ -297,7 +297,7 @@ def evaluating(support_set, test_set, model, r_list):
             # 4.预测结果
             accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
             epoch_acc += accu.item()
-            epoch_prec += recall.item()
+            epoch_prec += precision.item()
             epoch_recall += recall.item()
             epoch_f1s += f1s.item()
         loss_value = epoch_los / len(support_loader)
@@ -390,7 +390,7 @@ def run_proto_bert():
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
 
     # # 采用最小包含算法采样
-    # get_dataset(labeled_df, labels)
+    get_dataset(labeled_df, labels)
 
     support_set = pd.read_csv('./data/test_support_set.csv')
     query_set = pd.read_csv('./data/test_query_set.csv')
@@ -437,12 +437,14 @@ def run_proto_bert():
 # w2v模型
 def run_proto_w2v():
     features = ['name', 'storeType']
-    labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
+    # labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
+    labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
+              '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
     columns = ['drinkTypes']
     columns.extend(features)
     columns.extend(labels)
 
-    labeled_df = pd.read_csv(labeled_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
 
@@ -453,7 +455,7 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # # 采用最小包含算法采样
-    # get_dataset(labeled_df, labels)
+    get_dataset(labeled_df, labels)
 
     support_set = pd.read_csv('./data/test_support_set3.csv')
     query_set = pd.read_csv('./data/test_query_set3.csv')
@@ -492,7 +494,7 @@ def run_proto_w2v():
 
 
 if __name__ == '__main__':
-    run_proto_bert()
-
-    # run_proto_w2v()
+    # run_proto_bert()
+    #
+    run_proto_w2v()
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123

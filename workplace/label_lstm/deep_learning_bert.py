@@ -9,7 +9,6 @@ import pandas as pd
 from multiprocessing import Pool
 import torch
 from sklearn.model_selection import KFold, train_test_split
-from tensorboardX import SummaryWriter
 from torch import nn
 from torch import optim
 from torch.utils.data import Dataset, DataLoader
@@ -23,7 +22,6 @@ import gc
 
 warnings.filterwarnings("ignore", category=UserWarning)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-writer = SummaryWriter('./logs/v2')
 
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
@@ -111,7 +109,6 @@ def get_dataset():
 
     tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
     bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
-    labels_token = tokenizer.convert_tokens_to_ids(data_y)
     # 创建输入数据的空列表
     input_ids = []
     label2id_list = []
@@ -123,12 +120,13 @@ def get_dataset():
                                              truncation=True, return_tensors='pt')
         input_ids.append(encoded_dict['input_ids'].squeeze())
 
-        # 处理类别
-        # labels_tensor = labels_token[row['category3_new']]
-        # label2id_list.append(labels_tensor)
+    # 处理类别
+    lab2idx = dict(zip(cat_df['category3_new'], cat_df['cat_id']))
+    idx2lab = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
+    for lab in data_y:
+        label2id_list.append(lab2idx[lab])
 
-    data_x, data_y = input_ids, labels_token
-
+    data_x, data_y = torch.LongTensor([ii.tolist() for ii in input_ids]), torch.LongTensor(label2id_list)
     return data_x, data_y, bert_layer, tokenizer, len(category_classes)
 
 
@@ -244,6 +242,7 @@ def search_best_dataset(data_x, data_y, embedding, category_count):
     best_accuracy = 0.
     best_x_train, best_y_train, best_x_test, best_y_test = None, None, None, None
     for t_train, t_test in kf_5.split(data_x, data_y):
+        # data_x, data_y = np.array(data_x), np.array(data_y)
         print('==================第{}折================'.format(k + 1))
         k += 1
         model = BertLSTMNet(
@@ -466,7 +465,7 @@ if __name__ == '__main__':
     print('rerun_get_file time: %s minutes' % ((end0 - start0) / 60))
     # 2 随机抽取带标签训练集
     # random_get_trainset(is_labeled=False, labeled_is_all=True)
-    random_get_trainset(is_labeled=True, labeled_is_all=False)
+    # random_get_trainset(is_labeled=True, labeled_is_all=False)
     # 3 划分合适的训练集测试集，保存训练模型
     start1 = time.time()
     rerun_get_model()
