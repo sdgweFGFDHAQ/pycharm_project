@@ -182,7 +182,7 @@ def training(train_loader, model):
         # 1. 放到GPU上
         inputs = inputs.to(device, dtype=torch.long)
         labels = labels.to(device, dtype=torch.long)
-        masks = masks.to(device)
+        masks = masks.to(device, dtype=torch.long)
         # 2. 清空梯度
         optimizer.zero_grad()
         # 3. 计算输出
@@ -217,6 +217,7 @@ def predicting(val_loader, model):
             # 1. 放到GPU上
             inputs = inputs.to(device, dtype=torch.long)
             labels = labels.to(device, dtype=torch.long)
+            masks = masks.to(device, dtype=torch.long)
             # 2. 计算输出
             outputs = model(inputs, masks)
             outputs = outputs.squeeze(1)
