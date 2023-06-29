@@ -25,12 +25,13 @@ writer = SummaryWriter('./logs/v1')
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 labeled_path = '../sv_report_data.csv'
+labeled_update_path = './data/is_7t1.csv'
 labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
 unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
 batch_size = 16
-epochs = 25
+epochs = 30
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -116,7 +117,7 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
             row['name'],
             row['storeType'],
             add_special_tokens=True,
-            max_length=16,
+            max_length=14,
             padding='max_length',
             truncation=True,
             return_tensors='pt'
@@ -128,7 +129,7 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
         labels_tensor = torch.tensor([row[label] for label in label_list])
         label2id_list.append(labels_tensor)
 
-    dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks), torch.stack(label2id_list))
+    dataset = TensorDataset(torch.stack(input_ids), torch.stack(label2id_list), torch.stack(attention_masks))
     return dataset
 
 
@@ -145,7 +146,7 @@ def get_dataloader_2(df, preprocess, label_list):
         labels_tensor = torch.tensor([row[label] for label in label_list])
         label2id_list.append(labels_tensor)
 
-    dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list), torch.stack(label2id_list))
+    dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list))
     return dataset
 
 
@@ -228,7 +229,7 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
 
 
 def training(support_set, query_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=batch_size * 6, shuffle=False, drop_last=True)
+    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
     query_loader = DataLoader(query_set, batch_size=batch_size, shuffle=False, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(reduction='sum')
@@ -240,9 +241,9 @@ def training(support_set, query_set, model, r_list):
     for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
         # 1. 放到GPU上
         support_input0 = support_input[0].to(device, dtype=torch.long)
-        support_input2 = support_input[2].to(device, dtype=torch.long)
+        support_input2 = support_input[1].to(device, dtype=torch.long)
         query_input0 = query_input[0].to(device, dtype=torch.long)
-        query_input2 = query_input[2].to(device, dtype=torch.long)
+        query_input2 = query_input[1].to(device, dtype=torch.long)
         # 2. 清空梯度
         optimizer.zero_grad()
         # 3. 计算输出
@@ -264,16 +265,16 @@ def training(support_set, query_set, model, r_list):
         loss.backward()
         # 7. 更新梯度
         optimizer.step()
-    loss_value = epoch_los / len(support_loader)
-    acc_value = epoch_acc / len(support_loader)
-    prec_value = epoch_prec / len(support_loader)
-    rec_value = epoch_recall / len(support_loader)
-    f1_value = epoch_f1s / len(support_loader)
+    loss_value = epoch_los / len(query_loader)
+    acc_value = epoch_acc / len(query_loader)
+    prec_value = epoch_prec / len(query_loader)
+    rec_value = epoch_recall / len(query_loader)
+    f1_value = epoch_f1s / len(query_loader)
     return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
 def evaluating(support_set, test_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=batch_size * 5, shuffle=False, drop_last=True)
+    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(reduction='sum')
@@ -284,9 +285,9 @@ def evaluating(support_set, test_set, model, r_list):
         for i, (support_input, test_input) in enumerate(zip(support_loader, test_loader)):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
-            support_input2 = support_input[2].to(device, dtype=torch.long)
+            support_input2 = support_input[1].to(device, dtype=torch.long)
             query_input0 = test_input[0].to(device, dtype=torch.long)
-            query_input2 = test_input[2].to(device, dtype=torch.long)
+            query_input2 = test_input[1].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(support_input0, support_input2, query_input0)
             # outputs = outputs.squeeze(1)
@@ -300,11 +301,11 @@ def evaluating(support_set, test_set, model, r_list):
             epoch_prec += precision.item()
             epoch_recall += recall.item()
             epoch_f1s += f1s.item()
-        loss_value = epoch_los / len(support_loader)
-        acc_value = epoch_acc / len(support_loader)
-        prec_value = epoch_prec / len(support_loader)
-        rec_value = epoch_recall / len(support_loader)
-        f1_value = epoch_f1s / len(support_loader)
+        loss_value = epoch_los / len(test_loader)
+        acc_value = epoch_acc / len(test_loader)
+        prec_value = epoch_prec / len(test_loader)
+        rec_value = epoch_recall / len(test_loader)
+        f1_value = epoch_f1s / len(test_loader)
     return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
@@ -318,7 +319,7 @@ def predicting(support_set, predict_set, model, r_list):
         for i, (support_input, test_input) in enumerate(zip(support_loader, predict_loader)):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
-            support_input2 = support_input[2].to(device, dtype=torch.long)
+            support_input2 = support_input[1].to(device, dtype=torch.long)
             query_input0 = test_input[0].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(support_input0, support_input2, query_input0)
@@ -326,7 +327,7 @@ def predicting(support_set, predict_set, model, r_list):
         max_values, min_values = np.max(label_list, axis=0), np.min(label_list, axis=0)
         thresholds = (max_values - min_values) * r_list.numpy() + min_values
         label_list = np.where(label_list > thresholds, 1, 0)
-        # output = (output > r_list).int()
+        # label_list = [[np.where(arr > 0.5, 1, 0) for arr in row] for row in label_list]
     return label_list
 
 
@@ -437,25 +438,25 @@ def run_proto_bert():
 # w2v模型
 def run_proto_w2v():
     features = ['name', 'storeType']
-    # labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
-    labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
-              '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
+    labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
+    # labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
+    #           '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
     columns = ['drinkTypes']
     columns.extend(features)
     columns.extend(labels)
 
-    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
 
     # 加载 data
     segment = WordSegment()
     labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
-    preprocess = Preprocess(sen_len=6)
+    preprocess = Preprocess(sen_len=5)
     embedding = preprocess.create_tokenizer()
 
     # # 采用最小包含算法采样
-    get_dataset(labeled_df, labels)
+    # get_dataset(labeled_df, labels)
 
     support_set = pd.read_csv('./data/test_support_set3.csv')
     query_set = pd.read_csv('./data/test_query_set3.csv')
@@ -494,7 +495,7 @@ def run_proto_w2v():
 
 
 if __name__ == '__main__':
-    # run_proto_bert()
-    #
-    run_proto_w2v()
+    run_proto_bert()
+
+    # run_proto_w2v()
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123

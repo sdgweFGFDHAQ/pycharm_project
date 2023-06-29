@@ -11,7 +11,7 @@ import torch
 from sklearn.model_selection import KFold, train_test_split
 from torch import nn
 from torch import optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 from transformers import AutoTokenizer, AutoModel
 
 from model_bert import BertLSTMNet
@@ -109,25 +109,22 @@ def get_dataset():
 
     tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
     bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
-    # 创建输入数据的空列表
-    input_ids = []
-    label2id_list = []
+
     # 遍历数据集的每一行
-    for index, row in gz_df.iterrows():
-        # 处理特征
-        encoded_dict = tokenizer.encode_plus(row['cut_name'],
-                                             add_special_tokens=True, max_length=16, padding='max_length',
-                                             truncation=True, return_tensors='pt')
-        input_ids.append(encoded_dict['input_ids'].squeeze())
+    # 处理特征
+    encoded_dict = tokenizer.batch_encode_plus(gz_df['cut_name'].tolist(),
+                                               add_special_tokens=True, max_length=12, padding='max_length',
+                                               truncation=True, return_tensors='pt')
+    input_ids = encoded_dict['input_ids']
+    attention_masks = encoded_dict['attention_mask']
 
     # 处理类别
     lab2idx = dict(zip(cat_df['category3_new'], cat_df['cat_id']))
-    idx2lab = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
-    for lab in data_y:
-        label2id_list.append(lab2idx[lab])
+    # idx2lab = dict(zip(cat_df['cat_id'], cat_df['category3_new']))
+    label2id_list = [lab2idx[lab] for lab in data_y]
 
-    data_x, data_y = torch.LongTensor([ii.tolist() for ii in input_ids]), torch.LongTensor(label2id_list)
-    return data_x, data_y, bert_layer, tokenizer, len(category_classes)
+    dataset = TensorDataset(input_ids, torch.Tensor(label2id_list), attention_masks)
+    return dataset, bert_layer, tokenizer, len(category_classes)
 
 
 def get_dataset_pred():
@@ -181,14 +178,15 @@ def training(train_loader, model):
     model.train()
     train_len = len(train_loader)
     epoch_los, epoch_acc = 0, 0
-    for i, (inputs, labels) in enumerate(train_loader):
+    for i, (inputs, labels, masks) in enumerate(train_loader):
         # 1. 放到GPU上
         inputs = inputs.to(device, dtype=torch.long)
         labels = labels.to(device, dtype=torch.long)
+        masks = masks.to(device)
         # 2. 清空梯度
         optimizer.zero_grad()
         # 3. 计算输出
-        outputs = model(inputs)
+        outputs = model(inputs, masks)
         outputs = outputs.squeeze(1)  # 去掉最外面的 dimension
         # 4. 计算损失
         # outputs:batch_size*num_classes labels:1D
@@ -215,12 +213,12 @@ def predicting(val_loader, model):
     val_len = len(val_loader)
     with torch.no_grad():
         epoch_los, epoch_acc = 0, 0
-        for i, (inputs, labels) in enumerate(val_loader):
+        for i, (inputs, labels, masks) in enumerate(val_loader):
             # 1. 放到GPU上
             inputs = inputs.to(device, dtype=torch.long)
             labels = labels.to(device, dtype=torch.long)
             # 2. 计算输出
-            outputs = model(inputs)
+            outputs = model(inputs, masks)
             outputs = outputs.squeeze(1)
             # 3. 计算损失
             loss = criterion(outputs, labels)
@@ -235,15 +233,18 @@ def predicting(val_loader, model):
     return loss_value, acc_value
 
 
-def search_best_dataset(data_x, data_y, embedding, category_count):
+def search_best_dataset(dataset, embedding, category_count):
     # 使用k折交叉验证
     kf_5 = KFold(n_splits=5)
     k, epochs = 0, 3
     best_accuracy = 0.
-    best_x_train, best_y_train, best_x_test, best_y_test = None, None, None, None
-    for t_train, t_test in kf_5.split(data_x, data_y):
+    best_train, best_test = None, None
+    for fold, (train_idx, val_idx) in enumerate(kf_5.split(dataset)):
         # data_x, data_y = np.array(data_x), np.array(data_y)
-        print('==================第{}折================'.format(k + 1))
+        train_dataset = torch.utils.data.Subset(dataset, train_idx)
+        val_dataset = torch.utils.data.Subset(dataset, val_idx)
+
+        print('==================第{}折================'.format(fold + 1))
         k += 1
         model = BertLSTMNet(
             bert_embedding=embedding,
@@ -252,10 +253,8 @@ def search_best_dataset(data_x, data_y, embedding, category_count):
             num_classes=category_count,
             num_layers=2
         ).to(device)
-        train_ds = DefineDataset(data_x[t_train], data_y[t_train])
-        train_ip = DataLoader(dataset=train_ds, batch_size=64, shuffle=True, drop_last=True)
-        test_ds = DefineDataset(data_x[t_test], data_y[t_test])
-        test_ip = DataLoader(dataset=test_ds, batch_size=64, shuffle=False, drop_last=True)
+        train_ip = DataLoader(dataset=train_dataset, batch_size=256, shuffle=True, drop_last=True)
+        test_ip = DataLoader(dataset=val_dataset, batch_size=256, shuffle=False, drop_last=True)
         accuracy_list = list()
         # run epochs
         for ep in range(epochs):
@@ -265,12 +264,11 @@ def search_best_dataset(data_x, data_y, embedding, category_count):
         mean_accuracy = np.mean(accuracy_list)
         if mean_accuracy > best_accuracy:
             best_accuracy = mean_accuracy
-            best_x_train, best_y_train, best_x_test, best_y_test = data_x[t_train], data_y[t_train], data_x[t_test], \
-                data_y[t_test]
-    return best_x_train, best_y_train, best_x_test, best_y_test
+            best_train, best_test = train_dataset, val_dataset
+    return best_train, best_test
 
 
-def search_best_model(x_train, y_train, x_test, y_test, embedding, category_count):
+def search_best_model(train_set, test_set, embedding, category_count):
     model = BertLSTMNet(
         bert_embedding=embedding,
         input_dim=768,
@@ -278,10 +276,8 @@ def search_best_model(x_train, y_train, x_test, y_test, embedding, category_coun
         num_classes=category_count,
         num_layers=2
     ).to(device)
-    train_ds = DefineDataset(x_train, y_train)
-    train_ip = DataLoader(dataset=train_ds, batch_size=64, shuffle=True, drop_last=True)
-    test_ds = DefineDataset(x_test, y_test)
-    test_ip = DataLoader(dataset=test_ds, batch_size=64, shuffle=False, drop_last=True)
+    train_ip = DataLoader(dataset=train_set, batch_size=256, shuffle=True, drop_last=True)
+    test_ip = DataLoader(dataset=test_set, batch_size=256, shuffle=False, drop_last=True)
     # run epochs
     best_accuracy = 0.
     for ep in range(12):
@@ -437,11 +433,11 @@ def rerun_get_file():
 def rerun_get_model():
     # 训练模型,获取训练集
     # random_get_trainset()
-    d_x, d_y, embedding_matrix, prepro, class_num = get_dataset()
+    dataset, embedding_matrix, prepro, class_num = get_dataset()
     # K折找到最佳训练集、测试集
-    x_train, y_train, x_test, y_test = search_best_dataset(d_x, d_y, embedding_matrix, class_num)
+    train_set, test_set = search_best_dataset(dataset, embedding_matrix, class_num)
     # 保存最好的模型
-    search_best_model(x_train, y_train, x_test, y_test, embedding_matrix, class_num)
+    search_best_model(train_set, test_set, embedding_matrix, class_num)
 
 
 # 预测数据

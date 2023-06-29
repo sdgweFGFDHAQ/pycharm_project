@@ -29,10 +29,8 @@ class ProtoTypicalNet(nn.Module):
         # 原型网络核心
         self.prototype = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(input_dim, hidden_dim),
+            nn.Linear(self.num_class, self.num_class),
             # nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, self.num_class),
             nn.Sigmoid()
         )
 
@@ -45,14 +43,15 @@ class ProtoTypicalNet(nn.Module):
         # # 提取特征
         # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
         # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
-        e = torch.sum(torch.sin(support_embedding.unsqueeze(1).repeat(1, self.num_class, 1) * label_embedding), dim=1)
+        e = torch.sum(torch.sin(support_embedding.unsqueeze(1).repeat(1, self.num_class, 1) * label_embedding), dim=0)
         # 将0值所在位置替换为负无穷大
         # f = torch.where(e == 0, float('-inf'), e)
         # a 为计算得到的样本权重
         a = torch.softmax(e, dim=0)
         # 计算原型表示
         # c = b * torch.matmul(a.t(), embedding) + (1 - b) * label.t()
-        c = torch.matmul(a.t(), support_embedding)
+        c = 0.5 * torch.sum(a.unsqueeze(0) * support_embedding.unsqueeze(1).repeat(1, self.num_class, 1), dim=0) \
+            + 0.5 * self.label_embedding
         # 计算查询集标签到原型点的距离
         distances = torch.sqrt(torch.sum((c.unsqueeze(0) - query_embedding.unsqueeze(1)) ** 2, dim=2))
         # sqs = torch.concat((support_point, query_point, support_point - query_point), dim=1)

@@ -25,11 +25,11 @@ class BertLSTMNet(nn.Module):
         self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, batch_first=True, bidirectional=True)
         self.classifier = nn.Sequential(nn.Dropout(dropout),
                                         nn.Linear(hidden_dim * 2, num_classes),
-                                        nn.Sigmoid())
+                                        nn.Softmax())
 
-    def forward(self, inputs):
-        inputs_bert = self.bert_embedding(inputs).last_hidden_state[:, 0]
-        inputs_bert = inputs_bert.unsqueeze(1).to(torch.float32)
+    def forward(self, inputs, masks):
+        inputs_bert = self.bert_embedding(input_ids=inputs, attention_mask=masks).last_hidden_state
+        inputs_bert = inputs_bert.to(torch.float32)
         x, _ = self.lstm(inputs_bert)
         # 取用 LSTM 最后一个的 hidden state
         x = x[:, -1, :]
