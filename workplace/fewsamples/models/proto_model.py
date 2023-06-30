@@ -23,8 +23,8 @@ class ProtoTypicalNet(nn.Module):
         for param in self.bert_embedding.encoder.layer[-1:].parameters():
             param.requires_grad = True
 
-        # 对多标签编码
-        self.label_embedding = torch.normal(0, 1, size=(num_class, input_dim))
+        # LSTM层
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
         # 原型网络核心
         self.prototype = nn.Sequential(
@@ -34,28 +34,13 @@ class ProtoTypicalNet(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, support_input, support_label, query_input):
-        # # 由于版本原因，当前选择的bert模型会返回tuple，包含(last_hidden_state,pooler_output)
-        support_embedding = self.bert_embedding(support_input).last_hidden_state[:, 0]
-        query_embedding = self.bert_embedding(query_input).last_hidden_state[:, 0]
-        label_embedding = support_label.unsqueeze(2) * self.label_embedding.unsqueeze(0)
+    def forward(self, inputs):
+        inputs_embedding = self.bert_embedding(inputs).last_hidden_state[:, 0]
 
-        # # 提取特征
-        # e 为标签在该样本下的向量表示,标签是one-hot，不用求和
-        # e = torch.sum(torch.tan(g(embedding) * g(label)), dim=0)  # 6*5
-        e = torch.sum(torch.sin(support_embedding.unsqueeze(1).repeat(1, self.num_class, 1) * label_embedding), dim=0)
-        # 将0值所在位置替换为负无穷大
-        # f = torch.where(e == 0, float('-inf'), e)
-        # a 为计算得到的样本权重
-        a = torch.softmax(e, dim=0)
-        # 计算原型表示
-        # c = b * torch.matmul(a.t(), embedding) + (1 - b) * label.t()
-        c = 0.5 * torch.sum(a.unsqueeze(0) * support_embedding.unsqueeze(1).repeat(1, self.num_class, 1), dim=0) \
-            + 0.5 * self.label_embedding
-        # 计算查询集标签到原型点的距离
-        distances = torch.sqrt(torch.sum((c.unsqueeze(0) - query_embedding.unsqueeze(1)) ** 2, dim=2))
-        # sqs = torch.concat((support_point, query_point, support_point - query_point), dim=1)
+        # support_embedding = self.embedding(inputs)
+        # s_inputs = support_embedding.to(torch.float32)
+        # s_x, _ = self.lstm(s_inputs)
+        # output_point = s_x[:, -1, :]
 
-        # distances = torch.arctan(distances)
-        result = self.prototype(distances)
-        return result
+        output = self.prototype(inputs_embedding)
+        return output
