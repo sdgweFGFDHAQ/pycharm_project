@@ -16,20 +16,7 @@ def xlsx_to_csv_pd(source, target, use_columns):
     csvv.to_csv(target)
 
 
-def set_file_standard_data(path, use_columns):
-    csv_data = pd.read_csv(path, usecols=use_columns)
-    csv_data.drop_duplicates(keep='first', inplace=True)
-    print(csv_data.shape[0])
 
-    csv_data['store_category'] = csv_data['category3_new']
-
-    # 用一级标签填充空白(NAN)的二级标签、三级标签
-    # 删除至少有3个NaN值的行 # data = data.dropna(axis=0, thresh=3)
-    csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
-    csv_data['store_category'].fillna(csv_data['category2_new'], inplace=True)
-    csv_data['store_category'].fillna(csv_data['predict_category'], inplace=True)
-
-    csv_data.to_csv('sku_fromlog_new_cate.csv', columns=use_columns + ['store_category'])
 
 
 if __name__ == '__main__':

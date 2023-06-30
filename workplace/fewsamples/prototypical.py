@@ -247,6 +247,7 @@ def get_dataset(labeled_df, labels):
     support_set.to_csv('./data/test_support_set3.csv', index=False)
     test_set.to_csv('./data/test_test_set3.csv', index=False)
 
+
 # bert模型
 def run_proto_bert():
     features = ['name', 'storeType']

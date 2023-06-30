@@ -29,7 +29,7 @@ class ProtoTypicalNet(nn.Module):
         # 原型网络核心
         self.prototype = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(self.num_class, self.num_class),
+            nn.Linear(self.input_dim, self.num_class),
             # nn.ReLU(),
             nn.Sigmoid()
         )
