@@ -290,7 +290,7 @@ def run_proto_bert():
     lable_result = predicting(support_dataset, proto_model, ratio)
 
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([test_set[['name', 'storeType']], drink_df], axis=1)
+    predict_result = pd.concat([support_set[['store_id', 'name', 'storeType', 'drinkTypes']], drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result.csv')
 
 
