@@ -31,7 +31,7 @@ unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
 batch_size = 16
-epochs = 25
+epochs = 15
 
 
 def get_Support_Query(train_df, label_list, k=10):
