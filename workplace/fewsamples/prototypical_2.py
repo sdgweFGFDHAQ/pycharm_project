@@ -20,14 +20,12 @@ from workplace.fewsamples.utils.mini_tool import WordSegment
 
 warnings.filterwarnings("ignore")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-writer = SummaryWriter('./logs/v1')
-
-pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
+# writer = SummaryWriter('./logs/v2')
 
 labeled_path = '../sv_report_data.csv'
 labeled_update_path = './data/is_7t1.csv'
 labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
-unlabeled_path = '../unlabeled_data.csv'
+pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 token_max_length = 12
 batch_size = 16
@@ -71,16 +69,14 @@ def get_Support_Query(train_df, label_list, k=10):
     return support_df
 
 
-def get_Nway_Kshot(df, category_list, way, shot, query):
-    # 随机选择3个分类
-    selected_categories = random.sample(category_list, way)
-
+# 获取数据集
+def set_Nway_Kshot(df, category_list, way, shot, query):
     # 创建一个空的DataFrame用于存储支持集和查询集
     support_df = pd.DataFrame()
     query_df = pd.DataFrame()
 
     # 遍历选择的分类
-    for category in selected_categories:
+    for category in category_list:
         # 获取该分类下的数据
         category_data = df[df[category] == 1]
 
@@ -90,8 +86,7 @@ def get_Nway_Kshot(df, category_list, way, shot, query):
 
         # 从该分类中移除支持集样本，剩下的样本作为查询集
         category_data = category_data.drop(support_samples.index)
-
-        # 随机选择n个样本作为查询集
+        # 随机选择1个样本作为查询集
         query_samples = category_data.sample(n=query)
         query_df = pd.concat([query_df, query_samples])
 
@@ -99,41 +94,15 @@ def get_Nway_Kshot(df, category_list, way, shot, query):
     return support_df, query_df
 
 
-# 线下跑店(店铺存在且售品) 1399条
-def get_labeled_dataloader(df, bert_tokenizer, label_list):
-    # 生成类别-id字典
-    # df['cat_id'] = df['storeType'].factorize()[0]
-    # cat_df = df[['storeType', 'cat_id']].drop_duplicates().sort_values('cat_id').reset_index(drop=True)
-    # cat_df.to_csv('./data/store_type_to_id.csv')
-
-    # 创建输入数据的空列表
-    input_ids = []
-    attention_masks = []
-    label2id_list = []
-    # 遍历数据集的每一行
-    for index, row in df.iterrows():
-        # 处理特征
-        encoded_dict = bert_tokenizer.encode_plus(
-            row['name'],
-            row['storeType'],
-            add_special_tokens=True,
-            max_length=14,
-            padding='max_length',
-            truncation=True,
-            return_tensors='pt'
-        )
-        input_ids.append(encoded_dict['input_ids'].squeeze())
-        attention_masks.append(encoded_dict['attention_mask'].squeeze())
-
-        # 处理类别
-        labels_tensor = torch.tensor([row[label] for label in label_list])
-        label2id_list.append(labels_tensor)
-
-    dataset = TensorDataset(torch.stack(input_ids), torch.stack(label2id_list), torch.stack(attention_masks))
+def define_dataloader(df, preprocess):
+    data_x = df['cut_word'].values
+    data_x = preprocess.get_pad_word2idx(data_x)
+    data_x = [torch.tensor(i) for i in data_x.tolist()]
+    dataset = TensorDataset(torch.stack(data_x))
     return dataset
 
 
-def get_dataloader_2(df, preprocess, label_list):
+def define_dataloader_2(df, preprocess, label_list):
     data_x = df['cut_word'].values
     data_x = preprocess.get_pad_word2idx(data_x)
     data_x = [torch.tensor(i) for i in data_x.tolist()]
@@ -150,60 +119,26 @@ def get_dataloader_2(df, preprocess, label_list):
     return dataset
 
 
-# 泛样本127w
-def get_unlabeled_dataloader(file_path, bert_tokenizer):
-    unlabeled_df = pd.read_csv(file_path, usecols=['store_id', 'name', 'category3_new'])
-    # cat2id_df = pd.read_csv('./data/category_to_id.csv')
-    # cat2id = dict(zip(cat2id_df['category3_new'], cat2id_df['cat_id']))
+def load_dataset(labeled_df, labels, preprocess):
+    # 采用最小包含算法采样
+    sq_set = get_Support_Query(labeled_df, labels, k=600)
+    # sq_set.to_csv('./data/test_support_set3.csv', index=False)
+    # sq_set = pd.read_csv('./data/test_support_set3.csv')
+    print('sq_set len:{}'.format(sq_set.shape[0]))
+    train_set, test_set = train_test_split(sq_set, test_size=0.2)
+    print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    support_set, query_set = set_Nway_Kshot(train_set, labels, len(labels), 32, 1)
 
-    # 创建输入数据的空列表
-    input_ids = []
-    attention_masks = []
+    # dataloader
+    support_dataset = define_dataloader(support_set, preprocess)
+    query_dataset = define_dataloader(query_set, preprocess)
+    test_dataset = define_dataloader_2(test_set, preprocess, labels)
 
-    # 遍历数据集的每一行
-    for index, row in unlabeled_df.iterrows():
-        # 处理特征
-        encoded_dict = bert_tokenizer.encode_plus(
-            row['name'],
-            row['storeType'],
-            add_special_tokens=True,
-            max_length=24,
-            padding='max_length',
-            truncation=True,
-            return_tensors='pt'
-        )
-        input_ids.append(encoded_dict['input_ids'].squeeze())
-        attention_masks.append(encoded_dict['attention_mask'].squeeze())
+    # 计算标签为0的占比,作为阈值
+    num_ones = torch.tensor((sq_set[labels] == 1).sum(axis=0))
+    ratio = num_ones / sq_set.shape[0]
 
-    # 创建TensorDataset对象
-    dataset = TensorDataset(torch.stack(input_ids), torch.stack(attention_masks))
-    # 创建DataLoader对象
-    dataloader = DataLoader(dataset, batch_size=batch_size)
-    return dataloader
-
-
-def threshold_EVA(y_pred, y_true, rs):
-    acc, pre, rec, f1 = torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0])
-    # 设置阈值
-    # rs = torch.mean(y_true.float(), dim=0)
-    # max_values, min_values = torch.max(y_pred, dim=0).values, torch.min(y_pred, dim=0).values
-    # thresholds = (max_values - min_values) * rs + min_values
-    # y_pred = torch.where(y_pred >= thresholds, torch.ones_like(y_pred), torch.zeros_like(y_pred))
-    y_pred = (y_pred > 0.5).int()  # 使用0.5作为阈值，大于阈值的为预测为正类
-    try:
-        # 准确率
-        correct = (y_pred == y_true).int()
-        acc = correct.sum() / (correct.shape[0] * correct.shape[1])
-        # acc = accuracy_score(y_pred, y_true)
-        # 精确率
-        pre = precision_score(y_pred, y_true, average='weighted')
-        # 召回率
-        rec = recall_score(y_pred, y_true, average='weighted')
-        # F1
-        f1 = f1_score(y_pred, y_true, average='weighted')
-    except Exception as e:
-        print(str(e))
-    return acc, pre, rec, f1
+    return support_dataset, query_dataset, test_dataset, ratio
 
 
 def multilabel_categorical_crossentropy(y_pred, y_true):
@@ -228,6 +163,32 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
     return torch.sum(neg_loss + pos_loss)
 
 
+# 评价指标
+def threshold_EVA(y_pred, y_true, rs):
+    acc, pre, rec, f1 = torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0])
+    # 设置阈值
+    # rs = torch.mean(y_true.float(), dim=0)
+    # max_values, min_values = torch.max(y_pred, dim=0).values, torch.min(y_pred, dim=0).values
+    # thresholds = (max_values - min_values) * rs + min_values
+    # y_pred = torch.where(y_pred >= thresholds, torch.ones_like(y_pred), torch.zeros_like(y_pred))
+    y_pred = (y_pred > 0.5).int()  # 使用0.5作为阈值，大于阈值的为预测为正类
+    try:
+        # 准确率
+        correct = (y_pred == y_true).int()
+        acc = correct.sum() / (correct.shape[0] * correct.shape[1])
+        # acc = accuracy_score(y_pred, y_true)
+        # 精确率
+        pre = precision_score(y_pred, y_true, average='weighted')
+        # 召回率
+        rec = recall_score(y_pred, y_true, average='weighted')
+        # F1
+        f1 = f1_score(y_pred, y_true, average='weighted')
+    except Exception as e:
+        print(str(e))
+    return acc, pre, rec, f1
+
+
+# 训练
 def training(support_set, query_set, model, r_list):
     support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
     query_loader = DataLoader(query_set, batch_size=batch_size, shuffle=False, drop_last=True)
@@ -277,6 +238,7 @@ def training(support_set, query_set, model, r_list):
     return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
+# 测试
 def evaluating(support_set, test_set, model, r_list):
     support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, drop_last=True)
@@ -316,6 +278,7 @@ def evaluating(support_set, test_set, model, r_list):
     return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
+# 预测
 def predicting(support_set, predict_set, model, r_list):
     support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
     predict_loader = DataLoader(predict_set, batch_size=batch_size, shuffle=False, drop_last=True)
@@ -339,42 +302,21 @@ def predicting(support_set, predict_set, model, r_list):
     return label_list
 
 
-# 获取数据集
-def get_dataset(labeled_df, labels):
-    # 采用最小包含算法采样
-    train_set, test_set = train_test_split(labeled_df, test_size=0.2)
-    print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    support_set = get_Support_Query(train_set, labels, k=600)
-    train_set = train_set.drop(support_set.index)
-    query_set = get_Support_Query(train_set, labels, k=200)
-    # support_set, query_set = get_Nway_Kshot(train_set, labels, 7, 64, 16)
-    print('support_set len:{} query_set len:{}'.format(support_set.shape[0], query_set.shape[0]))
-
-    support_set.to_csv('./data/test_support_set3.csv', index=False)
-    query_set.to_csv('./data/test_query_set3.csv', index=False)
-    test_set.to_csv('./data/test_test_set3.csv', index=False)
-
-
 # 训练 测试 分析
-def use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, save_path):
+def train_and_test(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, save_path):
     max_accuracy = 0.0
     for step in range(epochs):
-        train_acc_value, train_loss_value, train_prec_value, train_rec_value, train_f1_value = training(support_dataset,
-                                                                                                        query_dataset,
-                                                                                                        proto_model_2,
-                                                                                                        ratio)
-        test_acc_value, test_loss_value, test_prec_value, test_rec_value, test_f1_value = evaluating(support_dataset,
-                                                                                                     test_dataset,
-                                                                                                     proto_model_2,
-                                                                                                     ratio)
+        train_acc_value, train_loss_value, train_prec_value, \
+            train_rec_value, train_f1_value = training(support_dataset, query_dataset, proto_model_2, ratio)
+        test_acc_value, test_loss_value, test_prec_value, \
+            test_rec_value, test_f1_value = evaluating(support_dataset, test_dataset, proto_model_2, ratio)
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
-              "| 验证集 accuracy: {:.2%},loss:{:.4f}".format(step, train_acc_value, train_loss_value, test_acc_value,
-                                                             test_loss_value))
+              "| 验证集 accuracy: {:.2%},loss:{:.4f}"
+              .format(step, train_acc_value, train_loss_value, test_acc_value, test_loss_value))
         print("         -- 训练集 precision: {:.2%},recall: {:.2%},F1:{:.2%} "
-              "| 验证集 precision: {:.2%},recall: {:.2%},F1:{:.2%}".format(train_prec_value, train_rec_value,
-                                                                           train_f1_value, test_prec_value,
-                                                                           test_rec_value, test_f1_value)
-              )
+              "| 验证集 precision: {:.2%},recall: {:.2%},F1:{:.2%}"
+              .format(train_prec_value, train_rec_value, train_f1_value, test_prec_value, test_rec_value,
+                      test_f1_value))
         # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
         # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
 
@@ -382,65 +324,6 @@ def use_model(support_dataset, query_dataset, test_dataset, proto_model_2, ratio
         if test_acc_value > max_accuracy:
             max_accuracy = test_acc_value
             torch.save(proto_model_2.state_dict(), save_path)
-
-
-# bert模型
-def run_proto_bert():
-    features = ['name', 'storeType']
-    labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
-    # labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
-    #           '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
-    columns = ['store_id', 'drinkTypes']
-    columns.extend(features)
-    columns.extend(labels)
-
-    labeled_df = pd.read_csv(labeled_path, usecols=columns)
-    labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
-    labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
-
-    # # 采用最小包含算法采样
-    get_dataset(labeled_df, labels)
-
-    support_set = pd.read_csv('./data/test_support_set.csv')
-    query_set = pd.read_csv('./data/test_query_set.csv')
-    test_set = pd.read_csv('./data/test_test_set.csv')
-
-    # 计算标签为0的占比,作为阈值
-    num_ones = torch.tensor((support_set[labels] == 1).sum(axis=0))
-    ratio = num_ones / support_set.shape[0]
-
-    tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
-    bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
-    proto_model = ProtoTypicalNet(
-        bert_layer=bert_layer,
-        input_dim=768,
-        hidden_dim=128,
-        num_class=len(labels)
-    ).to(device)
-
-    # dataloader
-    support_dataset = get_labeled_dataloader(support_set, tokenizer, labels)
-    query_dataset = get_labeled_dataloader(query_set, tokenizer, labels)
-    test_dataset = get_labeled_dataloader(test_set, tokenizer, labels)
-
-    # 训练 测试 分析
-    use_model(support_dataset, query_dataset, test_dataset, proto_model, ratio, './models/proto_model.pth')
-
-    # 加载模型做预测
-    # get_unlabeled_dataloader(unlabeled_path, tokenizer)
-    proto_model = ProtoTypicalNet(
-        bert_layer=bert_layer,
-        input_dim=768,
-        hidden_dim=128,
-        num_class=len(labels)
-    ).to(device)
-
-    proto_model.load_state_dict(torch.load('./models/proto_model.pth'))
-    lable_result = predicting(support_dataset, test_dataset, proto_model, ratio)
-
-    drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([test_set[['name', 'storeType']], drink_df], axis=1)
-    predict_result.to_csv('./data/sku_predict_result.csv')
 
 
 # w2v模型
@@ -453,40 +336,28 @@ def run_proto_w2v():
     columns.extend(features)
     columns.extend(labels)
 
+    # 读取指定列，去除空值
     labeled_df = pd.read_csv(labeled_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
-
-    # 加载 data
+    # 清洗中文文本
     segment = WordSegment()
     labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
     preprocess = Preprocess(sen_len=5)
     embedding = preprocess.create_tokenizer()
 
-    # # 采用最小包含算法采样
-    # get_dataset(labeled_df, labels)
-
-    support_set = pd.read_csv('./data/test_support_set3.csv')
-    query_set = pd.read_csv('./data/test_query_set3.csv')
-    test_set = pd.read_csv('./data/test_test_set3.csv')
-    # dataloader
-    support_dataset = get_dataloader_2(support_set, preprocess, labels)
-    query_dataset = get_dataloader_2(query_set, preprocess, labels)
-    test_dataset = get_dataloader_2(test_set, preprocess, labels)
-
-    # 计算标签为0的占比,作为阈值
-    num_ones = torch.tensor((support_set[labels] == 1).sum(axis=0))
-    ratio = num_ones / support_set.shape[0]
+    support_dataset, query_dataset, test_dataset, ratio = load_dataset(labeled_df, labels, preprocess)
 
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
         hidden_dim=128,
-        num_class=len(labels)
-    ).to(device)
+        num_class=len(labels)).to(device)
 
     # 训练 测试 分析
-    use_model(support_dataset, support_dataset, support_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
+    train_and_test(support_dataset, support_dataset, support_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
+
+    print("=================================")
 
     # 加载模型做预测
     proto_model_2 = ProtoTypicalNet2(
@@ -495,15 +366,14 @@ def run_proto_w2v():
         hidden_dim=128,
         num_class=len(labels)
     ).to(device)
+
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
     lable_result = predicting(support_dataset, support_dataset, proto_model_2, ratio)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([support_set[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
+    predict_result = pd.concat([support_dataset[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result3.csv')
 
 
 if __name__ == '__main__':
-    # run_proto_bert()
-    #
     run_proto_w2v()
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123
