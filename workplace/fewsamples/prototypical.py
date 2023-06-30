@@ -1,4 +1,3 @@
-import random
 import warnings
 
 import numpy as np
@@ -6,7 +5,7 @@ import pandas as pd
 from icecream.icecream import ic
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
-from transformers import AutoTokenizer, AutoModel, AutoConfig
+from transformers import AutoTokenizer, AutoModel
 import torch
 from torch import nn
 from torch import optim
@@ -14,9 +13,6 @@ from torch.utils.data import TensorDataset, DataLoader
 from tensorboardX import SummaryWriter
 
 from models.proto_model import ProtoTypicalNet
-from models.proto_model_2 import ProtoTypicalNet2
-from workplace.fewsamples.preprocess_data import Preprocess
-from workplace.fewsamples.utils.mini_tool import WordSegment
 
 warnings.filterwarnings("ignore")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -27,7 +23,6 @@ pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 labeled_path = '../sv_report_data.csv'
 labeled_update_path = './data/is_7t1.csv'
 labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
-unlabeled_path = '../unlabeled_data.csv'
 
 token_max_length = 12
 batch_size = 16
@@ -225,8 +220,8 @@ def use_model(support_dataset, proto_model_2, ratio, save_path):
               "| 验证集 precision: {:.2%},recall: {:.2%},F1:{:.2%}"
               .format(train_prec_value, train_rec_value, train_f1_value, test_prec_value, test_rec_value,
                       test_f1_value))
-        # writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
-        # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
+        writer.add_scalars('acc', {'train_acc': train_acc_value, 'test_acc': test_acc_value}, global_step=step)
+        writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
 
         # 保存最佳模型
         if test_acc_value > max_accuracy:
