@@ -28,8 +28,9 @@ labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 token_max_length = 12
-batch_size = 16
-epochs = 25
+s_batch_size = 16
+q_batch_size = 16
+epochs = 5
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -70,7 +71,7 @@ def get_Support_Query(train_df, label_list, k=10):
 
 
 # 获取数据集
-def set_Nway_Kshot(df, category_list, way, shot, query):
+def set_Nway_Kshot(df, category_list, shot, query):
     # 创建一个空的DataFrame用于存储支持集和查询集
     support_df = pd.DataFrame()
     query_df = pd.DataFrame()
@@ -117,28 +118,6 @@ def define_dataloader_2(df, preprocess, label_list):
 
     dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list))
     return dataset
-
-
-def load_dataset(labeled_df, labels, preprocess):
-    # 采用最小包含算法采样
-    sq_set = get_Support_Query(labeled_df, labels, k=600)
-    # sq_set.to_csv('./data/test_support_set3.csv', index=False)
-    # sq_set = pd.read_csv('./data/test_support_set3.csv')
-    print('sq_set len:{}'.format(sq_set.shape[0]))
-    train_set, test_set = train_test_split(sq_set, test_size=0.2)
-    print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    support_set, query_set = set_Nway_Kshot(train_set, labels, len(labels), 32, 1)
-
-    # dataloader
-    support_dataset = define_dataloader(support_set, preprocess)
-    query_dataset = define_dataloader(query_set, preprocess)
-    test_dataset = define_dataloader_2(test_set, preprocess, labels)
-
-    # 计算标签为0的占比,作为阈值
-    num_ones = torch.tensor((sq_set[labels] == 1).sum(axis=0))
-    ratio = num_ones / sq_set.shape[0]
-
-    return support_dataset, query_dataset, test_dataset, ratio
 
 
 def multilabel_categorical_crossentropy(y_pred, y_true):
@@ -190,8 +169,8 @@ def threshold_EVA(y_pred, y_true, rs):
 
 # 训练
 def training(support_set, query_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
-    query_loader = DataLoader(query_set, batch_size=batch_size, shuffle=False, drop_last=True)
+    support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=False, drop_last=True)
+    query_loader = DataLoader(query_set, batch_size=q_batch_size, shuffle=False, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(weight=r_list, reduction='sum')
     # 使用Adam优化器
@@ -217,7 +196,6 @@ def training(support_set, query_set, model, r_list):
         # 4. 计算损失
         loss = criterion(output, query_input2.float())
         # loss = multilabel_categorical_crossentropy(output, query_input2.float())
-        # loss = torch.sum(output, dim=0)
         epoch_los += loss.item()
         # 5.预测结果
         accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
@@ -240,8 +218,8 @@ def training(support_set, query_set, model, r_list):
 
 # 测试
 def evaluating(support_set, test_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, drop_last=True)
+    support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=False, drop_last=True)
+    test_loader = DataLoader(test_set, batch_size=q_batch_size, shuffle=False, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(weight=r_list, reduction='sum')
 
@@ -280,8 +258,8 @@ def evaluating(support_set, test_set, model, r_list):
 
 # 预测
 def predicting(support_set, predict_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=batch_size, shuffle=False, drop_last=True)
-    predict_loader = DataLoader(predict_set, batch_size=batch_size, shuffle=False, drop_last=True)
+    support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=False, drop_last=True)
+    predict_loader = DataLoader(predict_set, batch_size=q_batch_size, shuffle=False, drop_last=True)
 
     model.eval()
     with torch.no_grad():
@@ -346,16 +324,32 @@ def run_proto_w2v():
     preprocess = Preprocess(sen_len=5)
     embedding = preprocess.create_tokenizer()
 
-    support_dataset, query_dataset, test_dataset, ratio = load_dataset(labeled_df, labels, preprocess)
+    # 采用最小包含算法采样
+    sq_set = get_Support_Query(labeled_df, labels, k=600)
+    # sq_set.to_csv('./data/test_support_set3.csv', index=False)
+    # sq_set = pd.read_csv('./data/test_support_set3.csv')
+    print('sq_set len:{}'.format(sq_set.shape[0]))
+    test_set = labeled_df.drop(sq_set.index)
+    support_set, query_set = train_test_split(sq_set, test_size=0.2)
+    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    # support_set, query_set = set_Nway_Kshot(train_set, labels, s_batch_size, q_batch_size)
+
+    # dataloader
+    support_dataset = define_dataloader_2(support_set, preprocess, labels)
+    query_dataset = define_dataloader_2(query_set, preprocess, labels)
+    test_dataset = define_dataloader_2(test_set, preprocess, labels)
+
+    # 计算标签为0的占比,作为阈值
+    num_ones = torch.tensor((sq_set[labels] == 1).sum(axis=0))
+    ratio = num_ones / sq_set.shape[0]
 
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
         hidden_dim=128,
         num_class=len(labels)).to(device)
-
     # 训练 测试 分析
-    train_and_test(support_dataset, support_dataset, support_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
+    train_and_test(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
 
     print("=================================")
 
@@ -368,9 +362,10 @@ def run_proto_w2v():
     ).to(device)
 
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
-    lable_result = predicting(support_dataset, support_dataset, proto_model_2, ratio)
+    lable_result = predicting(support_dataset, test_dataset, proto_model_2, ratio)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([support_dataset[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
+    source_df = support_set[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
+    predict_result = pd.concat([source_df, drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result3.csv')
 
 
