@@ -371,5 +371,4 @@ def run_proto_w2v():
 
 if __name__ == '__main__':
     run_proto_w2v()
-    # sdsa
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123
