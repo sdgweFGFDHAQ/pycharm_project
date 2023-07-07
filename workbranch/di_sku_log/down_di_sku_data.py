@@ -23,6 +23,10 @@ def count_matching_number(ta_list):
                  "left join standard_db.di_store_dedupe_labeling as dsdl on dff.store_id = dsdl.store_id" \
             .format()
 
+        #合并去重
+        # hbsql = "SELECT name, 'storeType', string_agg(DISTINCT drink_label, ',') AS drink_labels " \
+        #         "FROM di_sku_log_drink_temp GROUP BY name, 'storeType' limit 10"
+
         cursor.execute(sql)
         di_sku_log_sql = cursor.fetchall()
         di_sku_log_data = as_pandas(di_sku_log_sql)

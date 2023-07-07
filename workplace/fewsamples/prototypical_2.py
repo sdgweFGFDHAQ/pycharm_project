@@ -30,7 +30,7 @@ pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 token_max_length = 12
 s_batch_size = 16
 q_batch_size = 16
-epochs = 5
+epochs = 25
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -169,8 +169,8 @@ def threshold_EVA(y_pred, y_true, rs):
 
 # 训练
 def training(support_set, query_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=False, drop_last=True)
-    query_loader = DataLoader(query_set, batch_size=q_batch_size, shuffle=False, drop_last=True)
+    support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=True, drop_last=True)
+    query_loader = DataLoader(query_set, batch_size=q_batch_size, shuffle=True, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(weight=r_list, reduction='sum')
     # 使用Adam优化器
@@ -187,27 +187,22 @@ def training(support_set, query_set, model, r_list):
         # 2. 清空梯度
         optimizer.zero_grad()
         # 3. 计算输出
-        # output1 = model(support_input0, support_input2)
-        output = model(query_input0, None)
-        # 计算查询集标签到原型点的距离
-        # distances = torch.sqrt(torch.sum((output1 - output2) ** 2, dim=2))
-        # output = torch.sigmoid(-distances)
-        # outputs = outputs.squeeze(1)
+        output = model(support_input0, support_input2, query_input0)
         # 4. 计算损失
         loss = criterion(output, query_input2.float())
-        # loss = multilabel_categorical_crossentropy(output, query_input2.float())
+        # 5. 反向传播
+        loss.requires_grad_(True)
+        loss.backward()
+        # 6. 更新梯度
+        optimizer.step()
+        # 7.预测结果
         epoch_los += loss.item()
-        # 5.预测结果
         accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
         epoch_acc += accu.item()
         epoch_prec += precision.item()
         epoch_recall += recall.item()
         epoch_f1s += f1s.item()
-        # 6. 反向传播
-        loss.requires_grad_(True)
-        loss.backward()
-        # 7. 更新梯度
-        optimizer.step()
+
     loss_value = epoch_los / len(query_loader)
     acc_value = epoch_acc / len(query_loader)
     prec_value = epoch_prec / len(query_loader)
@@ -233,14 +228,9 @@ def evaluating(support_set, test_set, model, r_list):
             query_input0 = test_input[0].to(device, dtype=torch.long)
             query_input2 = test_input[1].to(device, dtype=torch.long)
             # 2. 计算输出
-            # output1 = model(support_input0, support_input2)
-            output = model(query_input0, None)
-            # 计算查询集标签到原型点的距离
-            # distances = torch.sqrt(torch.sum((output1 - output2) ** 2, dim=2))
-            # output = torch.sigmoid(-distances)
+            output = model(support_input0, support_input2, query_input0)
             # 3. 计算损失
             loss = criterion(output, query_input2.float())
-            # loss = torch.sum(output, dim=0)
             epoch_los += loss.item()
             # 4.预测结果
             accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
@@ -264,14 +254,13 @@ def predicting(support_set, predict_set, model, r_list):
     model.eval()
     with torch.no_grad():
         label_list = []
-        for i, (support_input, test_input) in enumerate(zip(support_loader, predict_loader)):
+        for i, (support_input, predict_input) in enumerate(zip(support_loader, predict_loader)):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
             support_input2 = support_input[1].to(device, dtype=torch.long)
-            query_input0 = test_input[0].to(device, dtype=torch.long)
+            query_input0 = predict_input[0].to(device, dtype=torch.long)
             # 2. 计算输出
-            # output = model(support_input0, support_input2)
-            output = model(query_input0, None)
+            output = model(support_input0, support_input2, query_input0)
             label_list.extend([tensor.numpy() for tensor in output])
         # max_values, min_values = np.max(label_list, axis=0), np.min(label_list, axis=0)
         # thresholds = (max_values - min_values) * r_list.numpy() + min_values
@@ -307,15 +296,14 @@ def train_and_test(support_dataset, query_dataset, test_dataset, proto_model_2, 
 # w2v模型
 def run_proto_w2v():
     features = ['name', 'storeType']
-    labels = ['碳酸饮料', '果汁', '茶饮', '水', '乳制品', '植物蛋白饮料', '功能饮料']
-    # labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
-    #           '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
+    labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
+              '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
     columns = ['drinkTypes']
     columns.extend(features)
     columns.extend(labels)
 
     # 读取指定列，去除空值
-    labeled_df = pd.read_csv(labeled_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
     # 清洗中文文本
