@@ -303,7 +303,7 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
-    sq_set = get_Support_Query(labeled_df, labels, k=5000)
+    sq_set = get_Support_Query(labeled_df, labels, k=2000)
     sq_set.to_csv('./data/test_support_set3.csv', index=False)
     print('sq_set len:{}'.format(sq_set.shape[0]))
     test_set = labeled_df.drop(sq_set.index)
@@ -340,7 +340,7 @@ def run_proto_w2v():
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
     lable_result = predicting(test_dataset, proto_model_2, ratio)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    source_df = support_set[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
+    source_df = test_set[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result3.csv')
 
