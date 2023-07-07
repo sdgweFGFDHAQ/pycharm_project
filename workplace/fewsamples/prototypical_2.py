@@ -304,9 +304,10 @@ def run_proto_w2v():
 
     # 采用最小包含算法采样
     sq_set = get_Support_Query(labeled_df, labels, k=2000)
-    sq_set.to_csv('./data/test_support_set3.csv', index=False)
+    # sq_set.to_csv('./data/test_support_set3.csv', index=False)
     print('sq_set len:{}'.format(sq_set.shape[0]))
     test_set = labeled_df.drop(sq_set.index)
+    # sq_set.to_csv('./data/test_support_set3.csv', index=False)
     # support_set, query_set = train_test_split(sq_set, test_size=0.2)
     # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
 
