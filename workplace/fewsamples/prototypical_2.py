@@ -29,7 +29,7 @@ pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 token_max_length = 12
 batch_size = 64
-epochs = 15
+epochs = 25
 
 
 def get_Support_Query(train_df, label_list, k=10):
