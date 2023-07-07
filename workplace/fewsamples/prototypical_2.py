@@ -28,8 +28,7 @@ labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 token_max_length = 12
-s_batch_size = 16
-q_batch_size = 16
+batch_size = 64
 epochs = 15
 
 
@@ -168,8 +167,8 @@ def threshold_EVA(y_pred, y_true, rs):
 
 
 # 训练
-def training(support_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=True, drop_last=True)
+def training(dataset, model, r_list):
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(weight=r_list, reduction='sum')
     # 使用Adam优化器
@@ -177,7 +176,7 @@ def training(support_set, model, r_list):
 
     model.train()
     epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
-    for i, support_input in enumerate(support_loader):
+    for i, support_input in enumerate(dataloader):
         # 1. 放到GPU上
         support_input0 = support_input[0].to(device, dtype=torch.long)
         support_input2 = support_input[1].to(device, dtype=torch.long)
@@ -200,30 +199,27 @@ def training(support_set, model, r_list):
         epoch_recall += recall.item()
         epoch_f1s += f1s.item()
 
-    loss_value = epoch_los / len(query_loader)
-    acc_value = epoch_acc / len(query_loader)
-    prec_value = epoch_prec / len(query_loader)
-    rec_value = epoch_recall / len(query_loader)
-    f1_value = epoch_f1s / len(query_loader)
+    loss_value = epoch_los / len(dataloader)
+    acc_value = epoch_acc / len(dataloader)
+    prec_value = epoch_prec / len(dataloader)
+    rec_value = epoch_recall / len(dataloader)
+    f1_value = epoch_f1s / len(dataloader)
     return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
 # 测试
-def evaluating(support_set, test_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=False, drop_last=True)
-    test_loader = DataLoader(test_set, batch_size=q_batch_size, shuffle=False, drop_last=True)
+def evaluating(dataset, model, r_list):
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(weight=r_list, reduction='sum')
 
     model.eval()
     with torch.no_grad():
         epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
-        for i, (support_input, test_input) in enumerate(zip(support_loader, test_loader)):
+        for i, support_input in enumerate(dataloader):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
             support_input2 = support_input[1].to(device, dtype=torch.long)
-            query_input0 = test_input[0].to(device, dtype=torch.long)
-            query_input2 = test_input[1].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(support_input0)
             # 3. 计算损失
@@ -235,29 +231,26 @@ def evaluating(support_set, test_set, model, r_list):
             epoch_prec += precision.item()
             epoch_recall += recall.item()
             epoch_f1s += f1s.item()
-        loss_value = epoch_los / len(test_loader)
-        acc_value = epoch_acc / len(test_loader)
-        prec_value = epoch_prec / len(test_loader)
-        rec_value = epoch_recall / len(test_loader)
-        f1_value = epoch_f1s / len(test_loader)
+        loss_value = epoch_los / len(dataloader)
+        acc_value = epoch_acc / len(dataloader)
+        prec_value = epoch_prec / len(dataloader)
+        rec_value = epoch_recall / len(dataloader)
+        f1_value = epoch_f1s / len(dataloader)
     return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
 # 预测
-def predicting(support_set, predict_set, model, r_list):
-    support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=False, drop_last=True)
-    predict_loader = DataLoader(predict_set, batch_size=q_batch_size, shuffle=False, drop_last=True)
+def predicting(dataset, model, r_list):
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
     model.eval()
     with torch.no_grad():
         label_list = []
-        for i, (support_input, predict_input) in enumerate(zip(support_loader, predict_loader)):
+        for i, support_input in enumerate(dataloader):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
-            support_input2 = support_input[1].to(device, dtype=torch.long)
-            query_input0 = predict_input[0].to(device, dtype=torch.long)
             # 2. 计算输出
-            output = model(support_input0, support_input2, query_input0)
+            output = model(support_input0)
             label_list.extend([tensor.numpy() for tensor in output])
         # max_values, min_values = np.max(label_list, axis=0), np.min(label_list, axis=0)
         # thresholds = (max_values - min_values) * r_list.numpy() + min_values
@@ -267,13 +260,13 @@ def predicting(support_set, predict_set, model, r_list):
 
 
 # 训练 测试 分析
-def train_and_test(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, save_path):
+def train_and_test(support_dataset, test_dataset, proto_model_2, ratio, save_path):
     max_accuracy = 0.0
     for step in range(epochs):
         train_acc_value, train_loss_value, train_prec_value, \
-            train_rec_value, train_f1_value = training(support_dataset, query_dataset, proto_model_2, ratio)
+            train_rec_value, train_f1_value = training(support_dataset, proto_model_2, ratio)
         test_acc_value, test_loss_value, test_prec_value, \
-            test_rec_value, test_f1_value = evaluating(support_dataset, test_dataset, proto_model_2, ratio)
+            test_rec_value, test_f1_value = evaluating(test_dataset, proto_model_2, ratio)
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}"
               .format(step, train_acc_value, train_loss_value, test_acc_value, test_loss_value))
@@ -310,18 +303,15 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
-    sq_set = get_Support_Query(labeled_df, labels, k=600)
-    # sq_set.to_csv('./data/test_support_set3.csv', index=False)
-    # sq_set = pd.read_csv('./data/test_support_set3.csv')
+    sq_set = get_Support_Query(labeled_df, labels, k=5000)
+    sq_set.to_csv('./data/test_support_set3.csv', index=False)
     print('sq_set len:{}'.format(sq_set.shape[0]))
     test_set = labeled_df.drop(sq_set.index)
-    support_set, query_set = train_test_split(sq_set, test_size=0.2)
+    # support_set, query_set = train_test_split(sq_set, test_size=0.2)
     # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
-    # support_set, query_set = set_Nway_Kshot(train_set, labels, s_batch_size, q_batch_size)
 
     # dataloader
-    support_dataset = define_dataloader_2(support_set, preprocess, labels)
-    query_dataset = define_dataloader_2(query_set, preprocess, labels)
+    support_dataset = define_dataloader_2(sq_set, preprocess, labels)
     test_dataset = define_dataloader_2(test_set, preprocess, labels)
 
     # 计算标签为0的占比,作为阈值
@@ -335,7 +325,7 @@ def run_proto_w2v():
         num_labels=len(labels)
     ).to(device)
     # 训练 测试 分析
-    train_and_test(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
+    train_and_test(support_dataset, test_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
 
     print("=================================")
 
@@ -348,7 +338,7 @@ def run_proto_w2v():
     ).to(device)
 
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
-    lable_result = predicting(support_dataset, test_dataset, proto_model_2, ratio)
+    lable_result = predicting(test_dataset, proto_model_2, ratio)
     drink_df = pd.DataFrame(lable_result, columns=labels)
     source_df = support_set[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
