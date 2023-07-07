@@ -30,7 +30,7 @@ pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 token_max_length = 12
 s_batch_size = 16
 q_batch_size = 16
-epochs = 1200
+epochs = 15
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -168,9 +168,8 @@ def threshold_EVA(y_pred, y_true, rs):
 
 
 # 训练
-def training(support_set, query_set, model, r_list):
+def training(support_set, model, r_list):
     support_loader = DataLoader(support_set, batch_size=s_batch_size, shuffle=True, drop_last=True)
-    query_loader = DataLoader(query_set, batch_size=q_batch_size, shuffle=True, drop_last=True)
 
     criterion = nn.BCEWithLogitsLoss(weight=r_list, reduction='sum')
     # 使用Adam优化器
@@ -178,18 +177,16 @@ def training(support_set, query_set, model, r_list):
 
     model.train()
     epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
-    for i, (support_input, query_input) in enumerate(zip(support_loader, query_loader)):
+    for i, support_input in enumerate(support_loader):
         # 1. 放到GPU上
         support_input0 = support_input[0].to(device, dtype=torch.long)
         support_input2 = support_input[1].to(device, dtype=torch.long)
-        query_input0 = query_input[0].to(device, dtype=torch.long)
-        query_input2 = query_input[1].to(device, dtype=torch.long)
         # 2. 清空梯度
         optimizer.zero_grad()
         # 3. 计算输出
-        output = model(support_input0, support_input2, query_input0)
+        output = model(support_input0)
         # 4. 计算损失
-        loss = criterion(output, query_input2.float())
+        loss = criterion(output, support_input2.float())
         # 5. 反向传播
         loss.requires_grad_(True)
         loss.backward()
@@ -197,7 +194,7 @@ def training(support_set, query_set, model, r_list):
         optimizer.step()
         # 7.预测结果
         epoch_los += loss.item()
-        accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
+        accu, precision, recall, f1s = threshold_EVA(output, support_input2, r_list)
         epoch_acc += accu.item()
         epoch_prec += precision.item()
         epoch_recall += recall.item()
@@ -228,12 +225,12 @@ def evaluating(support_set, test_set, model, r_list):
             query_input0 = test_input[0].to(device, dtype=torch.long)
             query_input2 = test_input[1].to(device, dtype=torch.long)
             # 2. 计算输出
-            output = model(support_input0, support_input2, query_input0)
+            output = model(support_input0)
             # 3. 计算损失
-            loss = criterion(output, query_input2.float())
+            loss = criterion(output, support_input2.float())
             epoch_los += loss.item()
             # 4.预测结果
-            accu, precision, recall, f1s = threshold_EVA(output, query_input2, r_list)
+            accu, precision, recall, f1s = threshold_EVA(output, support_input2, r_list)
             epoch_acc += accu.item()
             epoch_prec += precision.item()
             epoch_recall += recall.item()
@@ -335,7 +332,8 @@ def run_proto_w2v():
         embedding=embedding,
         embedding_dim=200,
         hidden_dim=128,
-        num_class=len(labels)).to(device)
+        num_labels=len(labels)
+    ).to(device)
     # 训练 测试 分析
     train_and_test(support_dataset, query_dataset, test_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
 
@@ -346,7 +344,7 @@ def run_proto_w2v():
         embedding=embedding,
         embedding_dim=200,
         hidden_dim=128,
-        num_class=len(labels)
+        num_labels=len(labels)
     ).to(device)
 
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
