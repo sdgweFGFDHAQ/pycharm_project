@@ -119,28 +119,6 @@ def define_dataloader_2(df, preprocess, label_list):
     return dataset
 
 
-def multilabel_categorical_crossentropy(y_pred, y_true):
-    """多标签分类的交叉熵
-    说明：y_true和y_pred的shape一致，y_true的元素非0即1，
-         1表示对应的类为目标类，0表示对应的类为非目标类。
-    警告：请保证y_pred的值域是全体实数，换言之一般情况下y_pred
-         不用加激活函数，尤其是不能加sigmoid或者softmax！预测
-         阶段则输出y_pred大于0的类。如有疑问，请仔细阅读并理解
-         本文。
-    """
-    y_pred = (1 - 2 * y_true) * y_pred
-    y_pred_neg = y_pred - y_true * 1e12
-    y_pred_pos = y_pred - (1 - y_true) * 1e12
-
-    zeros = torch.zeros_like(y_pred[..., :1])
-
-    y_pred_neg = torch.cat([y_pred_neg, zeros], dim=-1)
-    y_pred_pos = torch.cat([y_pred_pos, zeros], dim=-1)
-    neg_loss = torch.logsumexp(y_pred_neg, dim=-1)
-    pos_loss = torch.logsumexp(y_pred_pos, dim=-1)
-    return torch.sum(neg_loss + pos_loss)
-
-
 # 评价指标
 def threshold_EVA(y_pred, y_true, rs):
     acc, pre, rec, f1 = torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0])
@@ -170,7 +148,7 @@ def threshold_EVA(y_pred, y_true, rs):
 def training(dataset, model, r_list):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    criterion = nn.BCEWithLogitsLoss(reduction='sum')
+    criterion = nn.BCEWithLogitsLoss(reduction='mean')
     # 使用Adam优化器
     optimizer = optim.Adam(model.parameters(), lr=0.0002)
 
@@ -210,7 +188,7 @@ def training(dataset, model, r_list):
 def evaluating(dataset, model, r_list):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
-    criterion = nn.BCEWithLogitsLoss(reduction='sum')
+    criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
     model.eval()
     with torch.no_grad():
@@ -299,7 +277,7 @@ def run_proto_w2v():
     # 清洗中文文本
     segment = WordSegment()
     labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
-    preprocess = Preprocess(sen_len=5)
+    preprocess = Preprocess(sen_len=6)
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
