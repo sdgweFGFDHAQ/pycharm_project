@@ -116,7 +116,7 @@ def define_dataloader_2(df, preprocess, label_list):
     #     label2id_list.append(labels_tensor)
     for index, row in df.iterrows():
         # 处理类别
-        labels_tensor = torch.tensor([row['植物蛋白饮料']])
+        labels_tensor = torch.tensor([row['植物饮料']])
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list))
@@ -176,7 +176,7 @@ def training(dataset, model, r_list):
 
     criterion = nn.BCEWithLogitsLoss(reduction='sum')
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.05)
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
     model.train()
     epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
@@ -329,7 +329,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=128,
+        hidden_dim=32,
         num_labels=len(labels)
     ).to(device)
     # 训练 测试 分析
@@ -341,7 +341,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=128,
+        hidden_dim=32,
         num_labels=len(labels)
     ).to(device)
 

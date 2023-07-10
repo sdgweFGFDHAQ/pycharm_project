@@ -21,11 +21,11 @@ class ProtoTypicalNet2(nn.Module):
         # 原型网络核心
         self.proto_point = nn.Parameter(torch.randn(num_labels, hidden_dim))
 
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=3, batch_first=True, bidirectional=False)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
         self.prototype = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, hidden_dim)
+            nn.Linear(hidden_dim * 2, hidden_dim)
         )
 
         self.last = nn.Sequential(
