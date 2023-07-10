@@ -16,7 +16,7 @@ from models.proto_model import ProtoTypicalNet
 
 warnings.filterwarnings("ignore")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-writer = SummaryWriter('./logs/v1')
+# writer = SummaryWriter('./logs/v1')
 
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
@@ -267,10 +267,11 @@ def run_proto_bert():
         num_class=len(labels)
     ).to(device)
 
+    labeled_dataset = get_labeled_dataloader(labeled_df, tokenizer, labels)
     proto_model.load_state_dict(torch.load('./models/proto_model.pth'))
-    lable_result = predicting(test_dataset, proto_model)
+    lable_result = predicting(labeled_dataset, proto_model)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([test_dataset[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
+    predict_result = pd.concat([labeled_df[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result.csv')
 
 
