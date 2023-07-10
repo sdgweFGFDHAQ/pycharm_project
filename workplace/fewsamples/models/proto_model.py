@@ -42,6 +42,6 @@ class ProtoTypicalNet(nn.Module):
 
         x_pt = self.prototype(inputs_embedding)
         distances = torch.cdist(x_pt, self.proto_point)
-        output = self.last(distances)
+        output = self.last((1 / (distances + 10e-6)))
 
         return output
