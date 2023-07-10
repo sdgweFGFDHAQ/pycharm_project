@@ -227,7 +227,7 @@ def run_proto_bert():
     features = ['name', 'storeType']
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
               '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
-    columns = ['store_id', 'drinkTypes']
+    columns = ['drinkTypes']
     columns.extend(features)
     columns.extend(labels)
 
@@ -270,7 +270,7 @@ def run_proto_bert():
     proto_model.load_state_dict(torch.load('./models/proto_model.pth'))
     lable_result = predicting(test_dataset, proto_model)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([test_dataset[['store_id', 'name', 'storeType', 'drinkTypes']], drink_df], axis=1)
+    predict_result = pd.concat([test_dataset[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result.csv')
 
 
