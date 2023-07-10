@@ -23,13 +23,13 @@ class ProtoTypicalNet2(nn.Module):
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=3, batch_first=True, bidirectional=True)
 
         self.prototype = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim * 2, hidden_dim)
         )
 
         self.last = nn.Sequential(
-            nn.Dropout(dropout),
             nn.Linear(num_labels, num_labels),
+            nn.Dropout(dropout),
             nn.Sigmoid()
         )
 
@@ -43,7 +43,7 @@ class ProtoTypicalNet2(nn.Module):
         x_pt = self.prototype(x)
         distances = torch.cdist(x_pt, self.proto_point)
 
-        output = self.last(distances)
+        output = self.last((1 / (distances + 10e-6)))
         return output
 
     # def forward(self, s_inputs, label, q_inputs):
