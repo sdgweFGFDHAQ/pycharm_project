@@ -110,13 +110,9 @@ def define_dataloader_2(df, preprocess, label_list):
     # 创建输入数据的空列表
     label2id_list = []
     # 遍历数据集的每一行
-    # for index, row in df.iterrows():
-    #     # 处理类别
-    #     labels_tensor = torch.tensor([row[label] for label in label_list])
-    #     label2id_list.append(labels_tensor)
     for index, row in df.iterrows():
         # 处理类别
-        labels_tensor = torch.tensor([row['植物饮料']])
+        labels_tensor = torch.tensor([row[label] for label in label_list])
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list))
@@ -307,16 +303,14 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
-    # sq_set = get_Support_Query(labeled_df, labels, k=2000)
-    # print('sq_set len:{}'.format(sq_set.shape[0]))
+    sq_set = get_Support_Query(labeled_df, labels, k=2000)
+    print('sq_set len:{}'.format(sq_set.shape[0]))
     # sq_set.to_csv('./data/test_sq_set_set2.csv', index=False)
-    # test_set = labeled_df.drop(sq_set.index)
-    # print('test_set len:{}'.format(test_set.shape[0]))
+    test_set = labeled_df.drop(sq_set.index)
+    print('test_set len:{}'.format(test_set.shape[0]))
     # test_set.to_csv('./data/test_test_set2.csv', index=False)
-    sq_set = pd.read_csv('./data/test_sq_set_set2.csv')
-    test_set = pd.read_csv('./data/test_test_set2.csv')
-    # support_set, query_set = train_test_split(sq_set, test_size=0.2)
-    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
+    # sq_set = pd.read_csv('./data/test_sq_set_set2.csv')
+    # test_set = pd.read_csv('./data/test_test_set2.csv')
 
     # dataloader
     support_dataset = define_dataloader_2(sq_set, preprocess, labels)
@@ -329,7 +323,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=32,
+        hidden_dim=64,
         num_labels=len(labels)
     ).to(device)
     # 训练 测试 分析
@@ -341,13 +335,13 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=32,
+        hidden_dim=64,
         num_labels=len(labels)
     ).to(device)
 
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
     lable_result = predicting(test_dataset, proto_model_2, ratio)
-    drink_df = pd.DataFrame(lable_result, columns=['labels'])
+    drink_df = pd.DataFrame(lable_result, columns=labels)
     source_df = test_set[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result3.csv')

@@ -11,7 +11,6 @@ class ProtoTypicalNet2(nn.Module):
         super(ProtoTypicalNet2, self).__init__()
         self.input_dim = embedding_dim
         self.hidden_dim = hidden_dim
-        num_labels = 1
         self.num_labels = num_labels
 
         # 线性层进行编码
