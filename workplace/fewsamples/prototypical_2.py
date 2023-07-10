@@ -116,7 +116,7 @@ def define_dataloader_2(df, preprocess, label_list):
     #     label2id_list.append(labels_tensor)
     for index, row in df.iterrows():
         # 处理类别
-        labels_tensor = torch.tensor([row['植物饮料']])
+        labels_tensor = torch.tensor([row['植物蛋白饮料']])
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list))
@@ -176,7 +176,7 @@ def training(dataset, model, r_list):
 
     criterion = nn.BCEWithLogitsLoss(reduction='sum')
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = optim.Adam(model.parameters(), lr=0.05)
 
     model.train()
     epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
@@ -291,6 +291,7 @@ def run_proto_w2v():
     features = ['name', 'storeType']
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
               '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
+    # labels = ["碳酸饮料", "果汁", "茶饮", "水", "乳制品", "植物蛋白饮料", "功能饮料"]
     columns = ['drinkTypes']
     columns.extend(features)
     columns.extend(labels)
@@ -306,11 +307,14 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
-    sq_set = get_Support_Query(labeled_df, labels, k=2000)
-    print('sq_set len:{}'.format(sq_set.shape[0]))
-    test_set = labeled_df.drop(sq_set.index)
-    print('test_set len:{}'.format(test_set.shape[0]))
-    # test_set.to_csv('./data/test_test_set3.csv', index=False)
+    # sq_set = get_Support_Query(labeled_df, labels, k=2000)
+    # print('sq_set len:{}'.format(sq_set.shape[0]))
+    # sq_set.to_csv('./data/test_sq_set_set2.csv', index=False)
+    # test_set = labeled_df.drop(sq_set.index)
+    # print('test_set len:{}'.format(test_set.shape[0]))
+    # test_set.to_csv('./data/test_test_set2.csv', index=False)
+    sq_set = pd.read_csv('./data/test_sq_set_set2.csv')
+    test_set = pd.read_csv('./data/test_test_set2.csv')
     # support_set, query_set = train_test_split(sq_set, test_size=0.2)
     # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
 
