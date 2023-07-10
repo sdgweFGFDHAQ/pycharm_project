@@ -323,7 +323,7 @@ def run_proto_w2v():
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
     lable_result = predicting(labeled_dataset, proto_model_2, ratio)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    source_df = test_set[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
+    source_df = labeled_df[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result3.csv')
 
