@@ -28,7 +28,7 @@ class ProtoTypicalNet(nn.Module):
 
         self.prototype = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim * 2, hidden_dim)
+            nn.Linear(input_dim, hidden_dim)
         )
 
         self.last = nn.Sequential(
