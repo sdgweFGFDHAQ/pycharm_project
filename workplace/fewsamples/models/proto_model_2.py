@@ -11,17 +11,24 @@ class ProtoTypicalNet2(nn.Module):
         super(ProtoTypicalNet2, self).__init__()
         self.input_dim = embedding_dim
         self.hidden_dim = hidden_dim
+        num_labels = 1
         self.num_labels = num_labels
 
         # 线性层进行编码
         self.embedding = nn.Embedding(embedding.size(0), embedding.size(1))
         self.embedding.weight = nn.Parameter(embedding, requires_grad=requires_grad)
-        # 对多标签编码
-        self.proto_point = nn.Parameter(torch.randn(num_labels, hidden_dim * 2))
+
         # 原型网络核心
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
+        self.proto_point = nn.Parameter(torch.randn(num_labels, hidden_dim))
+
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=3, batch_first=True, bidirectional=False)
 
         self.prototype = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim)
+        )
+
+        self.last = nn.Sequential(
             nn.Dropout(dropout),
             nn.Linear(num_labels, num_labels),
             nn.Sigmoid()
@@ -30,12 +37,14 @@ class ProtoTypicalNet2(nn.Module):
     def forward(self, inputs):
         embedding_inputs = self.embedding(inputs)
         embedding_inputs = embedding_inputs.to(torch.float32)
+
         x_inputs, _ = self.lstm(embedding_inputs)
         x = x_inputs[:, -1, :]
 
-        distances = torch.cdist(x, self.proto_point)
-        output = self.prototype(1 / (distances + 1e-6))
+        x_pt = self.prototype(x)
+        distances = torch.cdist(x_pt, self.proto_point)
 
+        output = self.last(distances)
         return output
 
     # def forward(self, s_inputs, label, q_inputs):
@@ -65,4 +74,3 @@ class ProtoTypicalNet2(nn.Module):
     #     distances = torch.sqrt(torch.sum((c.unsqueeze(0) - q_feature.unsqueeze(1)) ** 2, dim=2))
     #     output = self.prototype(-distances)
     #     return output
-

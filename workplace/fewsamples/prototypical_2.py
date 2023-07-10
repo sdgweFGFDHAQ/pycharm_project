@@ -29,7 +29,7 @@ pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 token_max_length = 12
 batch_size = 64
-epochs = 25
+epochs = 15
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -110,9 +110,13 @@ def define_dataloader_2(df, preprocess, label_list):
     # 创建输入数据的空列表
     label2id_list = []
     # 遍历数据集的每一行
+    # for index, row in df.iterrows():
+    #     # 处理类别
+    #     labels_tensor = torch.tensor([row[label] for label in label_list])
+    #     label2id_list.append(labels_tensor)
     for index, row in df.iterrows():
         # 处理类别
-        labels_tensor = torch.tensor([row[label] for label in label_list])
+        labels_tensor = torch.tensor([row['植物饮料']])
         label2id_list.append(labels_tensor)
 
     dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list))
@@ -170,9 +174,9 @@ def threshold_EVA(y_pred, y_true, rs):
 def training(dataset, model, r_list):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    criterion = nn.BCEWithLogitsLoss(weight=r_list, reduction='sum')
+    criterion = nn.BCEWithLogitsLoss(reduction='sum')
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.0002)
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
     model.train()
     epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
@@ -187,7 +191,6 @@ def training(dataset, model, r_list):
         # 4. 计算损失
         loss = criterion(output, support_input2.float())
         # 5. 反向传播
-        loss.requires_grad_(True)
         loss.backward()
         # 6. 更新梯度
         optimizer.step()
@@ -209,9 +212,9 @@ def training(dataset, model, r_list):
 
 # 测试
 def evaluating(dataset, model, r_list):
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
-    criterion = nn.BCEWithLogitsLoss(weight=r_list, reduction='sum')
+    criterion = nn.BCEWithLogitsLoss(reduction='sum')
 
     model.eval()
     with torch.no_grad():
@@ -241,7 +244,7 @@ def evaluating(dataset, model, r_list):
 
 # 预测
 def predicting(dataset, model, r_list):
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
     model.eval()
     with torch.no_grad():
@@ -304,10 +307,10 @@ def run_proto_w2v():
 
     # 采用最小包含算法采样
     sq_set = get_Support_Query(labeled_df, labels, k=2000)
-    # sq_set.to_csv('./data/test_support_set3.csv', index=False)
     print('sq_set len:{}'.format(sq_set.shape[0]))
     test_set = labeled_df.drop(sq_set.index)
-    # sq_set.to_csv('./data/test_support_set3.csv', index=False)
+    print('test_set len:{}'.format(test_set.shape[0]))
+    # test_set.to_csv('./data/test_test_set3.csv', index=False)
     # support_set, query_set = train_test_split(sq_set, test_size=0.2)
     # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
 
@@ -340,7 +343,7 @@ def run_proto_w2v():
 
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
     lable_result = predicting(test_dataset, proto_model_2, ratio)
-    drink_df = pd.DataFrame(lable_result, columns=labels)
+    drink_df = pd.DataFrame(lable_result, columns=['labels'])
     source_df = test_set[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result3.csv')
