@@ -20,7 +20,7 @@ class ProtoTypicalNet2(nn.Module):
         # 原型网络核心
         self.proto_point = nn.Parameter(torch.randn(num_labels, hidden_dim))
 
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
 
         self.prototype = nn.Sequential(
             nn.Dropout(dropout),
@@ -39,7 +39,7 @@ class ProtoTypicalNet2(nn.Module):
 
         x_inputs, _ = self.lstm(embedding_inputs)
         x = x_inputs[:, -1, :]
-
+        # ic(x)
         x_pt = self.prototype(x)
         distances = torch.cdist(x_pt, self.proto_point)
 

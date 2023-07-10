@@ -29,7 +29,7 @@ pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 token_max_length = 12
 batch_size = 64
-epochs = 15
+epochs = 10
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -172,7 +172,7 @@ def training(dataset, model, r_list):
 
     criterion = nn.BCEWithLogitsLoss(reduction='sum')
     # 使用Adam优化器
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = optim.Adam(model.parameters(), lr=0.0002)
 
     model.train()
     epoch_los, epoch_acc, epoch_prec, epoch_recall, epoch_f1s = 0.0, 0.0, 0.0, 0.0, 0.0
@@ -303,14 +303,16 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
-    sq_set = get_Support_Query(labeled_df, labels, k=2000)
-    print('sq_set len:{}'.format(sq_set.shape[0]))
+    # sq_set = get_Support_Query(labeled_df, labels, k=2000)
+    # print('sq_set len:{}'.format(sq_set.shape[0]))
     # sq_set.to_csv('./data/test_sq_set_set2.csv', index=False)
-    test_set = labeled_df.drop(sq_set.index)
-    print('test_set len:{}'.format(test_set.shape[0]))
+    # test_set = labeled_df.drop(sq_set.index)
+    # print('test_set len:{}'.format(test_set.shape[0]))
     # test_set.to_csv('./data/test_test_set2.csv', index=False)
-    # sq_set = pd.read_csv('./data/test_sq_set_set2.csv')
-    # test_set = pd.read_csv('./data/test_test_set2.csv')
+    sq_set = pd.read_csv('./data/test_sq_set_set2.csv')
+    test_set = pd.read_csv('./data/test_test_set2.csv')
+    # support_set, query_set = train_test_split(sq_set, test_size=0.2)
+    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
 
     # dataloader
     support_dataset = define_dataloader_2(sq_set, preprocess, labels)
@@ -323,7 +325,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=64,
+        hidden_dim=32,
         num_labels=len(labels)
     ).to(device)
     # 训练 测试 分析
@@ -335,12 +337,13 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=64,
+        hidden_dim=32,
         num_labels=len(labels)
     ).to(device)
 
+    labeled_dataset = define_dataloader_2(labeled_df, preprocess, labels)
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
-    lable_result = predicting(test_dataset, proto_model_2, ratio)
+    lable_result = predicting(labeled_dataset, proto_model_2, ratio)
     drink_df = pd.DataFrame(lable_result, columns=labels)
     source_df = test_set[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
