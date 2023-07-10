@@ -26,7 +26,7 @@ labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
 
 token_max_length = 12
 batch_size = 16
-epochs = 150
+epochs = 30
 
 
 def get_Support_Query(train_df, label_list, k=10):
