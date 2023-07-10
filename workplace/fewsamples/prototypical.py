@@ -231,7 +231,7 @@ def run_proto_bert():
     columns.extend(features)
     columns.extend(labels)
 
-    labeled_df = pd.read_csv(labeled_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
 
