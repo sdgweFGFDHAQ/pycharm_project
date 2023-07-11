@@ -7,7 +7,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class ProtoTypicalNet2(nn.Module):
-    def __init__(self, embedding, embedding_dim, hidden_dim, num_labels, dropout=0.5, requires_grad=False):
+    def __init__(self, embedding, embedding_dim, hidden_dim, num_labels, dropout=0.3, requires_grad=False):
         super(ProtoTypicalNet2, self).__init__()
         self.input_dim = embedding_dim
         self.hidden_dim = hidden_dim

@@ -281,14 +281,10 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
-    # sq_set = get_Support_Query(labeled_df, labels, k=2000)
-    # print('sq_set len:{}'.format(sq_set.shape[0]))
-    # sq_set.to_csv('./data/test_sq_set_set2.csv', index=False)
-    # test_set = labeled_df.drop(sq_set.index)
-    # print('test_set len:{}'.format(test_set.shape[0]))
-    # test_set.to_csv('./data/test_test_set2.csv', index=False)
-    sq_set = pd.read_csv('./data/test_sq_set_set2.csv')
-    test_set = pd.read_csv('./data/test_test_set2.csv')
+    sq_set = get_Support_Query(labeled_df, labels, k=2000)
+    print('sq_set len:{}'.format(sq_set.shape[0]))
+    test_set = labeled_df.drop(sq_set.index)
+    print('test_set len:{}'.format(test_set.shape[0]))
     # support_set, query_set = train_test_split(sq_set, test_size=0.2)
     # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
 
