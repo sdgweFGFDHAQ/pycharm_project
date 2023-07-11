@@ -10,6 +10,7 @@ import pandas as pd
 import torch
 from sklearn import preprocessing
 from icecream.icecream import ic
+from torch import nn
 
 
 def resub():
@@ -80,8 +81,15 @@ def multilabel_categorical_crossentropy(y_true, y_pred):
 
 
 if __name__ == '__main__':
-    crossentropy = multilabel_categorical_crossentropy(
-        torch.tensor([[1, 1, 1], [1, 0, 1], [0, 0, 0]]),
-        torch.tensor([[0.8, 0.6, 0.9], [0.7, -0.2, 0.1], [0.2, -0.6, -0.7]])
+    # crossentropy = multilabel_categorical_crossentropy(
+    #     torch.tensor([[1, 1, 1], [1, 0, 1], [0, 0, 0]]),
+    #     torch.tensor([[0.8, 0.6, 0.9], [0.7, -0.2, 0.1], [0.2, -0.6, -0.7]])
+    # )
+    # print(crossentropy)
+
+    criterion = nn.BCELoss(reduction='mean')
+    ou = criterion(
+        torch.tensor([[1., 1., 1.], [1., 0., 1.], [0., 0., 0.]]),
+        torch.tensor([[1., 1., 1.], [1., 1., 1.], [0., 0., 0.]])
     )
-    print(crossentropy)
+    print(ou)

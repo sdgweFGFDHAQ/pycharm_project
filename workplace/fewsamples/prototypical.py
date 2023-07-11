@@ -271,7 +271,8 @@ def run_proto_bert():
     proto_model.load_state_dict(torch.load('./models/proto_model.pth'))
     lable_result = predicting(labeled_dataset, proto_model)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    predict_result = pd.concat([labeled_df[['name', 'storeType', 'drinkTypes']], drink_df], axis=1)
+    source_df = labeled_df[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
+    predict_result = pd.concat([source_df, drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result.csv')
 
 

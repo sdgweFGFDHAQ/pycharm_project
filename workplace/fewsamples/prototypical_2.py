@@ -303,7 +303,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=64,
+        hidden_dim=32,
         num_labels=len(labels)
     ).to(device)
     # 训练 测试 分析
@@ -315,7 +315,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=64,
+        hidden_dim=32,
         num_labels=len(labels)
     ).to(device)
 
