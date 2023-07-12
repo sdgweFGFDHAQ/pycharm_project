@@ -94,14 +94,6 @@ def set_Nway_Kshot(df, category_list, shot, query):
     return support_df, query_df
 
 
-def define_dataloader(df, preprocess):
-    data_x = df['cut_word'].values
-    data_x = preprocess.get_pad_word2idx(data_x)
-    data_x = [torch.tensor(i) for i in data_x.tolist()]
-    dataset = TensorDataset(torch.stack(data_x))
-    return dataset
-
-
 def define_dataloader_2(df, preprocess, label_list):
     data_x = df['cut_word'].values
     data_x = preprocess.get_pad_word2idx(data_x)

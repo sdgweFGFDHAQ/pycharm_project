@@ -113,39 +113,6 @@ def test_KNsamples():
                  21, 22, 23, 24, 25]
     })
 
-    # 随机选择3个分类
-    selected_categories = random.sample(list(df['category'].unique()), 3)
-
-    # 创建一个空的DataFrame用于存储支持集和查询集
-    support_set = pd.DataFrame()
-    query_set = pd.DataFrame()
-
-    # 遍历选择的分类
-    for category in selected_categories:
-        # 获取该分类下的数据
-        category_data = df[df['category'] == category]
-
-        # 随机选择3个样本作为支持集
-        support_samples = category_data.sample(n=3)
-
-        # 将支持集添加到支持集DataFrame中
-        support_set = pd.concat([support_set, support_samples])
-
-        # 从该分类中移除支持集样本，剩下的样本作为查询集
-        category_data = category_data.drop(support_samples.index)
-
-        # 随机选择2个样本作为查询集
-        query_samples = category_data.sample(n=2)
-
-        # 将查询集添加到查询集DataFrame中
-        query_set = pd.concat([query_set, query_samples])
-
-    print("Support Set:")
-    print(support_set)
-    print()
-    print("Query Set:")
-    print(query_set)
-
 
 def createData():
     text_list_pos = ["电影内容很好", "电影题材很好", "演员演技很好", "故事很感人", "电影特效很好"]
