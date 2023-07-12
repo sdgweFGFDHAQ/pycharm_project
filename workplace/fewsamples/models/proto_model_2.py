@@ -29,20 +29,30 @@ class ProtoTypicalNet2(nn.Module):
 
         self.last = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(num_labels, num_labels),
-            nn.Sigmoid()
+            nn.Linear(num_labels, num_labels)
         )
+
+        self.convs = nn.ModuleList(
+            [nn.Sequential(nn.Conv1d(in_channels=embedding_dim, out_channels=hidden_dim, kernel_size=fs),
+                           nn.ReLU(),
+                           nn.MaxPool1d(kernel_size=6-fs+1))
+             for fs in [2, 3, 4]])
 
     def forward(self, inputs):
         embedding_inputs = self.embedding(inputs)
         embedding_inputs = embedding_inputs.to(torch.float32)
 
+        # embedding_inputs = embedding_inputs.permute(0, 2, 1)
+        # xi = [conv(embedding_inputs) for conv in self.convs]
+        # x = torch.cat(xi, dim=1)
+        # x = x.view(-1, x.size(1))
+
         x_inputs, _ = self.lstm(embedding_inputs)
         x = x_inputs[:, -1, :]
         # ic(x)
+
         x_pt = self.prototype(x)
         distances = torch.cdist(x_pt, self.proto_point)
-
         output = self.last((1 / (distances + 10e-6)))
         return output
 
