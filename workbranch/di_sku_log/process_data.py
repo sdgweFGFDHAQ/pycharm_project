@@ -53,8 +53,8 @@ if __name__ == '__main__':
     merge_multiple_categories('C:\\Users\\86158\\Desktop\\export_202307051821.csv',
                               'C:\\Users\\86158\\Desktop\\di_sku_log_data_temp.csv',
                               ['store_id', 'series_name', 'name', 'category1_new', 'category2_new', 'category3_new',
-                               'drink_label'],
-                              ['store_id', 'name', 'storeType', 'drink_label'])
+                               'predict_category', 'drink_label'],
+                              ['store_id', 'name', 'storeType', 'predict_category', 'drink_label'])
     # 中间需要使用sql合并
     # process_data('di_sku_log_data_temp.csv',
     #              'di_sku_log_drink_labels.csv',

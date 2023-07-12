@@ -29,7 +29,7 @@ pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 token_max_length = 12
 batch_size = 64
-epochs = 15
+epochs = 20
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -247,8 +247,9 @@ def train_and_test(support_dataset, test_dataset, proto_model_2, ratio, save_pat
         # writer.add_scalars('loss', {'train_loss': train_loss_value, 'test_loss': test_loss_value}, global_step=step)
 
         # 保存最佳模型
-        if test_acc_value > max_accuracy:
-            max_accuracy = test_acc_value
+        # if test_acc_value > max_accuracy:
+        #     max_accuracy = test_acc_value
+        if step == epochs - 1:
             torch.save(proto_model_2.state_dict(), save_path)
 
 
@@ -291,7 +292,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=32,
+        hidden_dim=64,
         num_labels=len(labels)
     ).to(device)
     # 训练 测试 分析
@@ -303,7 +304,7 @@ def run_proto_w2v():
     proto_model_2 = ProtoTypicalNet2(
         embedding=embedding,
         embedding_dim=200,
-        hidden_dim=32,
+        hidden_dim=64,
         num_labels=len(labels)
     ).to(device)
 
