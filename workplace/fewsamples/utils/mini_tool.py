@@ -5,21 +5,21 @@ from torch.utils.data import Dataset
 
 # 分词工具类
 class WordSegment:
-    def __init__(self):
-        self.set_jieba()
+    def __init__(self, prefix='../resources'):
+        self.set_jieba(prefix)
         self.stop_words = set()
-        self.load_stop_words('../resources/stopwords.txt')
+        self.load_stop_words(prefix + '/stopwords.txt')
 
         # 设置不可分割的词
 
-    def set_jieba(self):
-        jieba.load_userdict("../resources/statename.txt")
-        jieba.load_userdict("../resources/cityname.txt")
-        jieba.load_userdict("../resources/distinctname.txt")
-        jieba.load_userdict("../resources/symbol.txt")
-        jieba.load_userdict("../resources/namenoise.txt")
+    def set_jieba(self, prefix):
+        jieba.load_userdict(prefix + "/statename.txt")
+        jieba.load_userdict(prefix + "/cityname.txt")
+        jieba.load_userdict(prefix + "/distinctname.txt")
+        jieba.load_userdict(prefix + "/symbol.txt")
+        jieba.load_userdict(prefix + "/namenoise.txt")
         # 自定义词集
-        jieba.load_userdict('../resources/indiv_words.txt')
+        jieba.load_userdict(prefix + '/indiv_words.txt')
 
     # 外部加载停用词集 file_path=../resources/stopwords.txt
     def load_stop_words(self, file_path):

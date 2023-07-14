@@ -50,7 +50,7 @@ def process_data(source_path, target_path, required_column_list):
 
 
 if __name__ == '__main__':
-    merge_multiple_categories('C:\\Users\\86158\\Desktop\\export_202307051821.csv',
+    merge_multiple_categories('C:\\Users\\86158\\Desktop\\export_202307131400.csv',
                               'C:\\Users\\86158\\Desktop\\di_sku_log_data_temp.csv',
                               ['store_id', 'series_name', 'name', 'category1_new', 'category2_new', 'category3_new',
                                'predict_category', 'drink_label'],
