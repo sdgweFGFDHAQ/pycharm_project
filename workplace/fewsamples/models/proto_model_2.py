@@ -30,12 +30,12 @@ class ProtoTypicalNet2(nn.Module):
         self.last = nn.Sequential(
             nn.Dropout(dropout),
             nn.Linear(num_labels, num_labels)
-        )
+        )  # 面对二分类，在竖轴上使用softmax
 
         self.convs = nn.ModuleList(
             [nn.Sequential(nn.Conv1d(in_channels=embedding_dim, out_channels=hidden_dim, kernel_size=fs),
                            nn.ReLU(),
-                           nn.MaxPool1d(kernel_size=6-fs+1))
+                           nn.MaxPool1d(kernel_size=6 - fs + 1))
              for fs in [2, 3, 4]])
 
     def forward(self, inputs):
