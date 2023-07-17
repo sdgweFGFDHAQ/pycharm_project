@@ -2,6 +2,7 @@ import numpy
 import numpy as np
 import pandas as pd
 import torch
+from icecream import ic
 from sklearn.model_selection import train_test_split
 from torch import optim, nn
 from torch.utils.data import TensorDataset, DataLoader
@@ -29,6 +30,7 @@ def difine_dataset(df, tokenizer, label_list):
     data_x = df['cut_word'].values
     data_x = tokenizer.get_pad_word2idx(data_x)
     data_x = [torch.tensor(i) for i in data_x.tolist()]
+    df_index = [torch.tensor(i) for i in df.index]
 
     # 创建输入数据的空列表
     label2id_list = []
@@ -38,7 +40,7 @@ def difine_dataset(df, tokenizer, label_list):
         labels_tensor = torch.tensor([row[label] for label in label_list])
         label2id_list.append(labels_tensor)
 
-    dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list), torch.stack(df.index))
+    dataset = TensorDataset(torch.stack(data_x), torch.stack(label2id_list), torch.stack(df_index))
     return dataset
 
 
@@ -139,16 +141,16 @@ def rerun():
     while condition < threshold:
         neg_index_temp = np.random.choice(unl_index, replace=True, size=len(pos_index))
         remaining_index = list(set(unl_index) - set(neg_index_temp))
-        train_dataset = difine_dataset(labeled_df.loc[pos_index + neg_index_temp], tokenizer, labels)
+        train_dataset = difine_dataset(labeled_df.loc[list(set(pos_index) | set(neg_index_temp))], tokenizer, labels)
         eval_dataset = difine_dataset(labeled_df.loc[remaining_index], tokenizer, labels)
-        for _ in range(epoch):
+        for i in range(epoch):
             # (1)使用正样本和泛洋本训练分类器
             train_acc_value, train_loss_value = training(train_dataset, model)
             # (2)对泛样本打分，选取概率最高的作为负样本，重新生成样本集csv文件
             eval_acc_value, eval_loss_value = evaluating(eval_dataset, model)
             print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
                   "| 验证集 accuracy: {:.2%},loss:{:.4f}"
-                  .format(epoch, train_acc_value, train_loss_value, eval_acc_value, eval_loss_value))
+                  .format(i, train_acc_value, train_loss_value, eval_acc_value, eval_loss_value))
         score = predicting(eval_dataset, model)
         # (4)最终我们拿到了N次的预测结果，取平均作为最终的预测概率
         score_sum.loc[remaining_index, 0] += score
