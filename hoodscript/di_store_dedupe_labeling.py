@@ -33,7 +33,7 @@ for csv_i in range(8):
     # 读取csv文件输出字典
     data = []
     try:
-        with sftp_client.open("/home/data/temp/zzx/predict_data/predict_category_" + str(csv_i) + ".csv") as f:
+        with sftp_client.open("/home/data/temp/zhouzx/predict_data/test/predict_category_" + str(csv_i) + ".csv") as f:
             for row in csv.DictReader(f, skipinitialspace=True):
                 dict_line = dict(row)
                 data.append(dict_line)
@@ -50,7 +50,7 @@ for csv_i in range(8):
     spark = cm.sparkenv()
 
     df = spark.createDataFrame(data) \
-        .selectExpr("cast(store_id as long) as store_id", "name", "category3_new", "predict_category")
+        .selectExpr("cast(store_id as long) as store_id", "name", "category1_new as category3_new", "predict_category")
     df.printSchema()
 
     # df = spark.read.option("header", "true").csv("/tmp/export/all.csv") \

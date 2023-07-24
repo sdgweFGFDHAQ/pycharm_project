@@ -258,13 +258,13 @@ def run_proto_w2v():
     features = ['name', 'storeType']
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
               '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
-    # labels = ["碳酸饮料", "果汁", "茶饮", "水", "乳制品", "植物蛋白饮料", "功能饮料"]
+    labels = ["碳酸饮料", "果汁", "茶饮", "水", "乳制品", "植物蛋白饮料", "功能饮料"]
     columns = ['drinkTypes']
     columns.extend(features)
     columns.extend(labels)
 
     # 读取指定列，去除空值
-    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_update_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
     # 清洗中文文本
@@ -274,9 +274,10 @@ def run_proto_w2v():
     embedding = preprocess.create_tokenizer()
 
     # 采用最小包含算法采样
-    sq_set = get_Support_Query(labeled_df, labels, k=2000)
+    sq_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    # sq_set = get_Support_Query(labeled_df, labels, k=2000)
     print('sq_set len:{}'.format(sq_set.shape[0]))
-    test_set = labeled_df.drop(sq_set.index)
+    # test_set = labeled_df.drop(sq_set.index)
     print('test_set len:{}'.format(test_set.shape[0]))
     # support_set, query_set = train_test_split(sq_set, test_size=0.2)
     # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
@@ -311,7 +312,7 @@ def run_proto_w2v():
     labeled_dataset = define_dataloader_2(labeled_df, preprocess, labels)
     proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
     lable_result = predicting(labeled_dataset, proto_model_2, ratio)
-    drink_df = pd.DataFrame(lable_result, columns=labels)
+    drink_df = pd.DataFrame(lable_result, columns=[str(label) + 'predict' for label in labels])
     source_df = labeled_df[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result3.csv')
