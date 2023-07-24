@@ -6,7 +6,7 @@ from icecream import ic
 
 # 提取json字段，附在原始数据后
 def extract_data(*args):
-    df = pd.read_excel('../data_score/store_visit_report.xls')
+    df = pd.read_excel('../data_analysis/store_visit_report.xls')
     print(df.columns)
     df_t = df[df['is_exist'] == 't'].copy()
     column_dict = {}
@@ -27,7 +27,7 @@ def getname(df, col_dict):
 
 # 处理json字段，抽出分类所需的特征，生成新的csv文件
 def get_source_data(column_list):
-    df = pd.read_excel('../data_score/store_visit_report.xls')
+    df = pd.read_excel('../data_analysis/store_visit_report.xls')
     print('线下跑店获取的字段列名：'.format(df.columns))
     df_t = df[df['is_exist'] == 't'].copy()
 
@@ -94,16 +94,16 @@ def process_data1(path, required_column_list):
 
 if __name__ == '__main__':
     # 用于原型网络的input
-    # df = get_source_data('../data_score/store_visit_report.xls',
+    # df = get_source_data('../data_analysis/store_visit_report.xls',
     #                      ['name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes', 'address',
     #                       'productTypes','cashierCount', 'location'])
     # df.to_csv('temp_sv_report.csv')
     # 处理 '卖什么商品' 字段
-    # process_data('../data_score/store_visit_report.xls',
+    # process_data('../data_analysis/store_visit_report.xls',
     #              ['name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes'])
     # extract_data('name', 'storeType', 'stackingState', 'iceBoxState', 'drinkTypes')
 
-    df = process_data1('../data_score/di_sku_log_single_drink_labels.csv', ['name', 'store_category', 'drink_labels'])
+    df = process_data1('../data_analysis/di_sku_log_single_drink_labels.csv', ['name', 'store_category', 'drink_labels'])
 '''
 存在店铺的数据量：1734条！有所售商品类别的数据量:1399条！
 碳酸饮料:1307

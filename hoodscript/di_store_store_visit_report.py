@@ -31,7 +31,7 @@ sftp_client = connect.open_sftp()
 # 读取csv文件输出字典
 data = []
 try:
-    with sftp_client.open("/home/data/temp/zzx/workbranch/data_score/store_visit_report.csv") as f:
+    with sftp_client.open("/home/data/temp/zzx/workbranch/data_analysis/store_visit_report.csv") as f:
         for row in csv.DictReader(f, skipinitialspace=True):
             dict_line = dict(row)
             data.append(dict_line)
