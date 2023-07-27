@@ -23,7 +23,7 @@ def download_data():
         data_list = cursor.fetchall()
         df = pd.DataFrame(data_list,
                           columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point', 'category1_new'])
-        df.to_csv(out_url + 'workbranch/sample3000/' + city + '.csv',
+        df.to_csv(out_url + 'workbranch/ifexist_sample3k/' + city + '.csv',
                   columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point', 'category1_new'], mode='w')
     # 第二部分
     cursor.execute(
@@ -35,7 +35,7 @@ def download_data():
     df = pd.DataFrame(recall_data,
                       columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point', 'category1_new'])
     samp = pd.concat([df, samp], ignore_index=True)
-    samp.to_csv(out_url + 'workbranch/sample3000/ifexists_samples.csv',
+    samp.to_csv(out_url + 'workbranch/ifexist_sample3k/ifexists_samples.csv',
                 columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point', 'category1_new'], mode='w')
     cursor.close()
     conn.close()

@@ -1,6 +1,5 @@
 # from impala.dbapi import connect
 from pyhive import hive
-from impala.util import as_pandas
 import pandas as pd
 
 
@@ -19,7 +18,7 @@ def count_matching_number(ta_list):
                  "dssdl.series_name,dssdl.sku_name,dssdl.drink_label " \
                  "from standard_db.di_store_sku_drink_label dssdl " \
                  "inner join standard_db.di_sku as ds on dssdl.sku_code = ds.sku_code) ds " \
-                 "inner join standard_db.di_store_dedupe as dsd on dsd.appcode like '%高德%' and dsd.appcode like '%,%' and ds.store_id = dsd.id) dff " \
+                 "inner join standard_db.di_store_dedupe as dsd on dsd.appcode <> '高德' and ds.store_id = dsd.id) dff " \
                  "left join standard_db.di_store_dedupe_labeling as dsdl on dff.store_id = dsdl.store_id" \
             .format()
 
@@ -29,10 +28,14 @@ def count_matching_number(ta_list):
 
         cursor.execute(sql)
         di_sku_log_sql = cursor.fetchall()
-        di_sku_log_data = as_pandas(di_sku_log_sql)
+        di_sku_log_data = pd.DataFrame(di_sku_log_sql,
+                          columns=["store_id", "sku_code", "brand_name", "series_name", "sku_name",
+                                   "category1_new", "category2_new", "category3_new", "name",
+                                   "predict_category", "drink_label"]).set_index("id")
         di_sku_log_data.to_csv('di_sku_log_data.csv')
-    except Exception:
+    except Exception as e:
         print("出错了！")
+        print(e)
     finally:
         # 关闭连接
         cursor.close()

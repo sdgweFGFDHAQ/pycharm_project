@@ -31,7 +31,7 @@ sftp_client = connect.open_sftp()
 # 读取csv文件输出字典
 data = []
 try:
-    with sftp_client.open("/home/data/temp/zzx/workplace/ifexist_hivesql/result_df.csv") as f:
+    with sftp_client.open("/home/data/temp/zzx/workbranch/data_analysis/sku_drink_label.csv") as f:
         for row in csv.DictReader(f, skipinitialspace=True):
             dict_line = dict(row)
             data.append(dict_line)
@@ -43,12 +43,14 @@ ssh.close()
 print("read data success: " + str(len(data)))
 
 # 定义变量
-table_name = 'di_store_dedupe_ifexists'
+table_name = 'di_store_sku_drink_label'
 cm = pySparkCm(table_name)
 spark = cm.sparkenv()
 
 df = spark.createDataFrame(data) \
-    .selectExpr("cast(storeid as long) as store_id", "weight", "percentage")
+    .selectExpr('cast(useless_id as long) as useless_id', 'brand_name', 'series_name', 'sku_name', 'sku_code', 'drink_label')
+print('==========df===============')
+print(df)
 df.printSchema()
 
 # df = spark.read.option("header", "true").csv("/tmp/export/all.csv") \
@@ -57,5 +59,5 @@ df.printSchema()
 
 # 写入表
 print("write data count=" + str(df.count()))
-cm.write_to_hudi(df, 'standard_db', 'di_store_dedupe_ifexists', 'store_id', '', 'store_id', 'append', 'insert')
+cm.write_to_hudi(df, 'standard_db', 'di_store_sku_drink_label', 'useless_id', '', 'useless_id', 'append', 'insert')
 print("Complete!")

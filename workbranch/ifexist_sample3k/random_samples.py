@@ -16,7 +16,7 @@ def datafram_samples():
     result = pd.DataFrame(
         columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point', 'category1_new'])
     for i in range(len(cities)):
-        path_sta = '/home/data/temp/zzx/workbranch/sample3000/' + str(cities[i]) + '.csv'
+        path_sta = '/home/data/temp/zzx/workbranch/ifexist_sample3k/' + str(cities[i]) + '.csv'
         city_i = pd.read_csv(path_sta, index_col=0)
         csv_i = city_i[city_i['district'] == districts[i]]
         dr_df = csv_i[csv_i['category1_new'].isin(drink)]
@@ -35,17 +35,17 @@ def datafram_samples():
                 dd2 = group
             print(cities[i], key, len(dd2.index))
             result = pd.concat([result, dd2], ignore_index=True)
-    path_recall = '/home/data/temp/zzx/workbranch/sample3000/ifexists_samples.csv'
+    path_recall = '/home/data/temp/zzx/workbranch/ifexist_sample3k/ifexists_samples.csv'
     csv_recall = pd.read_csv(path_recall, index_col=0)
     csv_recall = csv_recall.groupby('district').sample(n=60, random_state=23)
     result_data = pd.concat([result, csv_recall], ignore_index=True)
-    result_data.to_csv('/home/data/temp/zzx/workbranch/sample3000/3000samples_v0.csv',
+    result_data.to_csv('/home/data/temp/zzx/workbranch/ifexist_sample3k/3000samples_v0.csv',
                        columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point',
                                 'category1_new'],
                        index=False)
     # 分区排序
     result_data = result_data.groupby(['district', 'township']).sample(frac=1)
-    result_data.to_csv('/home/data/temp/zzx/workbranch/sample3000/3000samples_v1.csv',
+    result_data.to_csv('/home/data/temp/zzx/workbranch/ifexist_sample3k/3000samples_v1.csv',
                        columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point',
                                 'category1_new'],
                        index=False)
@@ -62,7 +62,7 @@ def single_district():
     result = pd.DataFrame(
         columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point', 'category1_new'])
     for i in range(len(cities)):
-        path_sta = '/home/data/temp/zzx/workbranch/sample3000/' + str(cities[i]) + '.csv'
+        path_sta = '/home/data/temp/zzx/workbranch/ifexist_sample3k/' + str(cities[i]) + '.csv'
         city_i = pd.read_csv(path_sta, index_col=0)
         csv_i = city_i[city_i['district'] == districts[i]]
         dr_df = csv_i[csv_i['category1_new'].isin(drink)]
@@ -81,17 +81,17 @@ def single_district():
                 dd2 = group
             print(cities[i], key, len(dd2.index))
             result = pd.concat([result, dd2], ignore_index=True)
-    path_recall = '/home/data/temp/zzx/workbranch/sample3000/ie_samples.csv'
+    path_recall = '/home/data/temp/zzx/workbranch/ifexist_sample3k/ie_samples.csv'
     csv_recall = pd.read_csv(path_recall, index_col=0)
     csv_recall = csv_recall.groupby('district').sample(n=70, random_state=23)
     result_data = pd.concat([result, csv_recall], ignore_index=True)
-    result_data.to_csv('/home/data/temp/zzx/workbranch/sample3000/samples_v1.0.csv',
+    result_data.to_csv('/home/data/temp/zzx/workbranch/ifexist_sample3k/samples_v1.0.csv',
                        columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point',
                                 'category1_new'],
                        index=False)
     # 分区排序
     result_data = result_data.groupby(['township']).sample(frac=1)
-    result_data.to_csv('/home/data/temp/zzx/workbranch/sample3000/samples_v1.1.csv',
+    result_data.to_csv('/home/data/temp/zzx/workbranch/ifexist_sample3k/samples_v1.1.csv',
                        columns=['id', 'name', 'namepath', 'city', 'district', 'township', 'address', 'geo_point',
                                 'category1_new'],
                        index=False)

@@ -4,23 +4,33 @@ import xlrd
 from icecream import ic
 
 
-def merge_multiple_categories(source_path, target_path, use_columns, save_columns):
-    csv_data = pd.read_csv(source_path, usecols=use_columns, keep_default_na=False)
+def merge_multiple_categories(source_path, target_path, use_cols, keep_cols, merge_col):
+    csv_data = pd.read_csv(source_path, usecols=use_cols, keep_default_na=False)
     csv_data.drop_duplicates(keep='first', inplace=True)
-    print(csv_data.shape[0])
+    print("非单源高德 原始数据集：", csv_data.shape[0])
 
-    csv_data['storeType'] = csv_data['category3_new']
+    # 修改列名
+    csv_data['storeType'] = csv_data['category1_new']
+    save_cols = keep_cols + [merge_col]
 
     # 用一级标签填充空白(NAN)的二级标签、三级标签
     # 删除至少有3个NaN值的行 # data = data.dropna(axis=0, thresh=3)
-    csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
-    csv_data['storeType'].fillna(csv_data['category2_new'], inplace=True)
+    # csv_data['category2_new'].fillna(csv_data['category1_new'], inplace=True)
+    # csv_data['storeType'].fillna(csv_data['category2_new'], inplace=True)
     # csv_data['storeType'].fillna(csv_data['predict_category'], inplace=True)
     # csv_data = csv_data[csv_data['storeType'].notnull() & (csv_data['storeType'] != '')]
-    csv_result = csv_data[save_columns]
+
+    csv_result = csv_data[save_cols]
     csv_result.drop_duplicates(keep='first', inplace=True)
-    print(csv_result.shape[0])
-    csv_result.to_csv(target_path, columns=save_columns)
+    print("去重数据集：", csv_result.shape[0])
+    csv_result = csv_result.set_index(keep_cols)
+
+    # 合并售卖的商品
+    grouped = csv_result.groupby(by=keep_cols)
+    result = grouped.agg({merge_column: lambda x: set(x)})
+    result = result.reset_index()
+    print("合并饮料商品：", result.shape[0])
+    result.to_csv(target_path, index=False, columns=save_cols)
 
 
 def process_data(source_path, target_path, required_column_list):
@@ -50,11 +60,13 @@ def process_data(source_path, target_path, required_column_list):
 
 
 if __name__ == '__main__':
-    merge_multiple_categories('C:\\Users\\86158\\Desktop\\export_202307131400.csv',
-                              'C:\\Users\\86158\\Desktop\\di_sku_log_data_temp.csv',
-                              ['store_id', 'series_name', 'name', 'category1_new', 'category2_new', 'category3_new',
-                               'predict_category', 'drink_label'],
-                              ['store_id', 'name', 'storeType', 'predict_category', 'drink_label'])
+    read_path = 'C:\\Users\\86158\\Desktop\\export_202307261353.csv'
+    save_path = 'C:\\Users\\86158\\Desktop\\di_sku_log_data_temp.csv'
+    use_columns = ['store_id', 'name', 'category1_new', 'predict_category', 'drink_label']
+    keep_columns = ['store_id', 'name', 'storeType', 'predict_category']
+    merge_column = 'drink_label'
+    merge_multiple_categories(read_path, save_path, use_columns, keep_columns, merge_column)
+
     # 中间需要使用sql合并
     # process_data('di_sku_log_data_temp.csv',
     #              'di_sku_log_drink_labels.csv',
