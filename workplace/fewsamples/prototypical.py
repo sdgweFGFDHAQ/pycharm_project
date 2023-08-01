@@ -20,9 +20,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
-labeled_path = '../sv_report_data.csv'
 labeled_update_path = './data/is_7t1.csv'
 labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
+labeled_di_sku_path2 = './data/di_sku_log_chain_data.csv'
 
 token_max_length = 12
 batch_size = 16
@@ -104,6 +104,8 @@ def threshold_EVA(y_pred, y_true):
         correct = (y_pred == y_true).int()
         acc = correct.sum() / (correct.shape[0] * correct.shape[1])
         # acc = accuracy_score(y_pred, y_true)
+        y_pred = y_pred.cpu().numpy()
+        y_true = y_true.cpu().numpy()
         # 精确率
         pre = precision_score(y_pred, y_true, average='weighted')
         # 召回率
@@ -115,10 +117,10 @@ def threshold_EVA(y_pred, y_true):
     return acc, pre, rec, f1
 
 
-def training(dataset, model):
+def training(dataset, model, rt):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    criterion = nn.BCEWithLogitsLoss(reduction='sum')
+    criterion = nn.BCEWithLogitsLoss(reduction='mean', weight=rt)
     # 使用Adam优化器
     optimizer = optim.Adam(model.parameters(), lr=0.0002)
 
@@ -152,10 +154,10 @@ def training(dataset, model):
     return acc_value, loss_value, prec_value, rec_value, f1_value
 
 
-def evaluating(dataset, model):
+def evaluating(dataset, model, rt):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
-    criterion = nn.BCEWithLogitsLoss(reduction='sum')
+    criterion = nn.BCEWithLogitsLoss(reduction='mean', weight=rt)
 
     model.eval()
     with torch.no_grad():
@@ -193,19 +195,19 @@ def predicting(dataset, model):
             feature = support_input[0].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(feature)
-            label_list.extend([tensor.numpy() for tensor in output])
+            label_list.extend([tensor.cpu().numpy() for tensor in output])
         label_list = [[np.where(arr > 0.5, 1, 0) for arr in row] for row in label_list]
     return label_list
 
 
 # 训练 测试 分析
-def train_and_test(support_dataset, test_dataset, proto_model, save_path):
+def train_and_test(support_dataset, test_dataset, proto_model, save_path, ratio):
     max_accuracy = 0.0
     for step in range(epochs):
         train_acc_value, train_loss_value, train_prec_value, \
-            train_rec_value, train_f1_value = training(support_dataset, proto_model)
+            train_rec_value, train_f1_value = training(support_dataset, proto_model, ratio)
         test_acc_value, test_loss_value, test_prec_value, \
-            test_rec_value, test_f1_value = evaluating(test_dataset, proto_model)
+            test_rec_value, test_f1_value = evaluating(test_dataset, proto_model, ratio)
         print("epochs:{} 训练集 accuracy: {:.2%},loss:{:.4f} "
               "| 验证集 accuracy: {:.2%},loss:{:.4f}"
               .format(step, train_acc_value, train_loss_value, test_acc_value, test_loss_value))
@@ -236,7 +238,7 @@ def run_proto_bert():
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
 
     # 采用最小包含算法采样
-    sq_set = get_Support_Query(labeled_df, labels, k=2000)
+    sq_set = get_Support_Query(labeled_df, labels, k=2500)
     print('sq_set len:{}'.format(sq_set.shape[0]))
     test_set = labeled_df.drop(sq_set.index)
     print('test_set len:{}'.format(test_set.shape[0]))
@@ -247,6 +249,10 @@ def run_proto_bert():
     support_dataset = get_labeled_dataloader(sq_set, tokenizer, labels)
     test_dataset = get_labeled_dataloader(test_set, tokenizer, labels)
 
+    # 计算标签为1的占比,作为阈值
+    num_ones = torch.tensor((sq_set[labels] == 1).sum(axis=0))
+    ratio = num_ones / sq_set.shape[0]
+
     bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
     proto_model = ProtoTypicalNet(
         bert_layer=bert_layer,
@@ -256,7 +262,7 @@ def run_proto_bert():
     ).to(device)
 
     # 训练 测试 分析
-    train_and_test(support_dataset, test_dataset, proto_model, './models/proto_model.pth')
+    train_and_test(support_dataset, test_dataset, proto_model, ratio, './models/proto_model.pth')
     print("=================================")
 
     # 加载模型做预测

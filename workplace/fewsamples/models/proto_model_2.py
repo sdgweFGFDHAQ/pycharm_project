@@ -23,14 +23,18 @@ class ProtoTypicalNet2(nn.Module):
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=3, batch_first=True, bidirectional=True)
 
         self.prototype = nn.Sequential(
+            nn.BatchNorm1d(hidden_dim * 2),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.ReLU()
         )
 
         self.last = nn.Sequential(
+            nn.BatchNorm1d(num_labels),
             nn.Dropout(dropout),
-            nn.Linear(num_labels, num_labels)
-        )  # 面对二分类，在竖轴上使用softmax
+            nn.Linear(num_labels, num_labels),
+            nn.Sigmoid()
+        )
 
         self.convs = nn.ModuleList(
             [nn.Sequential(nn.Conv1d(in_channels=embedding_dim, out_channels=hidden_dim, kernel_size=fs),
@@ -46,14 +50,13 @@ class ProtoTypicalNet2(nn.Module):
         # xi = [conv(embedding_inputs) for conv in self.convs]
         # x = torch.cat(xi, dim=1)
         # x = x.view(-1, x.size(1))
-
         x_inputs, _ = self.lstm(embedding_inputs)
         x = x_inputs[:, -1, :]
-        # ic(x)
 
         x_pt = self.prototype(x)
         distances = torch.cdist(x_pt, self.proto_point)
-        output = self.last((1 / (distances + 10e-6)))
+        output = self.last(1 / (distances + 10e-6))
+        # output = self.last(-distances)
         return output
 
     # def forward(self, s_inputs, label, q_inputs):
@@ -83,3 +86,42 @@ class ProtoTypicalNet2(nn.Module):
     #     distances = torch.sqrt(torch.sum((c.unsqueeze(0) - q_feature.unsqueeze(1)) ** 2, dim=2))
     #     output = self.prototype(-distances)
     #     return output
+
+
+class ProtoTypicalNet3(nn.Module):
+    # accuracy: 89.27%比原型网络好
+    def __init__(self, embedding, embedding_dim, hidden_dim, num_labels, dropout=0.3, requires_grad=False):
+        super(ProtoTypicalNet3, self).__init__()
+        self.input_dim = embedding_dim
+        self.hidden_dim = hidden_dim
+        self.num_labels = num_labels
+
+        # 线性层进行编码
+        self.embedding = nn.Embedding(embedding.size(0), embedding.size(1))
+        self.embedding.weight = nn.Parameter(embedding, requires_grad=requires_grad)
+
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=3, batch_first=True, bidirectional=True)
+
+        self.prototype = nn.Sequential(
+            nn.BatchNorm1d(hidden_dim * 2),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim * 2, hidden_dim),
+        )
+
+        self.last = nn.Sequential(
+            nn.BatchNorm1d(hidden_dim),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, num_labels),
+            nn.Sigmoid()
+        )
+
+    def forward(self, inputs):
+        embedding_inputs = self.embedding(inputs)
+        embedding_inputs = embedding_inputs.to(torch.float32)
+
+        x_inputs, _ = self.lstm(embedding_inputs)
+        x = x_inputs[:, -1, :]
+
+        x_pt = self.prototype(x)
+        output = self.last(x_pt)
+        return output

@@ -60,13 +60,18 @@ class EDA(object):
         :return:
         """
         new_words = words.copy()
-        random_word_list = list(set([word for word in words]))
-        random.shuffle(random_word_list)
+        unique_words = []
+        for word in new_words:
+            if word not in unique_words:
+                unique_words.append(word)
+        weights = [i + 1 for i in range(len(unique_words))]
         num_replaced = 0
-        for random_word in random_word_list:
+        for _ in range(len(unique_words)):
+            random_word = random.choices(unique_words, weights=weights)[0]
             synonyms_words = self.get_synonyms(random_word)
+            weights.reverse()
             if len(synonyms_words) >= 1:
-                synonym = random.choice(synonyms_words)
+                synonym = random.choices(synonyms_words, weights=weights)[0]
                 new_words = [synonym if word == random_word else word for word in new_words]
                 num_replaced += 1
             if num_replaced >= n:

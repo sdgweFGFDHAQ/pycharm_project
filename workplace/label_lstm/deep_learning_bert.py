@@ -18,7 +18,6 @@ from model_bert import BertLSTMNet
 from preprocess_data import Preprocess
 from global_parameter import StaticParameter as SP
 from mini_tool import WordSegment, error_callback
-import gc
 
 warnings.filterwarnings("ignore", category=UserWarning)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -59,10 +58,14 @@ def set_file_standard_data(city, part_i):
 
 
 def typicalsamling(group, threshold):
-    if len(group.index) > threshold:
+    count = len(group.index)
+    if count > threshold:
         return group.sample(n=threshold, random_state=23)
     else:
-        return group.sample(frac=1)
+        percent, multiple = 0.3, 8  # 超参数，考虑缓解样本不平衡但不过多增加训练集 选择的比例
+        completion = round(percent * (threshold - count))
+        fraction = group.sample(n=min(multiple * count, completion), random_state=23)
+        return pd.concat([group, fraction])
 
 
 def random_get_trainset(is_labeled=True, labeled_is_all=False):
@@ -82,7 +85,7 @@ def random_get_trainset(is_labeled=True, labeled_is_all=False):
             else:
                 # 部分数据
                 # standard_df_i = df_i.groupby('category3_new').sample(frac=0.12, random_state=23)
-                standard_df_i = df_i.groupby('category3_new').apply(typicalsamling, 2000)
+                standard_df_i = df_i.groupby('category3_new').apply(typicalsamling, 1800)
         else:
             df_i = df_i[df_i['category3_new'] == '']
             standard_df_i = df_i
@@ -252,10 +255,10 @@ def search_best_dataset(dataset, embedding, category_count):
             input_dim=768,
             hidden_dim=128,
             num_classes=category_count,
-            num_layers=2
+            num_layers=1
         ).to(device)
-        train_ip = DataLoader(dataset=train_dataset, batch_size=256, shuffle=True, drop_last=True)
-        test_ip = DataLoader(dataset=val_dataset, batch_size=256, shuffle=False, drop_last=True)
+        train_ip = DataLoader(dataset=train_dataset, batch_size=512, shuffle=True, drop_last=True)
+        test_ip = DataLoader(dataset=val_dataset, batch_size=512, shuffle=False, drop_last=True)
         accuracy_list = list()
         # run epochs
         for ep in range(epochs):
@@ -275,13 +278,13 @@ def search_best_model(train_set, test_set, embedding, category_count):
         input_dim=768,
         hidden_dim=128,
         num_classes=category_count,
-        num_layers=2
+        num_layers=1
     ).to(device)
-    train_ip = DataLoader(dataset=train_set, batch_size=256, shuffle=True, drop_last=True)
-    test_ip = DataLoader(dataset=test_set, batch_size=256, shuffle=False, drop_last=True)
+    train_ip = DataLoader(dataset=train_set, batch_size=512, shuffle=True, drop_last=True)
+    test_ip = DataLoader(dataset=test_set, batch_size=512, shuffle=False, drop_last=True)
     # run epochs
     best_accuracy = 0.
-    for ep in range(12):
+    for ep in range(15):
         print('==========train epoch: {}============'.format(ep))
         training(train_ip, model)
         pre_lv, pre_av = predicting(test_ip, model)
@@ -318,7 +321,7 @@ def predict_result(model, part_i):
         data_x = preprocess.get_pad_word2idx(data_x)
         preprocess.get_lab2idx(None)
         pre_x = DefineDataset(data_x, None)
-        pre_ip = DataLoader(dataset=pre_x, batch_size=64, shuffle=False, drop_last=False)
+        pre_ip = DataLoader(dataset=pre_x, batch_size=512, shuffle=False, drop_last=False)
         pre_lists = list()
         # 將 model 的模式设定为 eval，固定model的参数
         model.eval()
@@ -462,17 +465,17 @@ if __name__ == '__main__':
     print('rerun_get_file time: %s minutes' % ((end0 - start0) / 60))
     # 2 随机抽取带标签训练集
     # random_get_trainset(is_labeled=False, labeled_is_all=True)
-    # random_get_trainset(is_labeled=True, labeled_is_all=False)
+    random_get_trainset(is_labeled=True, labeled_is_all=False)
     # 3 划分合适的训练集测试集，保存训练模型
     start1 = time.time()
     rerun_get_model()
     end1 = time.time()
     print('rerun_get_model time: %s minutes' % ((end1 - start1) / 60))
     # # 4 用于重新预测打标，生成预测文件
-    # start2 = time.time()
-    # rerun_predict_result()
-    # end2 = time.time()
-    # print('rerun_predict_result time: %s minutes' % ((end2 - start2) / 60))
+    start2 = time.time()
+    rerun_predict_result()
+    end2 = time.time()
+    print('rerun_predict_result time: %s minutes' % ((end2 - start2) / 60))
     # 绘制收敛次数图像
     # draw_trend(model_fit)
 

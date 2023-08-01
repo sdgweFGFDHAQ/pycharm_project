@@ -14,22 +14,22 @@ from torch.utils.data import TensorDataset, DataLoader
 from tensorboardX import SummaryWriter
 
 from models.proto_model import ProtoTypicalNet
-from models.proto_model_2 import ProtoTypicalNet2
-from workplace.fewsamples.preprocess_data import Preprocess
-from workplace.fewsamples.utils.mini_tool import WordSegment
+from models.proto_model_2 import ProtoTypicalNet2, ProtoTypicalNet3
+from preprocess_data import Preprocess
+from utils.mini_tool import WordSegment
 
 warnings.filterwarnings("ignore")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # writer = SummaryWriter('./logs/v2')
 
-labeled_path = '../sv_report_data.csv'
 labeled_update_path = './data/is_7t1.csv'
-labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
+labeled_di_sku_path = './data/di_sku_log_single_drink_labels.csv'
+labeled_di_sku_path2 = './data/di_sku_log_chain_data.csv'
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
 token_max_length = 12
-batch_size = 64
-epochs = 30
+batch_size = 128
+epochs = 35
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -115,22 +115,27 @@ def define_dataloader_2(df, preprocess, label_list):
 def threshold_EVA(y_pred, y_true, rs):
     acc, pre, rec, f1 = torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0]), torch.tensor([0.0])
     # 设置阈值
-    # rs = torch.mean(y_true.float(), dim=0)
-    # max_values, min_values = torch.max(y_pred, dim=0).values, torch.min(y_pred, dim=0).values
-    # thresholds = (max_values - min_values) * rs + min_values
-    # y_pred = torch.where(y_pred >= thresholds, torch.ones_like(y_pred), torch.zeros_like(y_pred))
     y_pred = (y_pred > 0.5).int()  # 使用0.5作为阈值，大于阈值的为预测为正类
     try:
         # 准确率
         correct = (y_pred == y_true).int()
         acc = correct.sum() / (correct.shape[0] * correct.shape[1])
         # acc = accuracy_score(y_pred, y_true)
+        TP = ((y_pred == y_true) & (y_true == 1)).sum()
+        TN = ((y_pred == y_true) & (y_true == 0)).sum()
+        FN = ((y_pred != y_true) & (y_true == 1)).sum()
+        FP = ((y_pred != y_true) & (y_true == 0)).sum()
+        # print("TP, FN, FP, TN",TP, FN, FP, TN)
+        acc = (TP + TN) / (TP + TN + FN + FP)
+        pre = TP / (TP + FP)
+        rec = TP / (TP + FN)
+        f1 = 2 * TP / (2 * TP + FP + FN)
         # 精确率
-        pre = precision_score(y_pred, y_true, average='weighted')
+        # pre = precision_score(y_pred, y_true, average='weighted')
         # 召回率
-        rec = recall_score(y_pred, y_true, average='weighted')
+        # rec = recall_score(y_pred, y_true, average='weighted')
         # F1
-        f1 = f1_score(y_pred, y_true, average='weighted')
+        # f1 = f1_score(y_pred, y_true, average='weighted')
     except Exception as e:
         print(str(e))
     return acc, pre, rec, f1
@@ -220,7 +225,7 @@ def predicting(dataset, model, r_list):
             support_input0 = support_input[0].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(support_input0)
-            label_list.extend([tensor.numpy() for tensor in output])
+            label_list.extend([tensor.cpu().numpy() for tensor in output])
         # max_values, min_values = np.max(label_list, axis=0), np.min(label_list, axis=0)
         # thresholds = (max_values - min_values) * r_list.numpy() + min_values
         # label_list = np.where(label_list > thresholds, 1, 0)
@@ -258,14 +263,14 @@ def run_proto_w2v():
     features = ['name', 'storeType']
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
               '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
-    labels = ["碳酸饮料", "果汁", "茶饮", "水", "乳制品", "植物蛋白饮料", "功能饮料"]
+    # labels = ["碳酸饮料", "果汁", "茶饮", "水", "乳制品", "植物蛋白饮料", "功能饮料"]
     columns = ['drinkTypes']
     columns = []
     columns.extend(features)
     columns.extend(labels)
 
     # 读取指定列，去除空值
-    labeled_df = pd.read_csv(labeled_update_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
     labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
     # 清洗中文文本
@@ -280,8 +285,6 @@ def run_proto_w2v():
     print('sq_set len:{}'.format(sq_set.shape[0]))
     # test_set = labeled_df.drop(sq_set.index)
     print('test_set len:{}'.format(test_set.shape[0]))
-    # support_set, query_set = train_test_split(sq_set, test_size=0.2)
-    # print('train_set len:{} test_set len:{}'.format(train_set.shape[0], test_set.shape[0]))
 
     # dataloader
     support_dataset = define_dataloader_2(sq_set, preprocess, labels)
@@ -316,9 +319,10 @@ def run_proto_w2v():
     drink_df = pd.DataFrame(lable_result, columns=[str(label) + 'predict' for label in labels])
     source_df = labeled_df[features + labels].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
-    predict_result.to_csv('./data/sku_predict_result3.csv')
+    predict_result.to_csv('./data/sku_predict_result2.csv')
 
 
 if __name__ == '__main__':
     run_proto_w2v()
+# nohup python -u main.py > log.log 2>&1 &
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123
