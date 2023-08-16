@@ -34,7 +34,8 @@ def get_weight(x_df: pd.DataFrame, today_date):
         lambda x: (today_date - datetime.date.fromtimestamp(int(x) // 1000)).days / 30)
     x_df['weight'] = x_df['month'].apply(lambda x: 0.6 ** (x - 6) if x > 6 else 1.0)
     print(x_df)
-    sum_weight = x_df[['id', 'name', 'namepath', 'township', 'address', 'weight']].groupby(by=['id', 'name', 'namepath', 'township', 'address']).sum().reset_index()
+    sum_weight = x_df[['id', 'name', 'namepath', 'township', 'address', 'weight']].groupby(
+        by=['id', 'name', 'namepath', 'township', 'address']).sum().reset_index()
     return sum_weight
 
 
@@ -45,7 +46,8 @@ def get_weight_8(x_df: pd.DataFrame, today_date):
         lambda x: (today_date - x).days / 30)
     x_df['weight'] = x_df['month'].apply(lambda x: 0.9 ** (x - 6) if x > 6 else 1.0)
     print(x_df)
-    sum_weight = x_df[['id', 'name', 'namepath', 'township', 'address', 'weight']].groupby(by=['id', 'name', 'namepath', 'township', 'address']).sum().reset_index()
+    sum_weight = x_df[['id', 'name', 'namepath', 'township', 'address', 'weight']].groupby(
+        by=['id', 'name', 'namepath', 'township', 'address']).sum().reset_index()
     return sum_weight
 
 
@@ -86,7 +88,9 @@ def judge_data(x_df1: pd.DataFrame, x_df2: pd.DataFrame, x_df3: pd.DataFrame):
     # result_df = df_1_2_3[df_1_2_3.percentage >= critical_percentage]
     result_df = df_1_2.sort_values(by='percentage', ascending=False).reset_index()
     print(result_df)
-    result_df.to_csv('result_df.csv', columns=['id', 'name', 'namepath', 'township', 'address', 'percentage'])
+    result_df.to_csv('result_df.csv', columns=['id', 'name', 'namepath', 'township', 'address', 'percentage'],
+                     index=False)
+
 
 # Y=a+k(X-Min)
 def separate_percent(df, a, b):
@@ -108,7 +112,7 @@ if __name__ == '__main__':
     columns = ['id', 'name', 'namepath', 'township', 'address', 'createtime']
     display_df = pd.read_csv('display_data.csv')
     order_df = pd.read_csv('order_data.csv')
-    visit_df = pd.read_csv('visit_data.csv',dtype={"createtime": str})
+    visit_df = pd.read_csv('visit_data.csv', dtype={"createtime": str})
     print('--开始计算置信率--')
     judge_data(display_df, order_df, visit_df)
     print('--置信率计算完成--')

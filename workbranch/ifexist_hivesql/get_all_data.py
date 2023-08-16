@@ -67,7 +67,7 @@ def get_connection_all(ti_list, ta_list):
         open('visit_data.csv', 'w').close()
         sql = "select dedupe.id, dedupe.name, dedupe.namepath, dedupe.township, dedupe.address, {0} as createtime from standard_db.{1} sd " \
               "inner join standard_db.di_store_dedupe dedupe " \
-              "on on dedupe.appcode not like '%高德%'and dedupe.namepath like '%广东%' " \
+              "on dedupe.appcode not like '%高德%'and dedupe.namepath like '%广东%' " \
               "and sd.storeid = dedupe.original_id" \
             .format(ti_list[2], ta_list[8])
         cursor.execute(sql)
