@@ -77,7 +77,7 @@ def get_connection_all(ti_list, ta_list):
         #     data = cursor.fetchmany(size=50000)
         #     if len(data) == 0:
         #         break
-        #     dl_order = as_pandas(data)
+        #     dl_order = pd.DataFrame(data)
         #     if os.path.getsize('visit_data.csv'):
         #         dl_order.to_csv('visit_data.csv', mode='a', header=False, index=False)
         #     else:

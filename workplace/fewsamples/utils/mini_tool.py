@@ -1,5 +1,6 @@
-import re
 import jieba
+import logging
+import re
 from torch.utils.data import Dataset
 
 
@@ -67,3 +68,53 @@ class DefineDataset(Dataset):
 # 并行计算时的异常回调
 def error_callback(error):
     print(f"Error info: {error}")
+
+
+class Logger:
+    """
+    %(levelno)s: 打印日志级别的数值
+    %(levelname)s: 打印日志级别名称
+    %(pathname)s: 打印当前执行程序的路径，其实就是sys.argv[0]
+    %(filename)s: 打印当前执行程序名
+    %(funcName)s: 打印日志的当前函数
+    %(lineno)d: 打印日志的当前行号
+    %(asctime)s: 打印日志的时间
+    %(thread)d: 打印线程ID
+    %(threadName)s: 打印线程名称
+    %(process)d: 打印进程ID
+    %(message)s: 打印日志信息
+    """
+
+    def __init__(self, logger_name=__name__, log_path='log.log',
+                 log_formatter='%(asctime)s - %(levelname)s - %(message)s', log_level=logging.INFO):
+        self.logger_name = logger_name  # 日志记录器名字
+        self.log_path = log_path  # log文件存储路径
+        self.log_formatter = log_formatter  # 日志信息输出格式
+        self.log_level = log_level  # 日志级别,级别排序:CRITICAL > ERROR > WARNING > INFO > DEBUG
+
+        self.logger = self.set_logger()
+        self.handler = self.set_fileHandler()
+        self.logger.addHandler(self.handler)
+
+    # 设置日志记录器
+    def set_logger(self):
+        logger = logging.getLogger(self.logger_name)
+        logger.setLevel(self.log_level)
+        return logger
+
+    # 创建文件处理器
+    def set_fileHandler(self):
+        handler = logging.FileHandler(self.log_path, encoding='utf-8')
+        handler.setLevel(self.log_level)
+        # 创建日志格式器
+        formatter = logging.Formatter(self.log_formatter)
+        handler.setFormatter(formatter)
+        return handler
+
+    # 添加处理器到记录器
+    def set_addHandler(self):
+        self.logger.addHandler(self.handler)
+
+    # 输出日志信息
+    def info(self, message):
+        self.logger.info(message)
