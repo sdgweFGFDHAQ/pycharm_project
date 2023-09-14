@@ -23,16 +23,16 @@ class ProtoTypicalNet(nn.Module):
         for param in self.bert_embedding.encoder.layer[-1:].parameters():
             param.requires_grad = True
 
-        # LSTM层
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
+        # # LSTM层
+        # self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=2, batch_first=True, bidirectional=True)
 
         # 原型网络核心
         self.proto_point = nn.Parameter(torch.randn(num_class, hidden_dim))
 
         self.prototype = nn.Sequential(
-            nn.BatchNorm1d(hidden_dim * 2),
+            nn.BatchNorm1d(input_dim),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim * 2, hidden_dim)
+            nn.Linear(input_dim, hidden_dim)
             # nn.ReLU(),
         )
 
@@ -45,10 +45,11 @@ class ProtoTypicalNet(nn.Module):
 
     def forward(self, inputs):
         inputs_embedding = self.bert_embedding(inputs).last_hidden_state[:, 0]
-        x_inputs, _ = self.lstm(inputs_embedding)
-        x = x_inputs[:, -1, :]
+        inputs_embedding = inputs_embedding.to(torch.float32)
+        # x_inputs, _ = self.lstm(inputs_embedding)
+        # x = x_inputs[:, -1, :]
 
-        x_pt = self.prototype(x)
+        x_pt = self.prototype(inputs_embedding)
         distances = torch.cdist(x_pt, self.proto_point)
         output = self.last(1 / (distances + 10e-6))
 

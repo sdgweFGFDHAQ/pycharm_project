@@ -19,10 +19,10 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # writer = SummaryWriter('./logs/v1')
 
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
-
+pretrian_bert_url0 = "IDEA-CCNL/Erlangshen-DeBERTa-v2-320M-Chinese"
 labeled_update_path = './data/is_7t1.csv'
 labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
-labeled_di_sku_path2 = './data/di_sku_log_chain_data.csv'
+labeled_di_sku_path2 = './data/di_sku_log_chain_drink_labels_clean_dgl.csv'
 
 token_max_length = 12
 batch_size = 16
@@ -77,7 +77,7 @@ def get_labeled_dataloader(df, bert_tokenizer, label_list):
         # 处理特征
         encoded_dict = bert_tokenizer.encode_plus(
             row['name'],
-            row['storeType'],
+            row['storetype'],
             add_special_tokens=True,
             max_length=14,
             padding='max_length',
@@ -201,7 +201,7 @@ def predicting(dataset, model):
 
 
 # 训练 测试 分析
-def train_and_test(support_dataset, test_dataset, proto_model, save_path, ratio):
+def train_and_test(support_dataset, test_dataset, proto_model, ratio, save_path):
     max_accuracy = 0.0
     for step in range(epochs):
         train_acc_value, train_loss_value, train_prec_value, \
@@ -226,23 +226,25 @@ def train_and_test(support_dataset, test_dataset, proto_model, save_path, ratio)
 
 # bert模型
 def run_proto_bert():
-    features = ['name', 'storeType']
+    features = ['name', 'storetype']
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
               '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
-    columns = ['drinkTypes']
+    labels = ['plant_clean', 'fruit_vegetable_clean', 'protein_clean', 'flavored_clean', 'tea_clean',
+                  'carbonated_clean', 'coffee_clean', 'water_clean', 'special_uses_clean']
+    columns = ['drink_labels']
     columns.extend(features)
     columns.extend(labels)
 
-    labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
+    labeled_df = pd.read_csv(labeled_di_sku_path2, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
-    labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
+    labeled_df = labeled_df[labeled_df['storetype'].notnull() & (labeled_df['storetype'] != '')]
 
     # 采用最小包含算法采样
-    sq_set = get_Support_Query(labeled_df, labels, k=2500)
+    sq_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    # sq_set = get_Support_Query(labeled_df, labels, k=2000)
     print('sq_set len:{}'.format(sq_set.shape[0]))
-    test_set = labeled_df.drop(sq_set.index)
+    # test_set = labeled_df.drop(sq_set.index)
     print('test_set len:{}'.format(test_set.shape[0]))
-    # test_set.to_csv('./data/test_test_set3.csv', index=False)
 
     # dataloader
     tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
@@ -251,7 +253,7 @@ def run_proto_bert():
 
     # 计算标签为1的占比,作为阈值
     num_ones = torch.tensor((sq_set[labels] == 1).sum(axis=0))
-    ratio = num_ones / sq_set.shape[0]
+    ratio = (num_ones / sq_set.shape[0]).to(device)
 
     bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
     proto_model = ProtoTypicalNet(
@@ -277,7 +279,7 @@ def run_proto_bert():
     proto_model.load_state_dict(torch.load('./models/proto_model.pth'))
     lable_result = predicting(labeled_dataset, proto_model)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    source_df = labeled_df[['name', 'storeType', 'drinkTypes']].reset_index(drop=True)
+    source_df = labeled_df[['name', 'storetype', 'drink_labels']].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
     predict_result.to_csv('./data/sku_predict_result.csv')
 

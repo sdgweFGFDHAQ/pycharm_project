@@ -57,6 +57,7 @@ class ProtoTypicalNet2(nn.Module):
         distances = torch.cdist(x_pt, self.proto_point)
         output = self.last(1 / (distances + 10e-6))
         # output = self.last(-distances)
+
         return output
 
     # def forward(self, s_inputs, label, q_inputs):

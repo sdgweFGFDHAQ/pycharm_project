@@ -24,6 +24,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 labeled_update_path = './data/is_7t1.csv'
 labeled_di_sku_path = './data/di_sku_log_single_drink_labels.csv'
+labeled_di_sku_path22 = './data/di_sku_log_single_drink_labels2.csv'
 labeled_di_sku_path2 = './data/di_sku_log_chain_data.csv'
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 
@@ -219,18 +220,18 @@ def predicting(dataset, model, r_list):
 
     model.eval()
     with torch.no_grad():
-        label_list = []
+        output_list = []
         for i, support_input in enumerate(dataloader):
             # 1. 放到GPU上
             support_input0 = support_input[0].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(support_input0)
-            label_list.extend([tensor.cpu().numpy() for tensor in output])
+            output_list.extend([tensor.cpu().numpy() for tensor in output])
         # max_values, min_values = np.max(label_list, axis=0), np.min(label_list, axis=0)
         # thresholds = (max_values - min_values) * r_list.numpy() + min_values
         # label_list = np.where(label_list > thresholds, 1, 0)
-        label_list = [[np.where(arr > 0.5, 1, 0) for arr in row] for row in label_list]
-    return label_list
+        label_list = [[np.where(arr > 0.5, 1, 0) for arr in row] for row in output_list]
+    return output_list, label_list
 
 
 # 训练 测试 分析
@@ -254,16 +255,16 @@ def train_and_test(support_dataset, test_dataset, proto_model_2, ratio, save_pat
         # 保存最佳模型
         if test_acc_value > max_accuracy:
             max_accuracy = test_acc_value
-        # if step == epochs - 1:
+            # if step == epochs - 1:
             torch.save(proto_model_2.state_dict(), save_path)
 
 
 # w2v模型
 def run_proto_w2v():
-    features = ['name', 'storeType']
+    features = ['name', 'storetype']
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
-              '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
-    # labels = ["碳酸饮料", "果汁", "茶饮", "水", "乳制品", "植物蛋白饮料", "功能饮料"]
+              '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']  # 30w条 现在要用的 9标签
+    labels = ["碳酸饮料", "果汁", "茶饮", "水", "乳制品", "植物蛋白饮料", "功能饮料"]  # 1700条 7标签
     columns = ['drinkTypes']
     columns = []
     columns.extend(features)
@@ -272,10 +273,10 @@ def run_proto_w2v():
     # 读取指定列，去除空值
     labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
-    labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
+    labeled_df = labeled_df[labeled_df['storetype'].notnull() & (labeled_df['storetype'] != '')]
     # 清洗中文文本
     segment = WordSegment()
-    labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
+    labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storetype']).apply(segment.cut_word)
     preprocess = Preprocess(sen_len=6)
     embedding = preprocess.create_tokenizer()
 
@@ -301,7 +302,7 @@ def run_proto_w2v():
         num_labels=len(labels)
     ).to(device)
     # 训练 测试 分析
-    train_and_test(support_dataset, test_dataset, proto_model_2, ratio, './models/proto_model_3.pth')
+    train_and_test(support_dataset, test_dataset, proto_model_2, ratio, './models/proto_model_2.pth')
 
     print("=================================")
 
@@ -314,11 +315,16 @@ def run_proto_w2v():
     ).to(device)
 
     labeled_dataset = define_dataloader_2(labeled_df, preprocess, labels)
-    proto_model_2.load_state_dict(torch.load('./models/proto_model_3.pth'))
-    lable_result = predicting(labeled_dataset, proto_model_2, ratio)
-    drink_df = pd.DataFrame(lable_result, columns=[str(label) + 'predict' for label in labels])
-    source_df = labeled_df[features + labels].reset_index(drop=True)
-    predict_result = pd.concat([source_df, drink_df], axis=1)
+    proto_model_2.load_state_dict(torch.load('./models/proto_model_2.pth'))
+    output_result, lable_result = predicting(labeled_dataset, proto_model_2, ratio)
+
+    drink_dict = {'name': labeled_df['name'], 'storetype': labeled_df['storetype']}
+    for i in range(len(labels)):
+        drink_dict[labels[i]] = labeled_df[labels[i]]  # 原始标签
+        drink_dict['output_' + str(labels[i])] = output_result[i]  # 模型输出的值
+        drink_dict['pred_' + str(labels[i])] = lable_result[i]  # 阈值0.5 的0/1标签
+    predict_result = pd.DataFrame(drink_dict)
+
     predict_result.to_csv('./data/sku_predict_result2.csv')
 
 
