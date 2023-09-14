@@ -107,7 +107,7 @@ def predicting(dataset, model):
 
 def rerun():
     # 设置所需字段
-    features = ['name', 'storeType']
+    features = ['name', 'storetype']
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
               '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
     labels = ['碳酸饮料']  # 先测试单标签
@@ -118,10 +118,10 @@ def rerun():
     # 读取文件数据
     labeled_df = pd.read_csv(labeled_di_sku_path, usecols=columns)
     labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
-    labeled_df = labeled_df[labeled_df['storeType'].notnull() & (labeled_df['storeType'] != '')]
+    labeled_df = labeled_df[labeled_df['storetype'].notnull() & (labeled_df['storetype'] != '')]
     labeled_df.reset_index(inplace=True)
     segment = WordSegment()
-    labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storeType']).apply(segment.cut_word)
+    labeled_df['cut_word'] = (labeled_df['name'] + labeled_df['storetype']).apply(segment.cut_word)
 
     # 划分正样本和无标签数据
     pos_index = labeled_df[labeled_df['碳酸饮料'] == 1].index

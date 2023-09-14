@@ -242,7 +242,7 @@ if __name__ == '__main__':
     data_prefix_path = '/home/data/temp/lxb/prod/fewshotlearning/data'
     source_path, target_path = '/noEDA_data', '/EDA_data'
     file_path_list = ['/Neg_df.csv', '/Pos_df.csv']
-    use_column_list = ['store_id', 'name', 'storeType']
+    use_column_list = ['store_id', 'name', 'storetype']
     grow_mode = 'eda'  # 数据增强模式 'eda'|'syn'|'swap'
     segment = WordSegment()
     for file_path in file_path_list:

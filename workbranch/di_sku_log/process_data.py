@@ -7,7 +7,7 @@ def merge_multiple_categories(csv_data, target_path, keep_cols, merge_col):
     csv_data.drop_duplicates(keep='first', inplace=True)
     print("dedupe 原始sku去重：", csv_data.shape[0])
     # 合并原始类别和预测类别
-    csv_data['storeType'] = csv_data['category1_new'].fillna(csv_data['predict_category'])
+    csv_data['storetype'] = csv_data['category1_new'].fillna(csv_data['predict_category'])
 
     save_cols = keep_cols + [merge_col]
     csv_result = csv_data[save_cols]
@@ -22,9 +22,9 @@ def merge_multiple_categories(csv_data, target_path, keep_cols, merge_col):
     print("========提取0-1饮料标签=========")
     exist_df = result
     print("合并饮料sku数据集：", exist_df.shape[0])
-    # 去除storeType为空的数据
-    exist_df = exist_df.dropna(subset=['storeType'])
-    exist_df = exist_df[exist_df['storeType'].notnull() & (exist_df['storeType'] != '')].reset_index(drop=True)
+    # 去除storetype为空的数据
+    exist_df = exist_df.dropna(subset=['storetype'])
+    exist_df = exist_df[exist_df['storetype'].notnull() & (exist_df['storetype'] != '')].reset_index(drop=True)
     print("合并饮料sku删除空值：", exist_df.shape[0])
 
     # 将'drinkTypes'列的列表元素提取为新的列
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     save_path = 'C:\\Users\\86158\\Desktop\\di_sku_log_drink_labeling_zzx.csv'
     use_columns = ['id', 'name', 'appcode', 'category1_new', 'predict_category', 'drink_label']
-    keep_columns = ['id', 'name', 'appcode', 'storeType']
+    keep_columns = ['id', 'name', 'appcode', 'storetype']
     merge_column = 'drink_label'
 
     # 集成学习预测品类标签，对相应数据集进行处理

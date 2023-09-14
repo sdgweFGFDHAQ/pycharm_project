@@ -71,8 +71,8 @@ def get_train_dataset(source_path, target_path, number):
 
 def get_predict_dataset(source_path, target_path):
     # 读取文件并转成LaserTagger模块的文件格式
-    few_csv = pd.read_csv(source_path, usecols=['store_id', 'name', 'storeType'])
-    texts = few_csv['name'].values + '[seq]' + few_csv['storeType'].values
+    few_csv = pd.read_csv(source_path, usecols=['store_id', 'name', 'storetype'])
+    texts = few_csv['name'].values + '[seq]' + few_csv['storetype'].values
     phrase_list = set()
     for t in texts:
         phrase_list.add(t)
@@ -83,15 +83,15 @@ def get_predict_dataset(source_path, target_path):
 
 def generate_dataset(source_path, target_path, few_path):
     # 读取预测文件并转成fewshot格式
-    name_csv = pd.read_csv(source_path, usecols=['prediction', 'storeType'])
+    name_csv = pd.read_csv(source_path, usecols=['prediction', 'storetype'])
     id_list = ['0000000000' + str(random.randint(1000, 100000)) for _ in range(name_csv.shape[0])]
     name_list = name_csv['prediction'].values
-    cate_list = name_csv['storeType'].values
-    result = pd.DataFrame({'store_id': id_list, 'name': name_list, 'storeType': cate_list})
+    cate_list = name_csv['storetype'].values
+    result = pd.DataFrame({'store_id': id_list, 'name': name_list, 'storetype': cate_list})
     segment = WordSegment()
     result['cut_name'] = result['name'].apply(segment.cut_word)
     # 小样本数据集和数据增强数据集拼接
-    few_csv = pd.read_csv(few_path, usecols=['store_id', 'name', 'storeType', 'cut_name'])
+    few_csv = pd.read_csv(few_path, usecols=['store_id', 'name', 'storetype', 'cut_name'])
     grow_data = pd.concat((few_csv, result))
     print(grow_data.shape[0])
     gd = grow_data.drop_duplicates(subset=['name'], keep='first')

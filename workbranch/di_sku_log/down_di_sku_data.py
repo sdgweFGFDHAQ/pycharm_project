@@ -18,8 +18,8 @@ def count_matching_number(ta_list):
               "join standard_db.di_store_dedupe as dsd on ds.store_id = dsd.id"
 
         # 合并去重
-        # hbsql = "SELECT name, 'storeType', string_agg(DISTINCT drink_label, ',') AS drink_labels " \
-        #         "FROM di_sku_log_drink_temp GROUP BY name, 'storeType' limit 10"
+        # hbsql = "SELECT name, 'storetype', string_agg(DISTINCT drink_label, ',') AS drink_labels " \
+        #         "FROM di_sku_log_drink_temp GROUP BY name, 'storetype' limit 10"
 
         cursor.execute(sql)
         di_sku_log_sql = cursor.fetchall()
