@@ -18,7 +18,7 @@ from models.proto_model import ProtoTypicalNet
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
-labeled_di_sku_path = "/home/data/temp/zhouzx/workbranch/di_sku_log/data/di_sku_log_drink_labeling_zzx.csv"
+labeled_di_sku_path = "/home/DI/zhouzx/code/workbranch/di_sku_log/data/di_sku_log_drink_labeling_zzx.csv"
 batch_size = 512
 
 
@@ -90,7 +90,7 @@ def proto_bert_predict():
     drink_df = pd.DataFrame(output_result, columns=['pred_' + label for label in labels])
     source_df = labeled_df[features + columns].reset_index(drop=True)
     predict_result = pd.concat([source_df, drink_df], axis=1)
-    predict_result.to_csv('./data/di_sku_proto_predict_result.csv')
+    predict_result.to_csv('./data/di_sku_proto_predict_result2.csv')
     print("========保存到csv文件=========", time.strftime('%H:%M:%S', time.localtime(time.time())))
 
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_colwidth', None)
-    df = pd.read_csv("./data/di_sku_proto_predict_result.csv")
+    df = pd.read_csv("./data/di_sku_proto_predict_result2.csv")
     print(df.shape[0])
     print(df.head())
 

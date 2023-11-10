@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2023/9/8 14:42
 # @Author  : zzx
-# @File    : down_di_sku_labeling_data.py
+# @File    : down_predict_sku_data.py
 # @Software: PyCharm
 # from impala.dbapi import connect
 from pyhive import hive
@@ -11,7 +11,9 @@ import pandas as pd
 
 # 用于集成学习 预测融合数据的品类
 def count_matching_number(fetch_size=1000000):
-    conn = hive.Connection(host='192.168.0.150', port=10015, username='hive', password='xwbigdata2022',
+    # conn = hive.Connection(host='192.168.0.150', port=10015, username='hive', password='xwbigdata2022',
+    #                        database='standard_db', auth='CUSTOM')
+    conn = hive.Connection(host='124.71.220.115', port=10015, username='hive', password='xwbigdata2022',
                            database='standard_db', auth='CUSTOM')
     cursor = conn.cursor()
     try:
@@ -38,7 +40,7 @@ def count_matching_number(fetch_size=1000000):
             di_sku_log_data = pd.DataFrame(results, columns=["id", "name", "appcode", "category1_new", "state", "city",
                                                              "predict_category", "drink_label"])
             di_sku_log_data.to_csv('./data/di_sku_log_drink_data_{}.csv'.format(count))
-            print("已查询待打标数据集{}:".format(count))
+            print("待打标数据集(预测集)数据量{}:".format(count))
             count += 1
         print("SQL执行完成！")
     except Exception as e:

@@ -1,4 +1,7 @@
 import datetime, time
+
+import argparse
+import numpy as np
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 
@@ -50,8 +53,27 @@ def dwe():
     print(df['cut_name'].dtype)
 
 
-if __name__ == '__main__':
-    # dwe()
-    frame = pd.DataFrame({'a': [14, 15, 13, 11, 12], 'b': [1, 2, 3, 4, 5]})
-    new_data_df = frame.sample(frac=1)
-    new_data_df.to_csv('aaaaa.csv', index=False)
+def replace():
+    print('replace')
+
+
+def nb_year():
+    print('nb_year')
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--method", choices=["replace", "nb_year"], help="1.replace 2.nb_year")
+args = parser.parse_args()
+
+if args.method is None:
+    print("linux none")
+    replace()
+    nb_year()
+else:
+    if args.method == "replace":
+        print("linux --replace")
+        replace()
+    elif args.method == "nb_year":
+        print("linux --nb_year")
+        nb_year()
+# 结论 不要加main

@@ -10,7 +10,7 @@ def download_data():
     out_url = "/home/data/temp/zzx/data/"
     conn = hive.Connection(host='192.168.0.150', port=10015, username='hive', password='xwbigdata2022',
                            database='standard_db', auth='CUSTOM')
-    # conn = hive.Connection(host='192.168.0.150',port=10015,username='ai',password='ai123456',
+    # conn = hive.Connection(host='124.71.220.115',port=10015,username='ai',password='ai123456',
     #                      database='standard_db',auth='CUSTOM')
     cursor = conn.cursor()
     cursor.execute("SELECT DISTINCT city from  standard_db.di_store_dedupe")

@@ -1,8 +1,10 @@
 import warnings
 
+import argparse
+from icecream.icecream import ic
 import numpy as np
 import pandas as pd
-from icecream.icecream import ic
+from pyhive import hive
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModel
@@ -16,17 +18,63 @@ from models.proto_model import ProtoTypicalNet
 
 warnings.filterwarnings("ignore")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# writer = SummaryWriter('./logs/v1')
+# writer = SummaryWriter(root_path + '/logs/v1')
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--method", choices=["count_matching_number", "run_proto_bert"], help="1.下载数据集 2.训练模型")
+args = parser.parse_args()
+
+root_path = '/home/DI/zhouzx/code/workplace/fewsamples'
 pretrian_bert_url = "IDEA-CCNL/Erlangshen-DeBERTa-v2-97M-Chinese"
 pretrian_bert_url0 = "IDEA-CCNL/Erlangshen-DeBERTa-v2-320M-Chinese"
-labeled_update_path = './data/is_7t1.csv'
-labeled_di_sku_path = './data/di_sku_log_drink_labels.csv'
-labeled_di_sku_path2 = './data/di_sku_log_chain_drink_labels_clean_dgl.csv'
+labeled_update_path = root_path + '/data/is_7t1.csv'
+labeled_di_sku_path = root_path + '/data/di_sku_log_drink_labels.csv'
+labeled_di_sku_path2 = root_path + '/data/di_sku_log_chain_drink_labels_clean_dgl.csv'
 
 token_max_length = 12
 batch_size = 16
-epochs = 30
+epochs = 20
+
+
+# 用于集成学习 预测融合数据的品类
+def count_matching_number(fetch_size=1000000):
+    conn = hive.Connection(host='124.71.220.115', port=10015, username='hive', password='xwbigdata2022',
+                           database='standard_db', auth='CUSTOM')  # 124.71.220.115 # 192.168.0.150
+    cursor = conn.cursor()
+    try:
+        sql = "WITH sku AS (" \
+              "SELECT DISTINCT ds.store_id,dssdl.drink_label " \
+              "from standard_db.di_store_sku_drink_label dssdl " \
+              "inner join standard_db.di_sku as ds " \
+              "on dssdl.sku_code = ds.sku_code WHERE dssdl.sku_name is not null), " \
+              "dedupe as (" \
+              "SELECT d.id,d.name,d.appcode,d.category1_new,d.state,d.city,ds.predict_category " \
+              "FROM standard_db.di_store_classify_dedupe d " \
+              "LEFT JOIN standard_db.di_store_dedupe_labeling ds on d.id=ds.store_id " \
+              "WHERE d.appcode like '%,%' and (d.appcode like '%高德%' or d.appcode like '%腾讯%' or d.appcode like '%百度%')) " \
+              "SELECT dedupe.*,sku.drink_label as drink_label " \
+              "FROM dedupe LEFT JOIN sku ON sku.store_id = dedupe.id"
+
+        cursor.execute(sql)
+
+        count = 0
+        while True:
+            results = cursor.fetchmany(fetch_size)
+            if not results:
+                break
+            di_sku_log_data = pd.DataFrame(results, columns=["id", "name", "appcode", "category1_new", "state", "city",
+                                                             "predict_category", "drink_label"])
+            di_sku_log_data.to_csv(root_path + '/data/di_sku_log_drink_data_{}.csv'.format(count))
+            print("已查询待打标数据集{}:".format(count))
+            count += 1
+        print("SQL执行完成！")
+    except Exception as e:
+        print("出错了！")
+        print(e)
+    finally:
+        # 关闭连接
+        cursor.close()
+        conn.close()
 
 
 def get_Support_Query(train_df, label_list, k=10):
@@ -189,15 +237,15 @@ def predicting(dataset, model):
 
     model.eval()
     with torch.no_grad():
-        label_list = []
+        output_list = []
         for i, support_input in enumerate(dataloader):
             # 1. 放到GPU上
             feature = support_input[0].to(device, dtype=torch.long)
             # 2. 计算输出
             output = model(feature)
-            label_list.extend([tensor.cpu().numpy() for tensor in output])
-        label_list = [[np.where(arr > 0.5, 1, 0) for arr in row] for row in label_list]
-    return label_list
+            output_list.extend([tensor.cpu().numpy() for tensor in output])
+        label_list = [[np.where(arr > 0.5, 1, 0) for arr in row] for row in output_list]
+    return output_list, label_list
 
 
 # 训练 测试 分析
@@ -230,7 +278,7 @@ def run_proto_bert():
     labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
               '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
     labels = ['plant_clean', 'fruit_vegetable_clean', 'protein_clean', 'flavored_clean', 'tea_clean',
-                  'carbonated_clean', 'coffee_clean', 'water_clean', 'special_uses_clean']
+              'carbonated_clean', 'coffee_clean', 'water_clean', 'special_uses_clean']
     columns = ['drink_labels']
     columns.extend(features)
     columns.extend(labels)
@@ -264,9 +312,30 @@ def run_proto_bert():
     ).to(device)
 
     # 训练 测试 分析
-    train_and_test(support_dataset, test_dataset, proto_model, ratio, './models/proto_model.pth')
+    train_and_test(support_dataset, test_dataset, proto_model, ratio, root_path + '/models/proto_model.pth')
     print("=================================")
 
+
+def predict():
+    features = ['name', 'storetype']
+    labels = ['植物饮料', '果蔬汁类及其饮料', '蛋白饮料', '风味饮料', '茶（类）饮料',
+              '碳酸饮料', '咖啡（类）饮料', '包装饮用水', '特殊用途饮料']
+    labels = ['plant_clean', 'fruit_vegetable_clean', 'protein_clean', 'flavored_clean', 'tea_clean',
+              'carbonated_clean', 'coffee_clean', 'water_clean', 'special_uses_clean']
+    columns = ['drink_labels']
+    columns.extend(features)
+    columns.extend(labels)
+
+    labeled_df = pd.read_csv(labeled_di_sku_path2, usecols=columns)
+    labeled_df = labeled_df[labeled_df['name'].notnull() & (labeled_df['name'] != '')]
+    labeled_df = labeled_df[labeled_df['storetype'].notnull() & (labeled_df['storetype'] != '')]
+
+    sq_set, test_set = train_test_split(labeled_df, test_size=0.2)
+    # 加载模型做预测
+    tokenizer = AutoTokenizer.from_pretrained(pretrian_bert_url)
+    test_dataset = get_labeled_dataloader(test_set, tokenizer, labels)
+
+    bert_layer = AutoModel.from_pretrained(pretrian_bert_url)
     # 加载模型做预测
     proto_model = ProtoTypicalNet(
         bert_layer=bert_layer,
@@ -274,16 +343,32 @@ def run_proto_bert():
         hidden_dim=128,
         num_class=len(labels)
     ).to(device)
+    proto_model.load_state_dict(torch.load(root_path + '/models/proto_model_new.pth'))
 
-    labeled_dataset = get_labeled_dataloader(labeled_df, tokenizer, labels)
-    proto_model.load_state_dict(torch.load('./models/proto_model.pth'))
-    lable_result = predicting(labeled_dataset, proto_model)
+    output_result, lable_result = predicting(test_dataset, proto_model)
     drink_df = pd.DataFrame(lable_result, columns=labels)
-    source_df = labeled_df[['name', 'storetype', 'drink_labels']].reset_index(drop=True)
-    predict_result = pd.concat([source_df, drink_df], axis=1)
-    predict_result.to_csv('./data/sku_predict_result.csv')
+    drink_values = pd.DataFrame(output_result, columns=labels)
+    source_df = test_set[['name', 'storetype', 'drink_labels']].reset_index(drop=True)
+
+    predict_result = pd.concat([source_df, drink_values], axis=1)
+
+    pd.options.display.float_format = '{:.6f}'.format
+    predict_result.to_csv(root_path + '/data/sku_predict_result_new.csv', index=False)
+    print("预测完成")
 
 
-if __name__ == '__main__':
+if args.method is None:
+    # 下载文件
+    count_matching_number()
+    # 训练模型
     run_proto_bert()
+    # predict()
+else:
+    if args.method == "count_matching_number":  # 下载文件
+        count_matching_number()
+    elif args.method == "run_proto_bert":  # 训练模型
+        run_proto_bert()
+
+# nohup python -u prototypical.py> log.log 2>&1 &
 # tensorboard --logdir=E:\pyProjects\pycharm_project\workplace\fewsamples\logs\v1 --port 8123
+# $ python script.py --method b --path '/data'
